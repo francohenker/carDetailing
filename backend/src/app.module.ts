@@ -6,14 +6,19 @@ import { AuthController } from './auth/auth.controller';
 import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { configService } from './config/config.service';
+import { ProductoController } from './producto/producto.controller';
+import { ProductoModule } from './producto/producto.module';
+import { OrdenService } from './orden/orden.service';
+import { OrdenModule } from './orden/orden.module';
+import { CategoriaController } from './categoria/categoria.controller';
 
 
 @Module({
   
   imports: [
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
-    UserModule, AuthModule],
-  controllers: [AppController, AuthController],
-  providers: [AppService],
+    UserModule, AuthModule, ProductoModule, OrdenModule],
+  controllers: [AppController, AuthController, ProductoController, CategoriaController],
+  providers: [AppService, OrdenService],
 })
 export class AppModule {}
