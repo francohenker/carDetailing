@@ -11,13 +11,14 @@ import { ProductoModule } from './producto/producto.module';
 import { OrdenService } from './orden/orden.service';
 import { OrdenModule } from './orden/orden.module';
 import { CategoriaController } from './categoria/categoria.controller';
+import { CategoriaModule } from './categoria/categoria.module';
 
 
 @Module({
   
   imports: [
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
-    UserModule, AuthModule, ProductoModule, OrdenModule],
+    UserModule, AuthModule, ProductoModule, OrdenModule, CategoriaModule],
   controllers: [AppController, AuthController, ProductoController, CategoriaController],
   providers: [AppService, OrdenService],
 })
