@@ -1,17 +1,17 @@
-import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn, } from 'typeorm'; 
+import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn, } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
 import { Role } from 'src/enums/role';
 
 
 @Entity()
-export class User{
+export class User {
     @PrimaryGeneratedColumn()
-    id: number 
+    id: number
 
-    @Column({unique : true})
+    @Column({ unique: true })
     username: string
-    
+
     @Exclude()
     @Column()
     password: string
@@ -28,11 +28,11 @@ export class User{
 
     @BeforeInsert()
     async hashPassword() {
-      const salt = await bcrypt.genSalt();
-      this.password = await bcrypt.hash(this.password, salt);
+        const salt = await bcrypt.genSalt();
+        this.password = await bcrypt.hash(this.password, salt);
     }
 
-    
+
 
 
     constructor(username: string, password: string, admin: Role) {
