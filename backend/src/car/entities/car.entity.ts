@@ -1,5 +1,5 @@
 import { Turno } from "src/turno/entities/turno.entity";
-import { User } from "src/user/entities/user.entity";
+import { Users } from "src/users/entities/users.entity";
 import { Column, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
@@ -7,8 +7,8 @@ export class Car{
     @PrimaryGeneratedColumn()
     id: number
 
-    @ManyToOne(() => User, (User) => User.cars)
-    user: User
+    @ManyToOne(() => Users, (User) => User.cars)
+    user: Users
 
     @Column()
     marca: string
@@ -16,7 +16,7 @@ export class Car{
     @Column()
     model: string
 
-    @Column()
+    @Column({unique: true})
     patente: string
 
     @Column()
@@ -26,7 +26,8 @@ export class Car{
     turno: Turno
 
 
-    constructor(marca: string, model: string, patente: string, color: string) {
+    constructor(user: Users, marca: string, model: string, patente: string, color: string) {
+        this.user = user;
         this.marca = marca;
         this.model = model;
         this.patente = patente;
