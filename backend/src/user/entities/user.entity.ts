@@ -1,7 +1,8 @@
-import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn, } from 'typeorm';
+import { BeforeInsert, Column, Entity, OneToMany, PrimaryGeneratedColumn, } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
 import { Role } from 'src/enums/role';
+import { Car } from 'src/car/entities/car.entity';
 
 
 @Entity()
@@ -20,7 +21,13 @@ export class User {
     admin: Role
 
     @Column()
-    correo: string
+    email: string
+
+    @Column()
+    telefono: number
+
+    @OneToMany(() => Car, (car) => car.user)
+    cars: Car[];
 
     async validatePassword(password: string): Promise<boolean> {
         return await bcrypt.compareSync(password, this.password);

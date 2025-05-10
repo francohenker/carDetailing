@@ -6,20 +6,19 @@ import { AuthController } from './auth/auth.controller';
 import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { configService } from './config/config.service';
-import { ProductoController } from './producto/producto.controller';
-import { ProductoModule } from './producto/producto.module';
-import { OrdenService } from './orden/orden.service';
-import { OrdenModule } from './orden/orden.module';
-import { CategoriaController } from './categoria/categoria.controller';
-import { CategoriaModule } from './categoria/categoria.module';
+import { ServicioController } from './servicio/servicio.controller';
+import { ServicioModule } from './servicio/servicio.module';
+import { TurnoController } from './turno/turno.controller';
+import { CarController } from './car/car.controller';
+import { CarService } from './car/car.service';
+import { CarModule } from './car/car.module';
 
 
 @Module({
-  
   imports: [
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
-    UserModule, AuthModule, ProductoModule, OrdenModule, CategoriaModule],
-  controllers: [AppController, AuthController, ProductoController, CategoriaController],
-  providers: [AppService, OrdenService],
+    UserModule, AuthModule, ServicioModule, CarModule],
+  controllers: [AppController, AuthController, ServicioController, TurnoController, CarController],
+  providers: [AppService, CarService],
 })
 export class AppModule {}
