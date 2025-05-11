@@ -4,7 +4,6 @@ import { CalendarDays, Car, Clock, MapPin, Phone, Shield, Sparkles, Wrench } fro
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import FooterDefault from "./footer"
-import Head from "next/head"
 
 export default function Home() {
   return (
@@ -22,7 +21,6 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-red-600/90 to-blue-800/90 z-10" />
           <div
             className="h-[500px] bg-cover bg-center"
-            style={{ backgroundImage: "url('/placeholder.svg?height=500&width=1200')" }}
           />
           <div className="container absolute inset-0 z-20 flex flex-col items-center justify-center text-center text-white">
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">

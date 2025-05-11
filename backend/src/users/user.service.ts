@@ -37,6 +37,13 @@ export class UserService {
         return await this.userRepository.findOne({ where: { username } });
     }
 
-
+    //verificar, no controle este metodo
+    async login(username: string, password: string): Promise<any> {
+        const user = await this.userRepository.findOne({ where: { username, password } });
+        if (!user) {
+            throw new Error('Invalid credentials');
+        }
+        return user;
+    }
 
 }

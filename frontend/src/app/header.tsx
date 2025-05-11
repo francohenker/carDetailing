@@ -10,28 +10,28 @@ export default function HeaderDefault() {
 
                 <div className="flex items-center gap-2">
                     <Car className="h-6 w-6 text-red-600" />
-                    <a href="/" className="text-xl font-bold text-base-content">CarDetailing</a>
+                    <a href="/" className="text-2xl font-bold text-base-content">CarDetailing</a>
                 </div>
 
-                    <nav className="text-base-content absolute left-1/2 transform -translate-x-1/2 hidden md:flex gap-6 items-center">
-                        {/* <Link href="/" className="text-sm font-medium hover:text-red-600 transition-colors">
+                <nav className="text-base-content absolute left-1/2 transform -translate-x-1/2 hidden md:flex gap-6 items-center">
+                    {/* <Link href="/" className="text-sm font-medium hover:text-red-600 transition-colors">
                             Inicio
                         </Link> */}
-                        <Link href="/servicios" className="text-sm font-medium hover:text-red-600 transition-colors">
-                            Servicios
-                        </Link>
-                        <Link href="/turno" className="text-sm font-medium hover:text-red-600 transition-colors">
-                            Reservar Turno
-                        </Link>
-                        <Link href="#contacto" className="text-sm font-medium hover:text-red-600 transition-colors">
-                            Contacto
-                        </Link>
-                    </nav>
+                    <Link href="/servicios" className="text-lg font-medium hover:text-red-600 transition-colors">
+                        Servicios
+                    </Link>
+                    <Link href="/turno" className="text-lg font-medium hover:text-red-600 transition-colors">
+                        Reservar Turno
+                    </Link>
+                    <Link href="#contacto" className="text-lg font-medium hover:text-red-600 transition-colors">
+                        Contacto
+                    </Link>
+                </nav>
 
                 <div className="ml-auto flex items-center gap-4 ">
 
                     {/* <button className="btn btn-soft">Iniciar Sesión</button> */}
-                    
+
                     <Button variant="outline" size="icon" className="md:hidden">
                         <span className="sr-only">Menú</span>
                         <svg
@@ -47,12 +47,27 @@ export default function HeaderDefault() {
                 </div>
 
                 <ThemeToggleButton />
-                <div className="avatar avatar-placeholder px-4">
-                    <div className="bg-neutral text-neutral-content w-14 rounded-full">
-                        <span className="text-xl">F</span>
+                <div className="dropdown dropdown-end px-2 ">
+                    <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
+                        <div className="bg-neutral text-neutral-content w-14 rounded-full">
+                            <span className="text-2xl">F</span>
+                        </div>
                     </div>
+                    <ul
+                        tabIndex={0}
+                        className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+                        <li>
+                            <a className="justify-between">
+                                Profile
+                                {/* <span className="badge">New</span> */}
+                            </a>
+                        </li>
+                        <li><a>Settings</a></li>
+                        <li><a>Logout</a></li>
+                    </ul>
                 </div>
             </div>
+
         </header>
     )
 }
