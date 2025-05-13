@@ -22,9 +22,16 @@ export class UserController {
     // IMPLEMENTAR JWT PARA TERMINAR ESTA FUNCION
     @Post('login')
     async login(@Body('username') username: string, @Body('password') password: string) {
-        const user = await this.userService.login(username, password);
+        try {
+            return await this.userService.login(username, password);            
+        } catch (error) {
+            return {
+                statusCode: 401,
+                message: 'Invalid credentials',
+            };
+        }
         
-        return 'asd';
+        
     }
 
 }

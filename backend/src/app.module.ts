@@ -13,14 +13,17 @@ import { CarController } from './car/car.controller';
 import { CarService } from './car/car.service';
 import { CarModule } from './car/car.module';
 import { UserService } from './users/user.service';
+import { AuthService } from './auth/auth.service';
+import { ConfigModule } from '@nestjs/config';
 
 
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
     UserModule, AuthModule, ServicioModule, CarModule],
   controllers: [AppController, AuthController, ServicioController, TurnoController, CarController],
   providers: [AppService, CarService, UserService],
   exports: [TypeOrmModule, UserService, TypeOrmModule],
 })
-export class AppModule {}
+export class AppModule { }
