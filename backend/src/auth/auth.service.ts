@@ -27,10 +27,6 @@ export class AuthService {
 
 
     async generateAccessToken(user: Users) {
-        // const user = await this.usersService.getUserByName(name);
-        // const user = await this.usersRepository.findOneBy({
-        //     nickname: username,
-        // });
         const payload = { name: user.username, userId: user.id, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),

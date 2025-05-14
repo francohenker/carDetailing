@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserService } from './user.service';
 import { Role } from 'src/enums/role';
@@ -6,12 +6,15 @@ import { STATUS_CODES } from 'http';
 
 @Controller('user')
 export class UserController {
-    constructor(private readonly userService: UserService) {}
-    
+    constructor(private readonly userService: UserService) { }
+
     @Post('register')
     async create(@Body() createUserDto: CreateUserDto) {
         await this.userService.create(createUserDto);
-        return STATUS_CODES[201];
+        return {
+            statusCode: 201,
+            message: 'User created successfully',
+        }
     }
 
     @Post('change-role')
@@ -19,19 +22,9 @@ export class UserController {
         return this.userService.changeRole(id, role);
     }
 
-    // IMPLEMENTAR JWT PARA TERMINAR ESTA FUNCION
     @Post('login')
     async login(@Body('username') username: string, @Body('password') password: string) {
-        try {
-            return await this.userService.login(username, password);            
-        } catch (error) {
-            return {
-                statusCode: 401,
-                message: 'Invalid credentials',
-            };
-        }
-        
-        
+        return await this.userService.login(username, password);
     }
 
 }

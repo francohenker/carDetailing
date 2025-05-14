@@ -36,7 +36,8 @@ export default function register() {
                 alert('Usuario creado con éxito')
                 window.location.href = '/login'
                 // Podés redirigir o mostrar notificación acá
-
+            }else{
+                alert('Error al crear el usuario')
             }
         } catch (error) {
             alert('Error al crear el usuario')

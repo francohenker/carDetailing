@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { Users } from './entities/users.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -40,27 +40,19 @@ export class UserService {
         return await this.userRepository.findOne({ where: { username } });
     }
 
-    //verificar, no controle este metodo
     async login(username: string, password: string): Promise<any> {
-        // const user = await this.userRepository.findOne({ where: { username, password } });
-        // if (!user) {
-        //     throw new Error('Invalid credentials');
-        // }
-        // return user;
-
         const user = await this.userRepository.findOneBy({username});
         if(!user){
-            throw new Error('User not found');
+            throw new HttpException('User not found', 404);
         }
-
-        if(bcrypt.compareSync("GOOGLE_ENTRY", user.password)){
-            throw new Error('User or password incorrect');
-        }
+        // if(bcrypt.compareSync("GOOGLE_ENTRY", user.password)){
+        //     throw new Error('User or password incorrect');
+        // }
         
         if(bcrypt.compareSync(password, user.password)){
             return this.authService.generateAccessToken(user);
         }
-        throw new Error('User or password incorrect');
+        throw new HttpException('User or password incorrect', 401);
     }
 
 }
