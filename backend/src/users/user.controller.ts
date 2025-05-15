@@ -1,8 +1,7 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserService } from './user.service';
 import { Role } from 'src/enums/role';
-import { STATUS_CODES } from 'http';
 
 @Controller('user')
 export class UserController {
@@ -27,4 +26,28 @@ export class UserController {
         return await this.userService.login(username, password);
     }
 
+    @Get('profile')
+    async getProfile(@Body('id') username: string) {
+        const user = await this.userService.findOne(username);
+        return {
+            statusCode: 200,
+            message: 'User profile retrieved successfully',
+            data: user,
+        }
+    }
+
+    @Get('validate-token')
+    async validateToken(@Req() request): Promise<any> {
+        const user = await this.userService.validateToken(request.headers.authorization);
+        if (!user) {
+            return {
+                statusCode: 401,
+                message: 'Invalid token',
+            }
+        }
+        return {
+            statusCode: 200,
+            message: 'Token is valid',
+        }
+    }
 }

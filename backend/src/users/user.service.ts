@@ -18,10 +18,10 @@ export class UserService {
 
     async create(createUserDto: CreateUserDto): Promise<any> {
         const user = new Users(
-            createUserDto.username, 
-            createUserDto.password, 
-            createUserDto.email, 
-            createUserDto.telefono, 
+            createUserDto.username,
+            createUserDto.password,
+            createUserDto.email,
+            createUserDto.telefono,
             Role.USER);
         const newUser = this.userRepository.create(user);
         return await this.userRepository.save(newUser);
@@ -41,18 +41,33 @@ export class UserService {
     }
 
     async login(username: string, password: string): Promise<any> {
-        const user = await this.userRepository.findOneBy({username});
-        if(!user){
+        const user = await this.userRepository.findOneBy({ username });
+        if (!user) {
             throw new HttpException('User not found', 404);
         }
         // if(bcrypt.compareSync("GOOGLE_ENTRY", user.password)){
         //     throw new Error('User or password incorrect');
         // }
-        
-        if(bcrypt.compareSync(password, user.password)){
+
+        if (bcrypt.compareSync(password, user.password)) {
             return this.authService.generateAccessToken(user);
         }
         throw new HttpException('User or password incorrect', 401);
     }
+    
+    async getProfile(id: number): Promise<any> {
+        const user = await this.userRepository.findOne({ where: { id } });
+        if (!user) {
+            throw new HttpException('User not found', 404);
+        }
+        return user;
+    }
 
+    async validateToken(token: string): Promise<any> {
+        const payload = await this.authService.validateToken(token);
+        if (!payload) {
+            throw new HttpException('Invalid token', 401);
+        }
+        return payload;
+    }  
 }

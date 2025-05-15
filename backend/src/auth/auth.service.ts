@@ -30,8 +30,18 @@ export class AuthService {
         const payload = { name: user.username, userId: user.id, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),
-            
+
         };
+    }
+
+    async validateToken(token: string) {
+        try {
+            const decoded = this.jwtService.verify(token); // Verifica firma y expiración
+            return decoded;
+        } catch (error) {
+            throw new UnauthorizedException('Token inválido o caducado');
+        }
+
     }
 
 
