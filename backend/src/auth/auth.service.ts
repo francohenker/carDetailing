@@ -41,7 +41,6 @@ export class AuthService {
         } catch (error) {
             throw new UnauthorizedException('Token inválido o caducado');
         }
-
     }
 
 

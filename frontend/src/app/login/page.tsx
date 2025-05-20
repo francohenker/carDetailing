@@ -12,7 +12,7 @@ export default function login() {
 
     const handlerLogin = async () => {
         try {
-            const response = await fetch("http://localhost:4000/user/login", {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/login`, {
                 // const response = await fetch(process.env.HOST_URL + "/user/login",{
                 method: 'POST',
                 headers: {

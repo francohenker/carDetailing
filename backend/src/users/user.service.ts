@@ -54,7 +54,7 @@ export class UserService {
         }
         throw new HttpException('User or password incorrect', 401);
     }
-    
+
     async getProfile(id: number): Promise<any> {
         const user = await this.userRepository.findOne({ where: { id } });
         if (!user) {
@@ -64,10 +64,16 @@ export class UserService {
     }
 
     async validateToken(token: string): Promise<any> {
-        const payload = await this.authService.validateToken(token);
+        var payload = "";
+        if (token && token.startsWith('Bearer ')) {
+            payload = token.split(' ')[1]; // Extraer solo el token
+        } else {
+            payload = null;
+        }
+        payload = await this.authService.validateToken(payload);
         if (!payload) {
             throw new HttpException('Invalid token', 401);
         }
         return payload;
-    }  
+    }
 }

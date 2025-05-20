@@ -25,7 +25,7 @@ export default function register() {
 
     const registerUser = async () => {
         try {
-            const res = await fetch('http://localhost:4000/user/register', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -37,6 +37,7 @@ export default function register() {
                 window.location.href = '/login'
                 // Podés redirigir o mostrar notificación acá
             }else{
+                alert('Error: ' + res.statusText)
                 alert('Error al crear el usuario')
             }
         } catch (error) {

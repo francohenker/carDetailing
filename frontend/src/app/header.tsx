@@ -1,9 +1,22 @@
+'use client'
 import { Button } from "@/components/ui/button"
 import { Car } from "lucide-react"
 import Link from "next/link"
 import ThemeToggleButton from "./ThemeToggle";
+import { removeItem } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export default function HeaderDefault() {
+    
+    const handlerLogout = () => {
+        if (typeof window !== "undefined") {
+            localStorage.removeItem("jwt");
+            window.location.href = "/";
+        }
+    }
+
+    
+
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/0" >
             <div className="container flex h-16 items-center px-4" >
@@ -57,13 +70,13 @@ export default function HeaderDefault() {
                         tabIndex={0}
                         className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
                         <li>
-                            <a className="justify-between">
-                                Profile
+                            <a href='/user/profile' className="justify-between">
+                                Perfil
                                 {/* <span className="badge">New</span> */}
                             </a>
                         </li>
-                        <li><a>Settings</a></li>
-                        <li><a>Logout</a></li>
+                        <li><a href="/user/settings">Configuración</a></li>
+                        <li><a onClick={handlerLogout}>Cerrar sesión</a></li>
                     </ul>
                 </div>
             </div>

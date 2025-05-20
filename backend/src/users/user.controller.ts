@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserService } from './user.service';
 import { Role } from 'src/enums/role';
@@ -27,13 +27,14 @@ export class UserController {
     }
 
     @Get('profile')
-    async getProfile(@Body('id') username: string) {
-        const user = await this.userService.findOne(username);
-        return {
-            statusCode: 200,
-            message: 'User profile retrieved successfully',
-            data: user,
+    async getProfile(@Req() request): Promise<any> {
+        const jwt = await this.userService.validateToken(request.headers.authorization);
+        const user = await this.userService.getProfile(jwt.userId);
+        if (!user) {
+            throw new UnauthorizedException('User not found');
         }
+
+        return user;
     }
 
     @Get('validate-token')
