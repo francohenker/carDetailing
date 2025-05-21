@@ -5,9 +5,10 @@ import Link from "next/link"
 import ThemeToggleButton from "./ThemeToggle";
 import { removeItem } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { userStore } from "./store/userStore";
 
 export default function HeaderDefault() {
-    
+
     const handlerLogout = () => {
         if (typeof window !== "undefined") {
             localStorage.removeItem("jwt");
@@ -15,7 +16,8 @@ export default function HeaderDefault() {
         }
     }
 
-    
+    const user = userStore((state) => state.user)
+    const initial = user?.name?.charAt(0).toUpperCase() ?? '?'
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/0" >
@@ -62,13 +64,13 @@ export default function HeaderDefault() {
                 <ThemeToggleButton />
                 <div className="dropdown dropdown-end px-2 ">
                     <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
-                        <div className="bg-neutral text-neutral-content w-14 rounded-full">
-                            <span className="text-2xl">F</span>
+                        <div className="text-neutral-content w-14 rounded-full bg-base-content">
+                            <span className="text-2xl text-base-100">{initial}</span>
                         </div>
                     </div>
                     <ul
                         tabIndex={0}
-                        className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+                        className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow text-base-content">
                         <li>
                             <a href='/user/profile' className="justify-between">
                                 Perfil

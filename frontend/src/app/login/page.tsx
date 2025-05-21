@@ -5,6 +5,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import HeaderDefault from "../header"
 import { useState } from "react"
+import { persist } from 'zustand/middleware'
+import { create } from 'zustand'
+import { userStore } from "../store/userStore"
+
+
 
 export default function login() {
     const [username, setUsername] = useState('')
@@ -20,17 +25,26 @@ export default function login() {
                 },
                 body: JSON.stringify({ username, password })
             })
-            if(!response.ok){
+            if (!response.ok) {
                 alert('Error al iniciar sesión');
                 return;
             }
             const data = await response.json();
             localStorage.setItem('jwt', data.access_token);
+
+            const {setUser} = userStore.getState()
+            //CAMBIAR ESTO POR EL NOMBRE DEL USUARIO
+            setUser({name: "Donpal"})              
             window.location.href = '/';
+
+
+
         } catch (error) {
             alert('Error al iniciar sesión');
         }
     }
+
+
 
     return (
         <div className="flex min-h-screen flex-col bg-base-100 bg"  >

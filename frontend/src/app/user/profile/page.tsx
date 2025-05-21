@@ -201,7 +201,7 @@ export default function UserProfile() {
                         Authorization: `Bearer ${token}`,
                     },
                 });
-                
+
                 if (!response.ok) {
                     alert("no se puedo hacer fetching del profile");
                     throw new Error("Error fetching profile");
@@ -230,7 +230,7 @@ export default function UserProfile() {
                             <ChevronLeft className="h-4 w-4" />
                             <span className="sr-only">Volver</span>
                         </Link>
-                        <h1 className="text-2xl font-bold">Mi Perfil</h1>
+                        <h1 className="text-2xl font-bold text-base-content">Mi Perfil</h1>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8">
@@ -281,20 +281,20 @@ export default function UserProfile() {
                                     <CardTitle className="text-base">Acciones rápidas</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-2">
-                                    <button className="btn btn-outline w-full justify-start">
-                                        <Link href="/">
+                                    <button className="btn btn-neutral btn-soft w-full justify-start">
+                                        <Link href="/" className="flex items-center">
                                             <Car className="mr-2 h-4 w-4" />
                                             Reservar turno
                                         </Link>
                                     </button>
-                                    <button className="btn btn-outline w-full justify-start">
-                                        <Link href="/">
+                                    <button className="btn btn-neutral btn-soft w-full justify-start">
+                                        <Link href="/" className="flex items-center">
                                             <History className="mr-2 h-4 w-4" />
                                             Ver historial completo
                                         </Link>
                                     </button>
                                     <button
-                                        className="btn btn-outline w-full justify-start text-destructive hover:text-destructive"
+                                        className="btn btn-error w-full justify-start"
                                         onClick={handleLogout}
                                     >
                                         <LogOut className="mr-2 h-4 w-4" />
@@ -306,8 +306,8 @@ export default function UserProfile() {
 
                         {/* Contenido principal */}
                         <div>
-                            <Tabs defaultValue="personal">
-                                <TabsList className="mb-6">
+                            <Tabs defaultValue="personal ">
+                                <TabsList className="mb-6 ">
                                     <TabsTrigger value="personal">
                                         <User className="h-4 w-4 mr-2" />
                                         Datos personales
@@ -373,7 +373,7 @@ export default function UserProfile() {
                                                         />
                                                     </div>
                                                 </div>
-                                                <button type="submit">
+                                                <button type="submit" className="btn btn-neutral">
                                                     <Save className="mr-2 h-4 w-4" />
                                                     Guardar cambios
                                                 </button>
@@ -392,7 +392,7 @@ export default function UserProfile() {
                                             </div>
                                             <Dialog open={isAddVehicleOpen} onOpenChange={setIsAddVehicleOpen}>
                                                 <DialogTrigger asChild>
-                                                    <button>
+                                                    <button className="btn btn-neutral btn-ghost">
                                                         <Plus className="mr-2 h-4 w-4" />
                                                         Agregar vehículo
                                                     </button>
@@ -477,10 +477,10 @@ export default function UserProfile() {
                                                         </div>
                                                     </div>
                                                     <DialogFooter>
-                                                        <button className="btn btn-outline" onClick={() => setIsAddVehicleOpen(false)}>
+                                                        <button className="btn btn-error" onClick={() => setIsAddVehicleOpen(false)}>
                                                             Cancelar
                                                         </button>
-                                                        <button onClick={handleAddVehicle}>Agregar vehículo</button>
+                                                        <button className="btn btn-success" onClick={handleAddVehicle}>Agregar vehículo</button>
                                                     </DialogFooter>
                                                 </DialogContent>
                                             </Dialog>
@@ -490,7 +490,7 @@ export default function UserProfile() {
                                                 <div className="text-center py-6">
                                                     <Car className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                                     <p className="text-muted-foreground">No tienes vehículos registrados.</p>
-                                                    <button className="btn btn-outline mt-4" onClick={() => setIsAddVehicleOpen(true)}>
+                                                    <button className="btn btn-neutral btn-ghost mt-4" onClick={() => setIsAddVehicleOpen(true)}>
                                                         <Plus className="mr-2 h-4 w-4" />
                                                         Agregar vehículo
                                                     </button>
@@ -747,14 +747,14 @@ export default function UserProfile() {
                                         </CardHeader>
                                         <CardContent>
                                             <div className="space-y-4">
-                                                <button className="btn btn-outline w-full justify-start">
+                                                <button className="btn btn-neutral btn-soft w-full justify-start">
                                                     Cambiar contraseña
                                                 </button>
-                                                <button className="btn btn-outline w-full justify-start">
+                                                <button className="btn btn-neutral btn-soft w-full justify-start">
                                                     Activar autenticación de dos factores
                                                 </button>
                                                 <button
-                                                    className="btn btn-outline w-full justify-start text-destructive hover:text-destructive"
+                                                    className="btn btn-error w-full justify-start"
                                                 >
                                                     Eliminar cuenta
                                                 </button>
