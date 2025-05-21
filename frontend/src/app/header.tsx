@@ -5,7 +5,7 @@ import Link from "next/link"
 import ThemeToggleButton from "./ThemeToggle";
 import { removeItem } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { userStore } from "./store/userStore";
+import { useUserStore } from "./store/useUserStore";
 
 export default function HeaderDefault() {
 
@@ -16,7 +16,7 @@ export default function HeaderDefault() {
         }
     }
 
-    const user = userStore((state) => state.user)
+    const user = useUserStore((state) => state.user)
     const initial = user?.name?.charAt(0).toUpperCase() ?? '?'
 
     return (

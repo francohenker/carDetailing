@@ -12,7 +12,7 @@ interface UserStore {
 }
 
 
-export const userStore = create<UserStore>()(
+export const useUserStore = create<UserStore>()(
     persist(
         (set) => ({
             user: null,

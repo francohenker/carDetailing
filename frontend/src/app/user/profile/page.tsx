@@ -186,35 +186,40 @@ export default function UserProfile() {
 
 
 
-    useEffect(() => {
-        const token = localStorage.getItem("jwt");
-        if (!token) {
-            window.location.href = "/login";
-            return;
-        }
-        const fetchData = async () => {
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/profile`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
+    // useEffect(() => {
+    //     const token = localStorage.getItem("jwt");
+    //     if (!token) {
+    //         window.location.href = "/login";
+    //         return;
+    //     }
 
-                if (!response.ok) {
-                    alert("no se puedo hacer fetching del profile");
-                    throw new Error("Error fetching profile");
-                }
+    //     const fetchData = async () => {
+    //         try {
+    //             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/profile`, {
+    //                 method: "GET",
+    //                 headers: {
+    //                     "Content-Type": "application/json",
+    //                     Authorization: `Bearer ${token}`,
+    //                 },
+    //             });
 
-                const data = await response.json();
-                setProfile(data);
-            } catch (error) {
-                console.error("Error fetching profile:", error);
-            }
-        };
-        fetchData();
-    }, [])
+    //             if (!response.ok) {
+    //                 alert("no se puedo hacer fetching del profile");
+    //                 throw new Error("Error fetching profile");
+    //             }
+
+    //             const data = await response.json();
+    //             setProfile(data);
+    //         } catch (error) {
+    //             console.error("Error fetching profile:", error);
+    //         }
+    //     };
+    //     fetchData();
+    // }, [])
+
+
+    
+
 
 
     return (
@@ -281,13 +286,13 @@ export default function UserProfile() {
                                     <CardTitle className="text-base">Acciones rápidas</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-2">
-                                    <button className="btn btn-neutral btn-soft w-full justify-start">
+                                    <button className="btn btn-neutral w-full justify-start">
                                         <Link href="/" className="flex items-center">
                                             <Car className="mr-2 h-4 w-4" />
                                             Reservar turno
                                         </Link>
                                     </button>
-                                    <button className="btn btn-neutral btn-soft w-full justify-start">
+                                    <button className="btn btn-neutral w-full justify-start">
                                         <Link href="/" className="flex items-center">
                                             <History className="mr-2 h-4 w-4" />
                                             Ver historial completo

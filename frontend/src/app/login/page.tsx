@@ -7,7 +7,7 @@ import HeaderDefault from "../header"
 import { useState } from "react"
 import { persist } from 'zustand/middleware'
 import { create } from 'zustand'
-import { userStore } from "../store/userStore"
+import { userStore } from "../store/useUserStore"
 
 
 

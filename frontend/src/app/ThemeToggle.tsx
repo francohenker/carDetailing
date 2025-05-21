@@ -25,7 +25,7 @@ export default function ThemeToggleButton() {
 
                 {/* sun icon */}
                 <svg
-                    className="swap-on h-10 w-10 fill-current"
+                    className="swap-on h-10 w-10 fill-current text-base-content"
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24">
                     <path
