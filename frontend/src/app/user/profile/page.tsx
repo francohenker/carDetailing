@@ -23,9 +23,9 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-// import { toast } from "@/hooks/use-toast"
-import HeaderDefault from "@/app/header"
 import { toast } from "@/hooks/use-toast"
+import HeaderDefault from "@/app/header"
+
 
 interface UserProfile {
     id: string
@@ -120,6 +120,7 @@ export default function UserProfile() {
             title: "Vehículo agregado",
             description: "Tu vehículo ha sido agregado correctamente.",
         })
+        
     }
 
     const handleEditVehicle = (vehicle: Vehicle) => {
@@ -218,7 +219,7 @@ export default function UserProfile() {
     // }, [])
 
 
-    
+
 
 
 
@@ -455,6 +456,8 @@ export default function UserProfile() {
                                                         <div className="space-y-2">
                                                             <Label htmlFor="licensePlate">Patente</Label>
                                                             <Input
+                                                                type="text"
+                                                                pattern="^([a-z]{3}\d{3}|[a-z]{2}\d{3}[a-z]{2})$"
                                                                 id="patente"
                                                                 name="patente"
                                                                 value={newVehicle.patente}
@@ -515,7 +518,7 @@ export default function UserProfile() {
                                                                         </div>
                                                                         <div className="mt-1 text-sm text-muted-foreground">
                                                                             <p>
-                                                                                • Color: {vehicle.color}
+                                                                                Color: {vehicle.color}
                                                                             </p>
                                                                             <p>Patente: {vehicle.patente}</p>
                                                                         </div>
@@ -612,9 +615,9 @@ export default function UserProfile() {
                                                                     <SelectValue placeholder="Seleccionar tipo" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    <SelectItem value="Sedán">Sedán</SelectItem>
+                                                                    {/* <SelectItem value="Sedán">Sedán</SelectItem>
                                                                     <SelectItem value="Hatchback">Hatchback</SelectItem>
-                                                                    <SelectItem value="SUV">SUV</SelectItem>
+                                                                    <SelectItem value="SUV">SUV</SelectItem> */}
                                                                     <SelectItem value="Camioneta">Camioneta</SelectItem>
                                                                     <SelectItem value="Deportivo">Deportivo</SelectItem>
                                                                     <SelectItem value="Otro">Otro</SelectItem>
