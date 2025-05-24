@@ -1,11 +1,13 @@
 'use client';
 
 import HeaderDefault from "@/app/header";
+import ProtectedRoute from "@/components/ProtectedRoutes";
 
 
 export default function UserSettings() {
     return (
-        <HeaderDefault />
-
+        <ProtectedRoute allowedRoles={['admin', 'user']}>
+            <HeaderDefault />
+        </ProtectedRoute>
     )
 }

@@ -5,9 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import HeaderDefault from "../header"
 import { useState } from "react"
-import { persist } from 'zustand/middleware'
-import { create } from 'zustand'
-import { userStore } from "../store/useUserStore"
+import { useUserStore } from "../store/useUserStore"
 
 
 
@@ -18,7 +16,6 @@ export default function login() {
     const handlerLogin = async () => {
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/login`, {
-                // const response = await fetch(process.env.HOST_URL + "/user/login",{
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -32,9 +29,10 @@ export default function login() {
             const data = await response.json();
             localStorage.setItem('jwt', data.access_token);
 
-            const {setUser} = userStore.getState()
-            //CAMBIAR ESTO POR EL NOMBRE DEL USUARIO
-            setUser({name: "Donpal"})              
+            const {setUser} = useUserStore.getState()
+            //
+            // useUserStore.getState().setUser({name: data.name, role: data.role})
+            setUser({name: data.name, role: data.role})              
             window.location.href = '/';
 
 
