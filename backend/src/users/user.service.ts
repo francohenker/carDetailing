@@ -18,10 +18,11 @@ export class UserService {
 
     async create(createUserDto: CreateUserDto): Promise<any> {
         const user = new Users(
-            createUserDto.username,
+            createUserDto.firstname.slice(0, 1).toUpperCase() + createUserDto.firstname.slice(1),
+            createUserDto.lastname.slice(0, 1).toUpperCase() + createUserDto.lastname.slice(1),
             createUserDto.password,
             createUserDto.email,
-            createUserDto.telefono,
+            createUserDto.phone,
             Role.USER);
         const newUser = this.userRepository.create(user);
         return await this.userRepository.save(newUser);
@@ -36,12 +37,9 @@ export class UserService {
         return await this.userRepository.save(user);
     }
 
-    async findOne(username: string): Promise<Users | null> {
-        return await this.userRepository.findOne({ where: { username } });
-    }
 
-    async login(username: string, password: string): Promise<any> {
-        const user = await this.userRepository.findOneBy({ username });
+    async login(email: string, password: string): Promise<any> {
+        const user = await this.userRepository.findOneBy({ email });
         if (!user) {
             throw new HttpException('User not found', 404);
         }
@@ -55,13 +53,24 @@ export class UserService {
         throw new HttpException('User or password incorrect', 401);
     }
 
-    async getProfile(id: number): Promise<any> {
-        const user = await this.userRepository.findOne({ where: { id } });
-        if (!user) {
-            throw new HttpException('User not found', 404);
-        }
-        return user;
+    // async getProfile(id: number): Promise<any> {
+    //     const user = await this.userRepository.findOne({ where: { id } });
+    //     if (!user) {
+    //         throw new HttpException('User not found', 404);
+    //     }
+    //     // var cars = await this.carService.findAllByUserId(id);
+
+
+    //     return user;
+    // }
+
+    async findOne(id: number): Promise<Users | null> {
+        return await this.userRepository.findOne({ where: { id } });
     }
+
+
+
+
 
     async validateToken(token: string): Promise<any> {
         var payload = "";
@@ -76,4 +85,25 @@ export class UserService {
         }
         return payload;
     }
+
+    async findUserByToken(token: string): Promise<any> {
+        const decode = await this.validateToken(token);
+        // const decode = await this.authService.validateToken(payload);
+
+        if (!decode) {
+            throw new HttpException('Invalid token', 401);
+        }
+
+        return this.userRepository.findOne({ where: { id: decode.userId } });
+
+    }
+
+    async getProfile(id: number): Promise<any> {
+        const user = await this.findOne(id);
+        if (!user) {
+            throw new HttpException('User not found', 404);
+        }
+        return user
+    }
+
 }

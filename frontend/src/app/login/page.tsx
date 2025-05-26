@@ -10,7 +10,7 @@ import { useUserStore } from "../store/useUserStore"
 
 
 export default function login() {
-    const [username, setUsername] = useState('')
+    const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
     const handlerLogin = async () => {
@@ -20,7 +20,7 @@ export default function login() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ email, password })
             })
             if (!response.ok) {
                 alert('Error al iniciar sesión');
@@ -58,11 +58,11 @@ export default function login() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="username">Nombre de usuario</Label>
+                            <Label htmlFor="email">Correo electrónico</Label>
                             <Input
-                                onChange={(e) => setUsername(e.target.value)}
-                                id="username"
-                                placeholder="Ingresa tu nombre de usuario"
+                                onChange={(e) => setEmail(e.target.value)}
+                                id="email"
+                                placeholder="Ingresa tu correo electrónico"
                                 required />
                         </div>
                         <div className="space-y-2">

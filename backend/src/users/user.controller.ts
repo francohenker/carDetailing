@@ -5,7 +5,9 @@ import { Role } from 'src/enums/role';
 
 @Controller('user')
 export class UserController {
-    constructor(private readonly userService: UserService) { }
+    constructor(
+        private readonly userService: UserService,
+    ) { }
 
     @Post('register')
     async create(@Body() createUserDto: CreateUserDto) {
@@ -22,14 +24,15 @@ export class UserController {
     }
 
     @Post('login')
-    async login(@Body('username') username: string, @Body('password') password: string) {
-        return await this.userService.login(username, password);
+    async login(@Body('email') email: string, @Body('password') password: string) {
+        return await this.userService.login(email, password);
     }
 
     @Get('profile')
     async getProfile(@Req() request): Promise<any> {
         const jwt = await this.userService.validateToken(request.headers.authorization);
         const user = await this.userService.getProfile(jwt.userId);
+
         if (!user) {
             throw new UnauthorizedException('User not found');
         }

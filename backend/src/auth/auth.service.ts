@@ -8,7 +8,6 @@ import { Repository } from 'typeorm';
 export class AuthService {
     constructor(
         // private userService: UserService,
-        // private userRepository: Repository<Users>,
         private jwtService: JwtService,
     ) { }
 
@@ -27,10 +26,10 @@ export class AuthService {
 
 
     async generateAccessToken(user: Users) {
-        const payload = { name: user.username, userId: user.id, role: user.role };
+        const payload = { name: user.firstname, userId: user.id, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),
-            name: user.username,
+            name: user.firstname,
             role: user.role,
         };
     }
@@ -44,5 +43,18 @@ export class AuthService {
         }
     }
 
+    async findUser(token: string): Promise<Users> {
+        var payload = "";
+        if (token && token.startsWith('Bearer ')) {
+            payload = token.split(' ')[1]; // Extraer solo el token
+        } else {
+            payload = null;
+        }
+        const decode = await this.validateToken(payload);
+        if (!decode) {
+            throw new UnauthorizedException('Token inválido o caducado');
+        }
+        return decode;
+    }
 
 }

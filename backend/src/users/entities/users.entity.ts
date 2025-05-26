@@ -10,27 +10,27 @@ export class Users {
     @PrimaryGeneratedColumn()
     id: number
 
-    @Column({ unique: true, type: 'varchar', length: 50 })
-    username: string
+    // @Column({ unique: true, type: 'varchar', length: 50 })
+    // username: string
 
-    // @Column({ type: 'varchar', length: 50, nullable: true })
-    // firstname: string
+    @Column({ type: 'varchar', length: 50 })
+    firstname: string
 
-    // @Column({ type: 'varchar', length: 50, unique: true })
-    // lastname: string
+    @Column({ type: 'varchar', length: 50 })
+    lastname: string
 
     @Exclude()
-    @Column({type: 'varchar', length: 100, nullable: true})
+    @Column({type: 'varchar', length: 100 })
     password: string
 
     @Column({type: 'enum', enum: Role, default: Role.USER})
     role: Role
 
-    @Column({type: 'varchar', length: 100, unique: true, nullable: true})
+    @Column({type: 'varchar', length: 100, unique: true})
     email: string
 
     @Column({type: 'varchar', length: 15, unique: true})
-    telefono: string
+    phone: string
 
     @OneToMany(() => Car, (car) => car.user)
     cars: Car[];
@@ -45,11 +45,12 @@ export class Users {
         this.password = await bcrypt.hash(this.password, salt);
     }
 
-    constructor(username: string, password: string, email: string, telefono: string, role: Role) {
-        this.username = username;
+    constructor(firstname: string, lastname: string, password: string, email: string, phone: string, role: Role) {
+        this.firstname = firstname;
+        this.lastname = lastname;
         this.password = password;
         this.email = email;
-        this.telefono = telefono;
+        this.phone = phone;
         this.role = role;
     }
 }

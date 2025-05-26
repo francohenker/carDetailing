@@ -13,10 +13,11 @@ export default function register() {
     const [success, setSuccess] = useState(false)
 
     const [formData, setFormData] = useState({
-        username: "",
+        firstname: "",
+        lastname: "",
         password: "",
         email: "",
-        telefono: "",
+        phone: "",
     })
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,8 +60,12 @@ export default function register() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="username">Nombre de usuario</Label>
-                            <Input id="username" placeholder="Ingresa un nombre de usuario" required onChange={handleChange} />
+                            <Label htmlFor="firstname">Nombre</Label>
+                            <Input id="firstname" placeholder="Ingresa tu nombre" required onChange={handleChange} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="lastname">Apellido</Label>
+                            <Input id="lastname" placeholder="Ingresa tu apellido" required onChange={handleChange} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">Contraseña</Label>
@@ -71,8 +76,8 @@ export default function register() {
                             <Input id="email" placeholder="alguien@email.com" onChange={handleChange} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="telefono">Telefono</Label>
-                            <Input id="telefono" placeholder="3758-123456" required onChange={handleChange} />
+                            <Label htmlFor="phone">Telefono</Label>
+                            <Input id="phone" placeholder="3758-123456" required onChange={handleChange} />
                         </div>
                     </CardContent>
                     <CardFooter>
