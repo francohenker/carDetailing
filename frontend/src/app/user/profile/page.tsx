@@ -181,6 +181,26 @@ export default function UserProfile() {
             setVehicles((prev) =>
                 prev.map((v) => (v.id === editingVehicle.id ? { ...editingVehicle } : v)),
             )
+            fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/car/modify`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+                },
+                body: JSON.stringify(editingVehicle),
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error("Error al actualizar el vehículo")
+                    }
+                    return response.json()
+                })
+                .then(() => {
+                    alert("Vehículo actualizado")
+                })
+                .catch((error) => {
+                    alert(error)
+                })
             setIsEditVehicleOpen(false)
             toast({
                 title: "Vehículo actualizado",

@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { createCarDto } from './dto/create-car.dto';
 import { CarService } from './car.service';
 import { UserService } from 'src/users/user.service';
+import { modifyCarDto } from './dto/modify-car.dto';
 
 @Controller('car')
 export class CarController {
@@ -23,6 +24,15 @@ export class CarController {
         const user = await this.userService.findUserByToken(request.headers.authorization);
         const cars = await this.carService.findAllByUserId(user.id);
         return cars;
+    }
+
+    // only change the color
+    @Post('modify')
+    async modifyCar(@Req() request, @Body() carData: modifyCarDto): Promise<any> {
+        const user = await this.userService.findUserByToken(request.headers.authorization);
+        // Assuming you have a method to modify the car
+        await this.carService.modify(carData, user);
+        return 'Car modified successfully';
     }
     
 

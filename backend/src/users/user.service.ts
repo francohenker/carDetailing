@@ -53,21 +53,10 @@ export class UserService {
         throw new HttpException('User or password incorrect', 401);
     }
 
-    // async getProfile(id: number): Promise<any> {
-    //     const user = await this.userRepository.findOne({ where: { id } });
-    //     if (!user) {
-    //         throw new HttpException('User not found', 404);
-    //     }
-    //     // var cars = await this.carService.findAllByUserId(id);
-
-
-    //     return user;
-    // }
 
     async findOne(id: number): Promise<Users | null> {
         return await this.userRepository.findOne({ where: { id } });
     }
-
 
 
 

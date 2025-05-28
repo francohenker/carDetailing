@@ -6,6 +6,7 @@ import { createCarDto } from './dto/create-car.dto';
 import { Users } from 'src/users/entities/users.entity';
 import { AuthService } from 'src/auth/auth.service';
 import { UserService } from 'src/users/user.service';
+import { modifyCarDto } from './dto/modify-car.dto';
 
 @Injectable()
 export class CarService {
@@ -35,6 +36,17 @@ export class CarService {
 
     async findAllByUserId(userId: number): Promise<Car[]> {
         return await this.carRepository.find({ where: { user: { id: userId } } });
+    }
+
+    async modify(carData: modifyCarDto, user: Users): Promise<Car> {
+        const car = await this.carRepository.findOne({ where: { id: carData.id, user: { id: user.id } } });
+        if (!car) {
+            throw new Error('Car not found or does not belong to the user');
+        }
+
+        car.color = carData.color.toUpperCase();
+
+        return await this.carRepository.save(car);
     }
 
 }
