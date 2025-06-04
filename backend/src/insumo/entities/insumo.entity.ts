@@ -17,4 +17,12 @@ export class Insumo {
 
     @ManyToMany(() => Servicio, (servicio) => servicio.insumo)
     servicio: Servicio[];
+
+
+    constructor(nombre: string, stock_minimo: number, stock: number) {
+        this.nombre = nombre;
+        this.stock_minimo = stock_minimo;
+        this.stock = stock;
+    }
+
 }

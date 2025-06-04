@@ -15,15 +15,17 @@ import { CarModule } from './car/car.module';
 import { UserService } from './users/user.service';
 import { AuthService } from './auth/auth.service';
 import { ConfigModule } from '@nestjs/config';
+import { TurnoService } from './turno/turno.service';
+import { TurnoModule } from './turno/turno.module';
 
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
-    UserModule, AuthModule, ServicioModule, CarModule],
+    UserModule, AuthModule, ServicioModule, CarModule, TurnoModule],
   controllers: [AppController, AuthController, ServicioController, TurnoController, CarController],
-  providers: [AppService, CarService, UserService],
+  providers: [AppService, CarService, UserService, TurnoService],
   exports: [TypeOrmModule, UserService, TypeOrmModule],
 })
 export class AppModule { }

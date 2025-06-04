@@ -3,7 +3,7 @@ import { Turno } from "src/turno/entities/turno.entity";
 import { Column, Entity, JoinTable, ManyToMany, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
-export class Servicio{
+export class Servicio {
 
     @PrimaryGeneratedColumn()
     id: number
@@ -11,16 +11,27 @@ export class Servicio{
     @Column()
     name: string
 
-    @Column()
+    @Column({ nullable: true })
     description: string
 
     @Column('decimal', { precision: 10, scale: 2 })
     precio: number
 
-    @ManyToOne(() => Turno, turno => turno.servicio)
-    turno: Turno;
+    @Column({ default: false })
+    isDeleted: boolean;
 
     @ManyToMany(() => Insumo, (insumo) => insumo.servicio)
     @JoinTable()
     insumo: Insumo[];
+
+    @ManyToMany(() => Turno, (turno) => turno.servicio)
+    @JoinTable()
+    turno: Turno[];
+
+
+    constructor(name: string, description: string, precio: number) {
+        this.name = name;
+        this.description = description;
+        this.precio = precio;
+    }
 }

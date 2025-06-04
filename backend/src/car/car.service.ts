@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, HttpException, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Car } from './entities/car.entity';
 import { Repository } from 'typeorm';
@@ -41,7 +41,7 @@ export class CarService {
     async modify(carData: modifyCarDto, user: Users): Promise<Car> {
         const car = await this.carRepository.findOne({ where: { id: carData.id, user: { id: user.id } } });
         if (!car) {
-            throw new Error('Car not found or does not belong to the user');
+            throw new HttpException('Car not found or does not belong to the user', 404);
         }
 
         car.color = carData.color.toUpperCase();

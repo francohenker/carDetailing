@@ -31,7 +31,7 @@ export class UserService {
     async changeRole(id: number, role: Role): Promise<any> {
         const user = await this.userRepository.findOne({ where: { id } });
         if (!user) {
-            throw new Error('User not found');
+            throw new HttpException('User not found', 404);
         }
         user.role = role;
         return await this.userRepository.save(user);
