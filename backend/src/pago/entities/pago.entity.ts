@@ -24,4 +24,5 @@ export class Pago {
     @OneToOne(() => Turno, (turno) => turno.pago)
     turno: Turno;
 
+    
 }

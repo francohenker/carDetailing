@@ -13,16 +13,16 @@ export class Insumo {
     stock_minimo: number;
     
     @Column({type: 'decimal', precision: 10, scale: 2})
-    stock: number;
+    stock_actual: number;
 
     @ManyToMany(() => Servicio, (servicio) => servicio.insumo)
     servicio: Servicio[];
 
 
-    constructor(nombre: string, stock_minimo: number, stock: number) {
+    constructor(nombre: string, stock_minimo: number, stock_actual: number) {
         this.nombre = nombre;
         this.stock_minimo = stock_minimo;
-        this.stock = stock;
+        this.stock_actual = stock_actual;
     }
 
 }
