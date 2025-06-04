@@ -1,9 +1,10 @@
-import { Type } from "class-transformer";
-import { ArrayNotEmpty, IsArray, IsDate, IsEnum, IsInt, IsString, ValidateNested } from "class-validator";
+import { ArrayNotEmpty, IsArray, IsDate, IsEnum, IsInt, IsString } from "class-validator";
 import { estado_turno } from "src/enums/estado_turno.enum";
-import { Servicio } from "src/servicio/entities/servicio.entity";
 
-export class CreateTurnoDto {
+export class ModifyTurnoDto {
+    @IsInt()
+    id: number;
+
     @IsDate()
     fechaHora: Date;
 
@@ -17,5 +18,4 @@ export class CreateTurnoDto {
     @ArrayNotEmpty()
     @IsInt({ each: true })
     servicios: number[];
-
 }

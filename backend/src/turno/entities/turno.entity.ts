@@ -12,7 +12,7 @@ export class Turno {
     @ManyToOne(() => Car, (Car) => Car.turno)
     car: Car
 
-    @Column({ type: 'timestamp' })
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     fechaHora: Date
 
     @Column()
@@ -24,17 +24,15 @@ export class Turno {
     @ManyToMany(() => Servicio, (Servicio) => Servicio.turno)
     servicio: Servicio[]
 
+    // @Column({ nullable: true })
     @OneToOne(() => Pago, (pago) => pago.turno)
     pago: Pago
 
 
-    constructor(id: number, car: Car, fechaHora: Date, estado: estado_turno, observacion: string, servicio: Servicio[], pago: Pago) {
-        this.id = id;
+    constructor(car: Car, estado: estado_turno, observacion: string, servicio: Servicio[]) {
         this.car = car;
-        this.fechaHora = fechaHora;
         this.estado = estado;
         this.observacion = observacion;
         this.servicio = servicio;
-        this.pago = pago;
     }
 }

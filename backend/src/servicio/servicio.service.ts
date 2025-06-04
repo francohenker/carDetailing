@@ -1,7 +1,7 @@
 import { HttpException, Injectable, UsePipes } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Servicio } from './entities/servicio.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateServicioDto } from './dto/create.servicio.dto';
 import { ModifyServicioDto } from './dto/modify.servicio.dto';
 
@@ -12,7 +12,7 @@ export class ServicioService {
         private servicioRepository: Repository<Servicio>,
     ) { }
 
-    
+
     async create(servicio: CreateServicioDto): Promise<Servicio> {
         const service = new Servicio(servicio.name, servicio.description, servicio.precio);
         return this.servicioRepository.save(service);
@@ -39,5 +39,20 @@ export class ServicioService {
     }
 
 
+    async findByIds(ids: number[]): Promise<Servicio[]> {
+        const servicios = await this.servicioRepository.find({
+            where: {
+                id: In(ids),
+                isDeleted: false,
+            },
+        });
+        if (servicios.length === 0) {
+            throw new HttpException('No servicios found', 404);
+        }
+        if( servicios.length !== ids.length) {
+            throw new HttpException("One o more servicios not found for ids", 404);
+        }
+        return servicios;
+    }
 
 }

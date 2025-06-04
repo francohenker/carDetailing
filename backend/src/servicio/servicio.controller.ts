@@ -40,7 +40,6 @@ export class ServicioController {
     @Roles(Role.ADMIN)
     async deleteServicio(@Body() body): Promise<any> {
         return this.servicioService.delete(body.id);
-
     }
 
 

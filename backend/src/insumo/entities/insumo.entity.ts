@@ -18,6 +18,9 @@ export class Insumo {
     @ManyToMany(() => Servicio, (servicio) => servicio.insumo)
     servicio: Servicio[];
 
+    @Column({ default: false })
+    isDeleted: boolean;
+
 
     constructor(nombre: string, stock_minimo: number, stock_actual: number) {
         this.nombre = nombre;

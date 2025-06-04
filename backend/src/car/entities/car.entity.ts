@@ -1,7 +1,7 @@
 import { TIPO_AUTO } from "src/enums/tipo_auto.enum";
 import { Turno } from "src/turno/entities/turno.entity";
 import { Users } from "src/users/entities/users.entity";
-import { Column, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class Car{
@@ -28,6 +28,9 @@ export class Car{
 
     @OneToMany(() => Turno, (Turno) => Turno.car)
     turno: Turno
+
+    @Column({ default: false })
+    isDeleted: boolean;
 
 
     constructor(user: Users, marca: string, model: string, patente: string, color: string, type: TIPO_AUTO) {

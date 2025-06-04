@@ -38,6 +38,15 @@ export class CarService {
         return await this.carRepository.find({ where: { user: { id: userId } } });
     }
 
+    async findById(carId: number): Promise<Car> {
+        const car = await this.carRepository.findOne({ where: { id: carId } });
+        if (!car) {
+            throw new HttpException('Car not found', 404);
+        }
+        return car;
+    }
+
+
     async modify(carData: modifyCarDto, user: Users): Promise<Car> {
         const car = await this.carRepository.findOne({ where: { id: carData.id, user: { id: user.id } } });
         if (!car) {
