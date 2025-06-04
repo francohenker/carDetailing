@@ -1,7 +1,7 @@
 import { BeforeInsert, Column, Entity, OneToMany, PrimaryGeneratedColumn, } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
-import { Role } from 'src/enums/role';
+import { Role } from '../../roles/role.enum';
 import { Car } from 'src/car/entities/car.entity';
 
 

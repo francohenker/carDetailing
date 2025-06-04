@@ -26,17 +26,17 @@ export class AuthService {
 
 
     async generateAccessToken(user: Users) {
-        const payload = { name: user.firstname, userId: user.id, role: user.role };
+        const payload = { name: user.email, userId: user.id, role: user.role };
         return {
-            access_token: this.jwtService.sign(payload),
-            name: user.firstname,
+            access_token: this.jwtService.sign(payload, { secret: process.env.JWT_SECRET }),
+            name: user.email,
             role: user.role,
         };
     }
 
     async validateToken(token: string) {
         try {
-            const decoded = this.jwtService.verify(token); // Verifica firma y expiración
+            const decoded = this.jwtService.verify(token, { secret: process.env.JWT_SECRET }); // Verifica firma y expiración
             return decoded;
         } catch (error) {
             throw new UnauthorizedException('Token inválido o caducado');

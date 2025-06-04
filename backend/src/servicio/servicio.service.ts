@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable, UsePipes } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Servicio } from './entities/servicio.entity';
 import { Repository } from 'typeorm';
@@ -12,6 +12,7 @@ export class ServicioService {
         private servicioRepository: Repository<Servicio>,
     ) { }
 
+    
     async create(servicio: CreateServicioDto): Promise<Servicio> {
         const service = new Servicio(servicio.name, servicio.description, servicio.precio);
         return this.servicioRepository.save(service);

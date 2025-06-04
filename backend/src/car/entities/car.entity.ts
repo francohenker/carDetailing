@@ -1,4 +1,4 @@
-import { TIPO_AUTO } from "src/enums/tipo_auto";
+import { TIPO_AUTO } from "src/enums/tipo_auto.enum";
 import { Turno } from "src/turno/entities/turno.entity";
 import { Users } from "src/users/entities/users.entity";
 import { Column, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";

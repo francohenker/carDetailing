@@ -1,6 +1,6 @@
 
-import { estado_pago } from 'src/enums/estado_pago';
-import { metodo_pago } from 'src/enums/metodo_pago';
+import { estado_pago } from 'src/enums/estado_pago.enum';
+import { metodo_pago } from 'src/enums/metodo_pago.enum';
 import { Turno } from 'src/turno/entities/turno.entity';
 import { Column, Entity, PrimaryGeneratedColumn, OneToOne } from 'typeorm';
 

@@ -1,4 +1,4 @@
-import { TIPO_AUTO } from "../../enums/tipo_auto";
+import { TIPO_AUTO } from "../../enums/tipo_auto.enum";
 export class createCarDto {
     marca: string;
     model: string;

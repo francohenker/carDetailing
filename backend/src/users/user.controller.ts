@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Req, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserService } from './user.service';
-import { Role } from 'src/enums/role';
+import { Role } from '../roles/role.enum';
 
 @Controller('user')
 export class UserController {
