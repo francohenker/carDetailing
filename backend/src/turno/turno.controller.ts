@@ -1,4 +1,4 @@
-import { Body, Controller, HttpException, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, Post, Req, UseGuards } from '@nestjs/common';
 import { TurnoService } from './turno.service';
 import { Turno } from './entities/turno.entity';
 import { CreateTurnoDto } from './dto/create.turno.dto';
@@ -6,6 +6,8 @@ import { Car } from 'src/car/entities/car.entity';
 import { CarService } from 'src/car/car.service';
 import { HttpErrorByCode } from '@nestjs/common/utils/http-error-by-code.util';
 import { ModifyTurnoDto } from './dto/modify.turno.dto';
+import { TurnoOwnerGuard } from 'src/auth/turno.owner.guard';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('turno')
 export class TurnoController {
@@ -26,9 +28,23 @@ export class TurnoController {
         return this.turnoService.createTurno(car, createTurnoDto);
     }
 
+    @UseGuards(TurnoOwnerGuard)
     @Post('modify')
     async modifyTurno(@Req() request, @Body() modifyTurnoDto: ModifyTurnoDto): Promise<string> {
         return this.turnoService.modifyTurno(modifyTurnoDto);
+    }
+
+    @Get(':id')
+    async findTurnoById(@Req() request): Promise<Turno> {
+        const turnoId = parseInt(request.params.id, 10);
+        if (isNaN(turnoId)) {
+            throw new HttpException('Invalid turno ID', 400);
+        }
+        const turno = await this.turnoService.findById(turnoId);
+        if (!turno) {
+            throw new HttpException('Turno not found', 404);
+        }
+        return turno;
     }
 
     // @Post('delete')

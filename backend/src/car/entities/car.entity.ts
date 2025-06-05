@@ -27,7 +27,7 @@ export class Car{
     type: TIPO_AUTO
 
     @OneToMany(() => Turno, (Turno) => Turno.car)
-    turno: Turno
+    turno: Turno[];
 
     @Column({ default: false })
     isDeleted: boolean;

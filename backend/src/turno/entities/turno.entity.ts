@@ -2,7 +2,7 @@ import { Car } from "src/car/entities/car.entity";
 import { estado_turno } from "src/enums/estado_turno.enum";
 import { Pago } from "src/pago/entities/pago.entity";
 import { Servicio } from "src/servicio/entities/servicio.entity";
-import { Column, Entity, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinTable, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class Turno {
@@ -22,6 +22,7 @@ export class Turno {
     observacion: string
 
     @ManyToMany(() => Servicio, (Servicio) => Servicio.turno)
+    @JoinTable()
     servicio: Servicio[]
 
     // @Column({ nullable: true })

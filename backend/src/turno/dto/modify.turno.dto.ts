@@ -3,7 +3,7 @@ import { estado_turno } from "src/enums/estado_turno.enum";
 
 export class ModifyTurnoDto {
     @IsInt()
-    id: number;
+    turnoId: number;
 
     @IsDate()
     fechaHora: Date;

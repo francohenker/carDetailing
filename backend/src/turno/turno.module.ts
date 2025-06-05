@@ -6,10 +6,11 @@ import { TurnoController } from './turno.controller';
 import { CarModule } from 'src/car/car.module';
 import { CarService } from 'src/car/car.service';
 import { ServicioModule } from 'src/servicio/servicio.module';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
     imports: [ServicioModule, CarModule, TypeOrmModule.forFeature([Turno])],
-    providers: [TurnoService, CarService],
+    providers: [TurnoService, CarService, JwtService],
     controllers: [TurnoController],
     exports: [TypeOrmModule],
 })

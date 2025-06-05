@@ -25,7 +25,6 @@ export class Servicio {
     insumo: Insumo[];
 
     @ManyToMany(() => Turno, (turno) => turno.servicio)
-    @JoinTable()
     turno: Turno[];
 
 
