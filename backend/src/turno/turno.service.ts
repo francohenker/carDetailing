@@ -16,28 +16,34 @@ export class TurnoService {
     ) {}
 
     
-    async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
+    async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<string> {
         const servicios = await this.servicioService.findByIds(turnoView.servicios);
         const newTurno = new Turno(car, turnoView.estado, turnoView.observacion, servicios);
         const turno = this.turnoRepository.create(newTurno);
-        return this.turnoRepository.save(turno);
+        this.turnoRepository.save(turno);
+        return "Turno created successfully";
     }
 
-    //implementar todavia, VERIFICAR!!!!!!!!!!
-    async modifyTurno(turno: ModifyTurnoDto): Promise<Turno> {
+    //VERIFICAR!!!!!!!!!!, agregar validaciones con respecto a la fecha (y posiblemente a los demas campos, try no funciona como deberia)
+    async modifyTurno(turno: ModifyTurnoDto): Promise<string> {
         const existingTurno = await this.turnoRepository.findOneBy({ id: turno.id });
         if (!existingTurno) {
             throw new HttpException('Turno not found', 404);
         }
+        try{
+            existingTurno.fechaHora = turno.fechaHora;
+            existingTurno.estado = turno.estado;
+            existingTurno.observacion = turno.observacion;
+    
+            const servicios = await this.servicioService.findByIds(turno.servicios);
+            existingTurno.servicio = servicios;
+            this.turnoRepository.save(existingTurno);
 
-        existingTurno.fechaHora = turno.fechaHora;
-        existingTurno.estado = turno.estado;
-        existingTurno.observacion = turno.observacion;
+        }catch (error) {
+            throw new HttpException('Error modifying Turno: ' + error.message, 500);
+        }
 
-        const servicios = await this.servicioService.findByIds(turno.servicios);
-        existingTurno.servicio = servicios;
-
-        return this.turnoRepository.save(existingTurno);
+        return "Turno modified successfully";
     }
 
 

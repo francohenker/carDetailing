@@ -4,6 +4,9 @@ import { estado_turno } from "src/enums/estado_turno.enum";
 import { Servicio } from "src/servicio/entities/servicio.entity";
 
 export class CreateTurnoDto {
+    @IsInt()
+    carId: number;
+
     @IsDate()
     fechaHora: Date;
 
