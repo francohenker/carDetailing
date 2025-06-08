@@ -20,6 +20,7 @@ import { TurnoModule } from './turno/turno.module';
 import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './roles/role.guard';
 import { JwtModule, JwtService } from '@nestjs/jwt';
+import { PagoModule } from './pago/pago.module';
 
 
 @Module({
@@ -30,7 +31,7 @@ import { JwtModule, JwtService } from '@nestjs/jwt';
     }),
     ConfigModule.forRoot(),
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
-    UserModule, AuthModule, ServicioModule, CarModule, TurnoModule],
+    UserModule, AuthModule, ServicioModule, CarModule, TurnoModule, PagoModule],
   controllers: [AppController, AuthController, ServicioController, TurnoController, CarController],
   providers: [AppService, CarService, UserService, TurnoService, JwtService,
     // {

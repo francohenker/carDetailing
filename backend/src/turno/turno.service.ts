@@ -41,6 +41,7 @@ export class TurnoService {
 
         }catch (error) {
             throw new HttpException('Error modifying Turno: ' + error.message, 500);
+            
         }
 
         return "Turno modified successfully";

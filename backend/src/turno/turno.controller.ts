@@ -8,19 +8,14 @@ import { HttpErrorByCode } from '@nestjs/common/utils/http-error-by-code.util';
 import { ModifyTurnoDto } from './dto/modify.turno.dto';
 import { TurnoOwnerGuard } from 'src/auth/turno.owner.guard';
 import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from 'src/roles/role.guard';
 
 @Controller('turno')
 export class TurnoController {
     constructor(
-        // private userService: UserService,
         private carService: CarService,
         private turnoService: TurnoService,
     ) { }
-
-    //use only for extracting user from request
-    // private getUserFromRequest(@Req() request): any {
-    //     return this.userService.findUserByToken(request.headers.authorization);
-    // }
 
     @Post('create')
     async createTurno(@Req() request, @Body() createTurnoDto: CreateTurnoDto): Promise<any> {
@@ -34,6 +29,7 @@ export class TurnoController {
         return this.turnoService.modifyTurno(modifyTurnoDto);
     }
 
+    //use in tests only for now
     @Get(':id')
     async findTurnoById(@Req() request): Promise<Turno> {
         const turnoId = parseInt(request.params.id, 10);

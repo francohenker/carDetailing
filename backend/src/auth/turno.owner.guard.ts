@@ -26,8 +26,12 @@ export class TurnoOwnerGuard implements CanActivate {
             throw new HttpException('Turno not found', 404);
         }
 
-        // Aquí depende de tu lógica: ¿el turno está asociado a qué entidad?
-        const userTurno = turno.car.user;
+        
+        const userTurno = turno.car.user; // el usuario asociado al turno
+        
+        
+        // Verifica si el usuario del token es el mismo que el usuario del turno
+        //VER SI ES NECESARIO AGREGAR EL ADMIN COMO POSIBLE MODIFICADOR DEL TURNO !!!!!!
         if (!user || userTurno.id !== user.id) {
             throw new HttpException('You do not have permission to delete this turno', 403);
         }
