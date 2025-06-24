@@ -11,38 +11,36 @@ import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('servicio')
 export class ServicioController {
-    constructor(
-        private servicioService: ServicioService,
-        private userService: UserService,
-    ) {}
+  constructor(
+    private servicioService: ServicioService,
+    private userService: UserService,
+  ) {}
 
-    getUserFromRequest(@Req() request): any {
-        return this.userService.findUserByToken(request.headers.authorization);
-        
-    }
+  getUserFromRequest(@Req() request): any {
+    return this.userService.findUserByToken(request.headers.authorization);
+  }
 
-    @Post('create')
-    @UseGuards(AuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
-    async createServicio(@Body() servicio: CreateServicioDto): Promise<Servicio | null> {
-        return this.servicioService.create(servicio);
-    }
+  @Post('create')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async createServicio(
+    @Body() servicio: CreateServicioDto,
+  ): Promise<Servicio | null> {
+    return this.servicioService.create(servicio);
+  }
 
-    @Post('modify')
-    @UseGuards(AuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
-    async modifyServicio(@Body() servicio: ModifyServicioDto): Promise<Servicio | null> {
-        return this.servicioService.modify(servicio);
-
-    }
-    @Post('delete')
-    @UseGuards(AuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
-    async deleteServicio(@Body() body): Promise<any> {
-        return this.servicioService.delete(body.id);
-    }
-
-
-
-
+  @Post('modify')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async modifyServicio(
+    @Body() servicio: ModifyServicioDto,
+  ): Promise<Servicio | null> {
+    return this.servicioService.modify(servicio);
+  }
+  @Post('delete')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async deleteServicio(@Body() body): Promise<any> {
+    return this.servicioService.delete(body.id);
+  }
 }

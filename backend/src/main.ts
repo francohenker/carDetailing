@@ -13,11 +13,8 @@ async function bootstrap() {
       transform: true, // convierte tipos automáticamente
       forbidNonWhitelisted: true, // Lanza un error si hay campos no permitidos
       whitelist: true, // Permite solo campos en la entidad del dto
-    }));
-
+    }),
+  );
 }
-
-
-
 
 bootstrap();

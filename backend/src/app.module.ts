@@ -22,7 +22,6 @@ import { RolesGuard } from './roles/role.guard';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PagoModule } from './pago/pago.module';
 
-
 @Module({
   imports: [
     JwtModule.register({
@@ -31,9 +30,26 @@ import { PagoModule } from './pago/pago.module';
     }),
     ConfigModule.forRoot(),
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
-    UserModule, AuthModule, ServicioModule, CarModule, TurnoModule, PagoModule],
-  controllers: [AppController, AuthController, ServicioController, TurnoController, CarController],
-  providers: [AppService, CarService, UserService, TurnoService, JwtService,
+    UserModule,
+    AuthModule,
+    ServicioModule,
+    CarModule,
+    TurnoModule,
+    PagoModule,
+  ],
+  controllers: [
+    AppController,
+    AuthController,
+    ServicioController,
+    TurnoController,
+    CarController,
+  ],
+  providers: [
+    AppService,
+    CarService,
+    UserService,
+    TurnoService,
+    JwtService,
     // {
     //   provide: APP_GUARD,
     //   useClass: RolesGuard,
@@ -41,4 +57,4 @@ import { PagoModule } from './pago/pago.module';
   ],
   exports: [TypeOrmModule, UserService, TypeOrmModule],
 })
-export class AppModule { }
+export class AppModule {}

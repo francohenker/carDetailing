@@ -9,32 +9,32 @@ import { JwtPayload } from './jwt.payload';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-    constructor(
-        @InjectRepository(Users)
-        private readonly userRepository: Repository<Users>,
-        configService: ConfigService,
-    ) {
-        const jwtSecret = configService.get<string>('JWT_SECRET');
-        if (!jwtSecret) {
-            throw new Error('JWT_SECRET not defined');
-        }
-
-        super({
-            secretOrKey: jwtSecret,
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-        });
+  constructor(
+    @InjectRepository(Users)
+    private readonly userRepository: Repository<Users>,
+    configService: ConfigService,
+  ) {
+    const jwtSecret = configService.get<string>('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET not defined');
     }
 
-    async validate(payload: JwtPayload): Promise<Users> {
-        const { id } = payload;
-        const user = await this.userRepository.findOneBy({ id });
+    super({
+      secretOrKey: jwtSecret,
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    });
+  }
 
-        if (!user) throw new UnauthorizedException('Token no es valido');
+  async validate(payload: JwtPayload): Promise<Users> {
+    const { id } = payload;
+    const user = await this.userRepository.findOneBy({ id });
 
-        // if (!user.isActive) throw new UnauthorizedException('Usuario inactivo');
+    if (!user) throw new UnauthorizedException('Token no es valido');
 
-        console.log(user);
+    // if (!user.isActive) throw new UnauthorizedException('Usuario inactivo');
 
-        return user;
-    }
+    console.log(user);
+
+    return user;
+  }
 }

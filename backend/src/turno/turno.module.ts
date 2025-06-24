@@ -9,9 +9,9 @@ import { ServicioModule } from 'src/servicio/servicio.module';
 import { JwtService } from '@nestjs/jwt';
 
 @Module({
-    imports: [ServicioModule, CarModule, TypeOrmModule.forFeature([Turno])],
-    providers: [TurnoService, CarService, JwtService],
-    controllers: [TurnoController],
-    exports: [TypeOrmModule],
+  imports: [ServicioModule, CarModule, TypeOrmModule.forFeature([Turno])],
+  providers: [TurnoService, CarService, JwtService],
+  controllers: [TurnoController],
+  exports: [TypeOrmModule],
 })
 export class TurnoModule {}

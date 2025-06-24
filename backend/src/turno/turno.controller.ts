@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpException, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { TurnoService } from './turno.service';
 import { Turno } from './entities/turno.entity';
 import { CreateTurnoDto } from './dto/create.turno.dto';
@@ -12,49 +20,47 @@ import { RolesGuard } from 'src/roles/role.guard';
 
 @Controller('turno')
 export class TurnoController {
-    constructor(
-        private carService: CarService,
-        private turnoService: TurnoService,
-    ) { }
+  constructor(
+    private carService: CarService,
+    private turnoService: TurnoService,
+  ) {}
 
-    @Post('create')
-    async createTurno(@Req() request, @Body() createTurnoDto: CreateTurnoDto): Promise<any> {
-        const car = await this.carService.findById(createTurnoDto.carId);
-        return this.turnoService.createTurno(car, createTurnoDto);
+  @Post('create')
+  async createTurno(@Req() request,@Body() createTurnoDto: CreateTurnoDto,): Promise<any> {
+    const car = await this.carService.findById(createTurnoDto.carId);
+    return this.turnoService.createTurno(car, createTurnoDto);
+  }
+
+  @UseGuards(TurnoOwnerGuard)
+  @Post('modify')
+  async modifyTurno(
+    @Req() request,
+    @Body() modifyTurnoDto: ModifyTurnoDto,
+  ): Promise<string> {
+    return this.turnoService.modifyTurno(modifyTurnoDto);
+  }
+
+  //use in tests only for now
+  @Get(':id')
+  async findTurnoById(@Req() request): Promise<Turno> {
+    const turnoId = parseInt(request.params.id, 10);
+    if (isNaN(turnoId)) {
+      throw new HttpException('Invalid turno ID', 400);
     }
-
-    @UseGuards(TurnoOwnerGuard)
-    @Post('modify')
-    async modifyTurno(@Req() request, @Body() modifyTurnoDto: ModifyTurnoDto): Promise<string> {
-        return this.turnoService.modifyTurno(modifyTurnoDto);
+    const turno = await this.turnoService.findById(turnoId);
+    if (!turno) {
+      throw new HttpException('Turno not found', 404);
     }
+    return turno;
+  }
 
-    //use in tests only for now
-    @Get(':id')
-    async findTurnoById(@Req() request): Promise<Turno> {
-        const turnoId = parseInt(request.params.id, 10);
-        if (isNaN(turnoId)) {
-            throw new HttpException('Invalid turno ID', 400);
-        }
-        const turno = await this.turnoService.findById(turnoId);
-        if (!turno) {
-            throw new HttpException('Turno not found', 404);
-        }
-        return turno;
-    }
+  // @Post('delete')
+  // async deleteTurno(@Req() request): Promise<void> {
+  //     return this.turnoService.deleteTurno(user);
+  // }
 
-    // @Post('delete')
-    // async deleteTurno(@Req() request): Promise<void> {
-    //     return this.turnoService.deleteTurno(user);
-    // }
-
-    // @Post('list')
-    // async listTurnos(@Req() request): Promise<Turno[]> {
-    //     return this.turnoService.listTurnos(user);
-    // }
-
-
-
-
-
+  // @Post('list')
+  // async listTurnos(@Req() request): Promise<Turno[]> {
+  //     return this.turnoService.listTurnos(user);
+  // }
 }

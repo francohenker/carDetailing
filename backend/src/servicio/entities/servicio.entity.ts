@@ -1,36 +1,42 @@
-import { Insumo } from "src/insumo/entities/insumo.entity";
-import { Turno } from "src/turno/entities/turno.entity";
-import { Column, Entity, JoinTable, ManyToMany, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Insumo } from 'src/insumo/entities/insumo.entity';
+import { Turno } from 'src/turno/entities/turno.entity';
+import {
+  Column,
+  Entity,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class Servicio {
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @PrimaryGeneratedColumn()
-    id: number
+  @Column()
+  name: string;
 
-    @Column()
-    name: string
+  @Column({ nullable: true })
+  description: string;
 
-    @Column({ nullable: true })
-    description: string
+  @Column('decimal', { precision: 10, scale: 2 })
+  precio: number;
 
-    @Column('decimal', { precision: 10, scale: 2 })
-    precio: number
+  @Column({ default: false })
+  isDeleted: boolean;
 
-    @Column({ default: false })
-    isDeleted: boolean;
+  @ManyToMany(() => Insumo, (insumo) => insumo.servicio)
+  @JoinTable()
+  insumo: Insumo[];
 
-    @ManyToMany(() => Insumo, (insumo) => insumo.servicio)
-    @JoinTable()
-    insumo: Insumo[];
+  @ManyToMany(() => Turno, (turno) => turno.servicio)
+  turno: Turno[];
 
-    @ManyToMany(() => Turno, (turno) => turno.servicio)
-    turno: Turno[];
-
-
-    constructor(name: string, description: string, precio: number) {
-        this.name = name;
-        this.description = description;
-        this.precio = precio;
-    }
+  constructor(name: string, description: string, precio: number) {
+    this.name = name;
+    this.description = description;
+    this.precio = precio;
+  }
 }
