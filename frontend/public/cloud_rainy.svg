@@ -1,0 +1,19 @@
+<svg width="150" height="140" viewBox="0 0 150 140" xmlns="http://www.w3.org/2000/svg">
+<!-- Nube -->
+    <g fill="#C0D8FF">
+        <ellipse cx="75" cy="55" rx="45" ry="25"/>
+        <ellipse cx="50" cy="50" rx="20" ry="15"/>
+        <ellipse cx="60" cy="40" rx="18" ry="14"/>
+        <ellipse cx="80" cy="40" rx="25" ry="18"/>
+        <ellipse cx="100" cy="48" rx="20" ry="16"/>
+        <ellipse cx="110" cy="55" rx="15" ry="12"/>
+    </g>
+
+    <!-- Gotas de lluvia (forma de gota) -->
+    <g fill="#4A90E2">
+        <path d="M53 95c0 5 4 8 4 8s4-3 4-8a4 4 0 1 0 -8 0z"/>
+        <path d="M68 100c0 5 4 8 4 8s4-3 4-8a4 4 0 1 0 -8 0z"/>
+        <path d="M83 95c0 5 4 8 4 8s4-3 4-8a4 4 0 1 0 -8 0z"/>
+        <path d="M98 100c0 5 4 8 4 8s4-3 4-8a4 4 0 1 0 -8 0z"/>
+    </g>
+</svg>

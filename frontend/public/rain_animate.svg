@@ -1,0 +1,51 @@
+<svg width="150" height="140" viewBox="0 0 150 140" xmlns="http://www.w3.org/2000/svg">
+  <!-- Nube -->
+  <g fill="#C0D8FF">
+    <ellipse cx="75" cy="55" rx="45" ry="25"/>
+    <ellipse cx="50" cy="50" rx="20" ry="15"/>
+    <ellipse cx="60" cy="40" rx="18" ry="14"/>
+    <ellipse cx="80" cy="40" rx="25" ry="18"/>
+    <ellipse cx="100" cy="48" rx="20" ry="16"/>
+    <ellipse cx="110" cy="55" rx="15" ry="12"/>
+  </g>
+
+  <!-- Gotas animadas -->
+  <!-- Cada gota es un path con la punta abajo; la animación traslada y desvanece -->
+  <g fill="#4A90E2" stroke="none">
+    <!-- Gota 1 -->
+    <path d="M53 80 C49 86 49 92 53 96 C57 92 57 86 53 80 Z">
+      <animateTransform attributeName="transform" type="translate"
+                        values="0 0; 0 20" dur="1s" repeatCount="indefinite"
+                        begin="0s"/>
+      <animate attributeName="opacity" values="1;0" dur="1s"
+               repeatCount="indefinite" begin="0s"/>
+    </path>
+
+    <!-- Gota 2 -->
+    <path d="M68 85 C64 91 64 97 68 101 C72 97 72 91 68 85 Z">
+      <animateTransform attributeName="transform" type="translate"
+                        values="0 0; 0 20" dur="1s" repeatCount="indefinite"
+                        begin="0.25s"/>
+      <animate attributeName="opacity" values="1;0" dur="1s"
+               repeatCount="indefinite" begin="0.25s"/>
+    </path>
+
+    <!-- Gota 3 -->
+    <path d="M83 80 C79 86 79 92 83 96 C87 92 87 86 83 80 Z">
+      <animateTransform attributeName="transform" type="translate"
+                        values="0 0; 0 20" dur="1s" repeatCount="indefinite"
+                        begin="0.5s"/>
+      <animate attributeName="opacity" values="1;0" dur="1s"
+               repeatCount="indefinite" begin="0.5s"/>
+    </path>
+
+    <!-- Gota 4 -->
+    <path d="M98 85 C94 91 94 97 98 101 C102 97 102 91 98 85 Z">
+      <animateTransform attributeName="transform" type="translate"
+                        values="0 0; 0 20" dur="1s" repeatCount="indefinite"
+                        begin="0.75s"/>
+      <animate attributeName="opacity" values="1;0" dur="1s"
+               repeatCount="indefinite" begin="0.75s"/>
+    </path>
+  </g>
+</svg>

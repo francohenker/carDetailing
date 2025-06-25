@@ -4,6 +4,7 @@ import { CalendarDays, Car, Clock, MapPin, Phone, Shield, Sparkles, Wrench } fro
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import FooterDefault from "./footer"
+import Wheater from "./wheater"
 
 export default function Home() {
   return (
@@ -23,6 +24,9 @@ export default function Home() {
             className="h-[500px] bg-cover bg-center"
           />
           <div className="container absolute inset-0 z-20 flex flex-col items-center justify-center text-center text-white">
+            
+            {/*por alguna forma los svg de /public funcionan asi xd, osea con ../../ o con / directamente */}
+            <img src="/rainy_animate.svg" alt="imagen ade sol nublado" />
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
               Detailing Profesional para tu Vehículo
             </h1>
@@ -35,6 +39,12 @@ export default function Home() {
               </button>
               <button className="btn btn-soft">
                 Ver Servicios
+                {/* <Wheater /> */}
+
+
+
+
+
               </button>
             </div>
           </div>

@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button"
 import { Car } from "lucide-react"
 import Link from "next/link"
-import ThemeToggleButton from "./ThemeToggle";
+import ThemeToggleButton from "../components/ThemeToggle";
 import { removeItem } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useUserStore } from "./store/useUserStore";
@@ -46,7 +46,7 @@ export default function HeaderDefault() {
                 <div className="ml-auto flex items-center gap-4 ">
 
                     {/* <button className="btn btn-soft">Iniciar Sesión</button> */}
-
+                        
                     <Button variant="outline" size="icon" className="md:hidden">
                         <span className="sr-only">Menú</span>
                         <svg
