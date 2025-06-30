@@ -3,8 +3,6 @@ import { Button } from "@/components/ui/button"
 import { Car } from "lucide-react"
 import Link from "next/link"
 import ThemeToggleButton from "../components/ThemeToggle";
-import { removeItem } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { useUserStore } from "./store/useUserStore";
 
 export default function HeaderDefault() {
@@ -62,6 +60,7 @@ export default function HeaderDefault() {
                 </div>
 
                 <ThemeToggleButton />
+
                 <div className="dropdown dropdown-end px-2 ">
                     <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
                         <div className="text-neutral-content w-14 rounded-full bg-base-content">

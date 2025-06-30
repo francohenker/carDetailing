@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import FooterDefault from "./footer"
 import { WeatherWidget } from "@/components/wheater-widget"
+import MyCalendar from "@/components/calendar"
 // import {WeatherWidget} from "@/components/weather-widget"
 
 export default function Home() {
@@ -40,7 +41,6 @@ export default function Home() {
               </button>
               <button className="btn btn-soft">
                 Ver Servicios
-                  <WeatherWidget />
               </button>
             </div>
           </div>
@@ -68,9 +68,9 @@ export default function Home() {
                   <p className="text-sm text-muted-foreground mb-4">
                     Elige el día que prefieras para tu servicio de detailing.
                   </p>
-                  <div className="h-40 bg-gray-100 rounded-md flex items-center justify-center">
-                    <p className="text-muted-foreground">Calendario de Disponibilidad</p>
-                  </div>
+                  
+                  
+                  {/* <MyCalendar/> */}
                 </CardContent>
               </Card>
 
@@ -107,6 +107,8 @@ export default function Home() {
               </Card>
 
               <Card>
+                  <WeatherWidget />
+{/* 
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center">
                     <Clock className="mr-2 h-5 w-5 text-red-600" />
@@ -138,7 +140,7 @@ export default function Home() {
                     </Button>
                   </div>
                   <Button className="w-full mt-4">Confirmar Reserva</Button>
-                </CardContent>
+                </CardContent> */}
               </Card>
             </div>
           </div>
