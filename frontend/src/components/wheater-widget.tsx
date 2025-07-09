@@ -18,8 +18,8 @@ interface WeatherData {
 }
 
 
-function getWeatherDescription(code : number) {
-    const weatherCodes = {
+function getWeatherDescription(code : number)  {
+    const weatherCodes : { [key: number]: string } = {
         0: "Cielo despejado",
         1: "Principalmente despejado",
         2: "Parcialmente nublado",
@@ -54,7 +54,7 @@ function getWeatherDescription(code : number) {
 }
 
 function getWeatherIconn(code : number) {
-    const iconMap = {
+    const iconMap : { [key: number]: string } = {
         0: "☀️", // Despejado
         1: "🌤️", // Principalmente despejado
         2: "⛅", // Parcialmente nublado

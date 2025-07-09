@@ -26,10 +26,7 @@ export default function HeaderDefault() {
                     <a href="/" className="text-2xl font-bold text-base-content">CarDetailing</a>
                 </div>
 
-                <nav className="text-base-content absolute left-1/2 transform -translate-x-1/2 hidden md:flex gap-6 items-center">
-                    {/* <Link href="/" className="text-sm font-medium hover:text-red-600 transition-colors">
-                            Inicio
-                        </Link> */}
+                <nav className="text-base-content absolute left-1/2 transform -translate-x-1/2 hidden md:flex gap-6 items-center">                    
                     <Link href="/servicios" className="text-lg font-medium hover:text-red-600 transition-colors">
                         Servicios
                     </Link>
@@ -41,10 +38,7 @@ export default function HeaderDefault() {
                     </Link>
                 </nav>
 
-                <div className="ml-auto flex items-center gap-4 ">
-
-                    {/* <button className="btn btn-soft">Iniciar Sesión</button> */}
-                        
+                <div className="ml-auto flex items-center gap-4 ">                        
                     <Button variant="outline" size="icon" className="md:hidden">
                         <span className="sr-only">Menú</span>
                         <svg
@@ -73,11 +67,10 @@ export default function HeaderDefault() {
                         <li>
                             <a href='/user/profile' className="justify-between">
                                 Perfil
-                                {/* <span className="badge">New</span> */}
                             </a>
                         </li>
                         <li><a href="/user/settings">Configuración</a></li>
-                        <li><a onClick={handlerLogout}>Cerrar sesión</a></li>
+                        <li><a href="#" onClick={handlerLogout}>Cerrar sesión</a></li>
                     </ul>
                 </div>
             </div>

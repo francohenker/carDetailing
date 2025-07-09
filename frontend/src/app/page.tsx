@@ -1,12 +1,9 @@
-import Link from "next/link"
 import HeaderDefault from "./header"
-import { CalendarDays, Car, Clock, MapPin, Phone, Shield, Sparkles, Wrench } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { CalendarDays, Car, Shield, Sparkles, Wrench } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import FooterDefault from "./footer"
 import { WeatherWidget } from "@/components/wheater-widget"
 import MyCalendar from "@/components/calendar"
-// import {WeatherWidget} from "@/components/weather-widget"
 
 export default function Home() {
   return (
@@ -56,7 +53,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center">
@@ -70,11 +67,11 @@ export default function Home() {
                   </p>
                   
                   
-                  {/* <MyCalendar/> */}
+                  <MyCalendar/>
                 </CardContent>
               </Card>
 
-              <Card>
+              {/* <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center">
                     <Wrench className="mr-2 h-5 w-5 text-red-600" />
@@ -104,7 +101,7 @@ export default function Home() {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
 
               <Card>
                   <WeatherWidget />
