@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js';
 import { estado_pago } from 'src/enums/estado_pago.enum';
 import { metodo_pago } from 'src/enums/metodo_pago.enum';
 import { Turno } from 'src/turno/entities/turno.entity';
