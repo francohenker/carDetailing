@@ -169,7 +169,7 @@ export default function Servicios() {
             <section id="servicios" className="container mx-auto px-4 py-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {services.map((service) => (
-                        <div key={service.id} className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+                        <div key={service.id} className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow ">
                             {service.popular && (
                                 <div className="badge badge-secondary absolute top-4 right-4 z-10">
                                     <Star className="w-3 h-3 mr-1" />
@@ -186,13 +186,13 @@ export default function Servicios() {
                                 <div className="badge badge-primary absolute bottom-4 left-4">{service.category}</div>
                             </figure>
 
-                            <div className="card-body">
+                            <div className="card-body text-base-content">
                                 <h2 className="card-title">
                                     {service.name}
-                                    <div className="badge badge-outline">${service.price.toLocaleString()}</div>
+                                    <div className="badge ">${service.price.toLocaleString()}</div>
                                 </h2>
 
-                                <p className="text-base-content/70 text-sm mb-4">{service.description}</p>
+                                <p className="text-sm mb-4">{service.description}</p>
 
                                 <div className="flex items-center gap-2 mb-4">
                                     <Clock className="w-4 h-4 text-primary" />
@@ -225,17 +225,17 @@ export default function Servicios() {
             </section>
 
             {/* Sección de Beneficios */}
-            <section className="bg-base-200 py-16">
+            <section className="bg-base-200 py-16 text-base-content">
                 <div className="container mx-auto px-4">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-bold mb-4">¿Por qué elegir DetailCar?</h2>
-                        <p className="text-base-content/70 max-w-2xl mx-auto">
+                        <p className="max-w-2xl mx-auto">
                             Somos especialistas en detailing automotriz con más de 10 años de experiencia y los mejores productos del
                             mercado.
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-base-content">
                         <div className="card bg-base-100 shadow-lg">
                             <div className="card-body items-center text-center">
                                 <div className="avatar placeholder mb-4">
@@ -248,7 +248,7 @@ export default function Servicios() {
                             </div>
                         </div>
 
-                        <div className="card bg-base-100 shadow-lg">
+                        <div className="card bg-base-100 shadow-lg ">
                             <div className="card-body items-center text-center">
                                 <div className="avatar placeholder mb-4">
                                     <div className="bg-secondary text-secondary-content rounded-full w-16">
@@ -288,7 +288,7 @@ export default function Servicios() {
             </section>
 
             {/* Sección de Preguntas Frecuentes */}
-            <section className="container mx-auto px-4 py-16">
+            <section className="container mx-auto px-4 py-16 text-base-content">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold mb-4">Preguntas Frecuentes</h2>
                     <p className="text-base-content/70">Resolvemos las dudas más comunes sobre nuestros servicios</p>
