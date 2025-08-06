@@ -23,17 +23,17 @@ export default function HeaderDefault() {
 
                 <div className="flex items-center gap-2">
                     <Car className="h-6 w-6 text-red-600" />
-                    <a href="/" className="text-2xl font-bold text-base-content">CarDetailing</a>
+                    <Link href="/" className="text-2xl font-bold text-base-content">CarDetailing</Link>
                 </div>
 
                 <nav className="text-base-content absolute left-1/2 transform -translate-x-1/2 hidden md:flex gap-6 items-center">                    
-                    <Link href="/servicios" className="text-lg font-medium hover:text-red-600 transition-colors">
+                    <Link href="/servicios" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
                         Servicios
                     </Link>
-                    <Link href="/turno" className="text-lg font-medium hover:text-red-600 transition-colors">
+                    <Link href="/turno" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
                         Reservar Turno
                     </Link>
-                    <Link href="#contacto" className="text-lg font-medium hover:text-red-600 transition-colors">
+                    <Link href="#contacto" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
                         Contacto
                     </Link>
                 </nav>
