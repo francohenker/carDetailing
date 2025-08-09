@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { fetchWeatherApi } from "openmeteo"
@@ -18,8 +18,6 @@ interface WeatherData {
     icon: string
 }
 
-
-
 export function WeatherWidget() {
     const weather = useWeatherStore((state) => state.weather)
     const loading = useWeatherStore((state) => state.loading)
@@ -29,33 +27,96 @@ export function WeatherWidget() {
     const setError = useWeatherStore((state) => state.setError)
 
     const lastUpdated = useWeatherStore((state) => state.lastUpdated)
-    const setLastUpdated = useWeatherStore((state) => state.setLastUpdated)
 
+    const clearWeather = useWeatherStore((state) => state.clearWeather)
 
-    useEffect(() => {
     const fetchWeather = async () => {
-        setLoading(true)
+        useWeatherStore.setState({ loading: true })
         try {
-            // ...
+            const params = {
+                latitude: [-27.0005],
+                longitude: [-54.4816],
+                hourly: ["temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation"],
+                current: ["temperature_2m", "precipitation", "weather_code", "cloud_cover", "apparent_temperature", "wind_speed_10m", "relative_humidity_2m"],
+                timezone: "America/Sao_Paulo",
+                start_date: "2025-06-25",
+                end_date: "2025-06-26",
+            }
+
+            const url = "https://api.open-meteo.com/v1/forecast"
+            const responses = await fetchWeatherApi(url, params)
+            const response = responses[0]
+            const utcOffsetSeconds = response.utcOffsetSeconds()
+            const current = response.current()!
+
+            const weatherData = {
+                location: "San Vicente, Misiones",
+                temperature: current.variables(0)!.value(),
+                precipitation: current.variables(1)!.value(),
+                condition: current.variables(2)!.value(),
+                cloudCover: current.variables(3)!.value(),
+                apparentTemperature: current.variables(4)!.value(),
+                windSpeed: current.variables(5)!.value(),
+                humidity: current.variables(6)!.value(),
+            }
+
+            setWeather({
+                location: weatherData.location,
+                temperature: weatherData.temperature,
+                condition: weatherData.condition,
+                windSpeed: weatherData.windSpeed,
+                humidity: weatherData.humidity,
+                description: getWeatherDescription(weatherData.condition),
+                icon: getWeatherIconn(weatherData.condition),
+            })
+
+            useWeatherStore.setState({ lastUpdated: Date.now() })
+            useWeatherStore.setState({ error: null })
         } catch (err) {
-            setError("Error al obtener el clima")
+            useWeatherStore.setState({ error: "Error al obtener el clima" })
         } finally {
-            setLoading(false)
+            useWeatherStore.setState({ loading: false })
         }
     }
 
-    const oneHour = 60 * 60 * 1000
-    const now = Date.now()
 
-    if (!weather || !lastUpdated || now - lastUpdated > oneHour) {
-        fetchWeather()
-    } else {
-        setLoading(false)
+    const [isHydrated, setIsHydrated] = useState(false)
+
+    useEffect(() => {
+        const unsub = useWeatherStore.persist.onFinishHydration(() => {
+            console.log("Hydration finished")
+            setIsHydrated(true)
+        })
+        if (useWeatherStore.persist.hasHydrated()) setIsHydrated(true)
+        if (!useWeatherStore.getState().weather || useWeatherStore.getState().isDataExpired()) {
+
+
+            fetchWeather()
+        }
+        console.log(weather)
+        console.log(isHydrated)
+        return () => unsub();
+    }, [])
+
+    if (!isHydrated) {
+        return (
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Condiciones climáticas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center space-x-4">
+                        <Skeleton className="h-16 w-16 rounded-full" />
+                        <div className="space-y-2 flex-1">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-3 w-32" />
+                            <Skeleton className="h-3 w-28" />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        )
     }
-
-    const interval = setInterval(fetchWeather, oneHour)
-    return () => clearInterval(interval)
-}, [])
 
     if (loading) {
         return (
@@ -100,7 +161,14 @@ export function WeatherWidget() {
                 <CardContent>
                     <div className="text-center py-4">
                         <p className="text-sm text-muted-foreground">{error}</p>
-                        <button onClick={() => window.location.reload()} className="text-sm text-blue-600 hover:underline mt-2">
+                        <button
+                            onClick={() => {
+                                setError(null)
+                                clearWeather()
+                                window.location.reload()
+                            }}
+                            className="text-sm text-blue-600 hover:underline mt-2"
+                        >
                             Intentar nuevamente
                         </button>
                     </div>
@@ -109,13 +177,36 @@ export function WeatherWidget() {
         )
     }
 
-    if (!weather) return null
+    if (!weather) {
+                return (
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Condiciones climáticas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center space-x-4">
+                        <Skeleton className="h-16 w-16 rounded-full" />
+                        <div className="space-y-2 flex-1">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-3 w-32" />
+                            <Skeleton className="h-3 w-28" />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
 
     return (
         <Card>
             <CardHeader className="pb-3">
-                <div className="flex items-center ">
+                <div className="flex items-center justify-between">
                     <CardTitle className="text-base text-left">Condiciones climáticas</CardTitle>
+                    {lastUpdated && (
+                        <span className="text-xs text-muted-foreground">
+                            {new Date(lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    )}
                 </div>
             </CardHeader>
             <CardContent>
@@ -134,7 +225,7 @@ export function WeatherWidget() {
                 <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
                         <p className="text-xs text-muted-foreground">Humedad</p>
-                        <p className="text-sm font-medium">{weather.humidity}%</p>
+                        <p className="text-sm font-medium">{weather.humidity.toFixed(0)}%</p>
                     </div>
                     <div>
                         <p className="text-xs text-muted-foreground">Viento</p>
@@ -152,9 +243,9 @@ export function WeatherWidget() {
                 <div className="mt-4 p-3 bg-muted rounded-lg">
                     <p className="text-xs font-medium text-muted-foreground mb-1">Recomendación para lavado:</p>
                     <p className="text-sm">
-                        {weather.condition < 100 && weather.condition > 49
+                        {weather.condition >= 51 && weather.condition <= 99
                             ? "⚠️ No recomendado - Condiciones de lluvia"
-                            : weather.condition >= 0 && weather.condition < 2
+                            : weather.condition >= 0 && weather.condition <= 3
                                 ? "✅ Excelente - Condiciones ideales para el secado"
                                 : "👍 Bueno - Condiciones aceptables para servicios"}
                     </p>
