@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UserModule } from './users/user.module';
+import { UserModule } from './users/users.module';
 import { AuthController } from './auth/auth.controller';
 import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -12,7 +12,7 @@ import { TurnoController } from './turno/turno.controller';
 import { CarController } from './car/car.controller';
 import { CarService } from './car/car.service';
 import { CarModule } from './car/car.module';
-import { UserService } from './users/user.service';
+import { UserService } from './users/users.service';
 import { AuthService } from './auth/auth.service';
 import { ConfigModule } from '@nestjs/config';
 import { TurnoService } from './turno/turno.service';

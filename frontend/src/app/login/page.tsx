@@ -15,7 +15,7 @@ export default function login() {
 
     const handlerLogin = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/login`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

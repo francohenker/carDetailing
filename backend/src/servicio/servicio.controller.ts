@@ -1,6 +1,6 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ServicioService } from './servicio.service';
-import { UserService } from 'src/users/user.service';
+import { UserService } from 'src/users/users.service';
 import { CreateServicioDto } from './dto/create.servicio.dto';
 import { ModifyServicioDto } from './dto/modify.servicio.dto';
 import { Servicio } from './entities/servicio.entity';

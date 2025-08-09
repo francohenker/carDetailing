@@ -250,7 +250,7 @@ export default function UserProfile() {
 
         const fetchDataUser = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/profile`, {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/profile`, {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
@@ -266,9 +266,7 @@ export default function UserProfile() {
                 console.log("Profile data:", data);
 
                 setProfile(data);
-            } catch (error) {
-                console.error("Error fetching profile:", error);
-            }
+            } catch (error) {}
         };
 
         const fetchDataCars = async () => {

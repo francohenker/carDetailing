@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { createCarDto } from './dto/create-car.dto';
 import { CarService } from './car.service';
-import { UserService } from 'src/users/user.service';
+import { UserService } from 'src/users/users.service';
 import { modifyCarDto } from './dto/modify-car.dto';
 
 @Controller('car')

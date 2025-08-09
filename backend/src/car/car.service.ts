@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { createCarDto } from './dto/create-car.dto';
 import { Users } from 'src/users/entities/users.entity';
 import { AuthService } from 'src/auth/auth.service';
-import { UserService } from 'src/users/user.service';
+import { UserService } from 'src/users/users.service';
 import { modifyCarDto } from './dto/modify-car.dto';
 
 @Injectable()

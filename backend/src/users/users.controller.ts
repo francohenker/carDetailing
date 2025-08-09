@@ -7,11 +7,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UserService } from './user.service';
+import { UserService } from './users.service';
 import { Role } from '../roles/role.enum';
 
-@Controller('user')
-export class UserController {
+@Controller('users')
+export class UsersController {
   constructor(private readonly userService: UserService) {}
 
   @Post('register')
