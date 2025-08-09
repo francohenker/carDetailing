@@ -44,7 +44,6 @@ export const useWeatherStore = create<WeatherState>()(
         }),
         {
             name: "weather-storage",
-            skipHydration: true // no hidrata automáticamente
         }
     )
 )

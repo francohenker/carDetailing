@@ -7,7 +7,6 @@ import { fetchWeatherApi } from "openmeteo"
 import { useWeatherStore } from "../lib/stores/weatherStore"
 import { getWeatherDescription, getWeatherIconn } from "@/lib/utils/weatherUtils"
 
-// Tipos para los datos del clima
 interface WeatherData {
     location: string
     temperature: number
