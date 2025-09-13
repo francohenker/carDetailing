@@ -8,16 +8,17 @@ import { Role } from 'src/roles/role.enum';
 import { Roles } from 'src/roles/role.decorator';
 import { RolesGuard } from 'src/roles/role.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { AuthService } from 'src/auth/auth.service';
 
 @Controller('servicio')
 export class ServicioController {
   constructor(
     private servicioService: ServicioService,
-    private userService: UserService,
+    private authService: AuthService,
   ) {}
 
   getUserFromRequest(@Req() request): any {
-    return this.userService.findUserByToken(request.headers.authorization);
+    return this.authService.findUserByToken(request.headers.authorization);
   }
 
   @Post('create')

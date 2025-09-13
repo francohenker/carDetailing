@@ -58,30 +58,7 @@ export class UserService {
     return await this.userRepository.findOne({ where: { id } });
   }
 
-  async validateToken(token: string): Promise<any> {
-    let payload = '';
-    if (token && token.startsWith('Bearer ')) {
-      payload = token.split(' ')[1]; // Extraer solo el token
-    } else {
-      payload = null;
-    }
-    payload = await this.authService.validateToken(payload);
-    if (!payload) {
-      throw new HttpException('Invalid token', 401);
-    }
-    return payload;
-  }
 
-  async findUserByToken(token: string): Promise<Users> {
-    const decode = await this.validateToken(token);
-    // const decode = await this.authService.validateToken(payload);
-
-    if (!decode) {
-      throw new HttpException('Invalid token', 401);
-    }
-
-    return this.userRepository.findOne({ where: { id: decode.userId } });
-  }
 
   async getProfile(id: number): Promise<any> {
     const user = await this.findOne(id);

@@ -63,7 +63,7 @@ export class CarService {
     return await this.carRepository.save(car);
   }
 
-  // turn True isDelete property in car
+  // turn True isDelete property car
   async deleteCar(user : Users, carId : number){
     const car = await this.carRepository.findOne({
       where: {id: carId, user : { id: user.id } }

@@ -7,7 +7,7 @@ import { UserModule } from 'src/users/users.module';
 import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Car]), UserModule, AuthModule],
+  imports: [TypeOrmModule.forFeature([Car]), AuthModule],
   controllers: [CarController],
   providers: [CarService],
   exports: [TypeOrmModule],

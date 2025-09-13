@@ -13,10 +13,14 @@ import { Role } from '../roles/role.enum';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/roles/role.guard';
 import { Roles } from 'src/roles/role.decorator';
+import { AuthService } from 'src/auth/auth.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Post('register')
   async create(@Body() createUserDto: CreateUserDto) {
@@ -47,7 +51,7 @@ export class UsersController {
   @Get('profile')
   @UseGuards(AuthGuard)
   async getProfile(@Req() request): Promise<any> {
-    const jwt = await this.userService.validateToken(
+    const jwt = await this.authService.validateToken(
       request.headers.authorization,
     );
     const user = await this.userService.getProfile(jwt.userId);
