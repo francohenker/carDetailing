@@ -14,10 +14,10 @@ export class TurnoService {
   constructor(
     @InjectRepository(Turno)
     private readonly turnoRepository: Repository<Turno>,
-    private servicioService: ServicioService, // Assuming you have a ServicioService to handle services
+    private servicioService: ServicioService, 
   ) { }
 
-  async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<string> {
+  async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
     const servicios = await this.servicioService.findByIds(turnoView.servicios);
     const newTurno = new Turno(
       car,
@@ -27,11 +27,11 @@ export class TurnoService {
     );
     const turno = this.turnoRepository.create(newTurno);
     this.turnoRepository.save(turno);
-    return 'Turno created successfully';
+    return turno;
   }
 
   //VERIFICAR!!!!!!!!!!, agregar validaciones con respecto a la fecha (y posiblemente a los demas campos, try no funciona como deberia)
-  async modifyTurno(turno: ModifyTurnoDto): Promise<string> {
+  async modifyTurno(turno: ModifyTurnoDto): Promise<Turno> {
     const existingTurno = await this.turnoRepository.findOneBy({
       id: turno.turnoId,
     });
@@ -48,10 +48,9 @@ export class TurnoService {
       this.turnoRepository.save(existingTurno);
     } catch (error) {
       throw new HttpException('Error modifying Turno: ' + error.message, 500);
-      23;
     }
 
-    return 'Turno modified successfully';
+    return existingTurno;
   }
 
   async deleteTurno(turnoId: number): Promise<void> {
@@ -74,8 +73,9 @@ export class TurnoService {
 
 
   // APARTADO DE LA API DEL TIEMPO
+  //falta ver bien su implmementacion, filtrar por la fecha de inicio y de fin
 
-  async wheater(startDate: string, endDate: string): Promise<any>{
+  async wheater(startDate: string, endDate: string): Promise<any> {
 
     const params = {
       "latitude": [-27.0005],

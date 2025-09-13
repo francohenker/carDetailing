@@ -2,7 +2,7 @@ import { Servicio } from 'src/servicio/entities/servicio.entity';
 import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
-export class Insumo {
+export class Producto {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -15,7 +15,7 @@ export class Insumo {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   stock_actual: number;
 
-  @ManyToMany(() => Servicio, (servicio) => servicio.insumo)
+  @ManyToMany(() => Servicio, (servicio) => servicio.Producto)
   servicio: Servicio[];
 
   @Column({ default: false })

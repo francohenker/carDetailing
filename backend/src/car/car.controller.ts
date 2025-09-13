@@ -20,6 +20,7 @@ export class CarController {
         return 'Car created successfully';
     }
 
+    //return car's user 
     @Get('get-cars-user')
     async getCarsByUser(@Req() request): Promise<any> {
         const user = await this.userService.findUserByToken(
@@ -29,7 +30,7 @@ export class CarController {
         return cars;
     }
 
-    // only change the color
+    // only change color
     @Post('modify')
     async modifyCar(@Req() request, @Body() carData: modifyCarDto): Promise<any> {
         const user = await this.userService.findUserByToken(
@@ -39,4 +40,11 @@ export class CarController {
         await this.carService.modify(carData, user);
         return 'Car modified successfully';
     }
+
+    @Post('delete')
+    async deleteCar(@Req() request, @Body() body) : Promise<any>{
+        const user = await this.userService.findUserByToken(request.headers.authorization)
+        return await this.carService.deleteCar(user, body.id);
+    }
+
 }

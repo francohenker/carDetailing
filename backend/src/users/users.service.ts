@@ -13,14 +13,14 @@ export class UserService {
     @InjectRepository(Users)
     private userRepository: Repository<Users>,
     private authService: AuthService,
-  ) {}
+  ) { }
 
   async create(createUserDto: CreateUserDto): Promise<any> {
     const user = new Users(
       createUserDto.firstname.slice(0, 1).toUpperCase() +
-        createUserDto.firstname.slice(1),
+      createUserDto.firstname.slice(1),
       createUserDto.lastname.slice(0, 1).toUpperCase() +
-        createUserDto.lastname.slice(1),
+      createUserDto.lastname.slice(1),
       createUserDto.password,
       createUserDto.email,
       createUserDto.phone,
@@ -72,7 +72,7 @@ export class UserService {
     return payload;
   }
 
-  async findUserByToken(token: string): Promise<any> {
+  async findUserByToken(token: string): Promise<Users> {
     const decode = await this.validateToken(token);
     // const decode = await this.authService.validateToken(payload);
 

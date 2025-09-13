@@ -1,4 +1,4 @@
-import { Insumo } from 'src/insumo/entities/insumo.entity';
+import { Producto } from 'src/Producto/entities/producto.entity';
 import { Turno } from 'src/turno/entities/turno.entity';
 import {
   Column,
@@ -27,9 +27,9 @@ export class Servicio {
   @Column({ default: false })
   isDeleted: boolean;
 
-  @ManyToMany(() => Insumo, (insumo) => insumo.servicio)
+  @ManyToMany(() => Producto, (Producto) => Producto.servicio)
   @JoinTable()
-  insumo: Insumo[];
+  Producto: Producto[];
 
   @ManyToMany(() => Turno, (turno) => turno.servicio)
   turno: Turno[];

@@ -4,12 +4,13 @@ import {
   IsDate,
   IsEnum,
   IsInt,
+  IsNumber,
   IsString,
 } from 'class-validator';
 import { estado_turno } from 'src/enums/estado_turno.enum';
 
 export class ModifyTurnoDto {
-  @IsInt()
+  @IsNumber()
   turnoId: number;
 
   @IsDate()

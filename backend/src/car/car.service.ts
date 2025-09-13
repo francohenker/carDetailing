@@ -1,4 +1,4 @@
-import { forwardRef, HttpException, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, HttpCode, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Car } from './entities/car.entity';
 import { Repository } from 'typeorm';
@@ -33,7 +33,7 @@ export class CarService {
     const newCar = this.carRepository.create(car);
     return await this.carRepository.save(newCar);
   }
-
+  //return all cars for user
   async findAllByUserId(userId: number): Promise<Car[]> {
     return await this.carRepository.find({ where: { user: { id: userId } } });
   }
@@ -46,6 +46,7 @@ export class CarService {
     return car;
   }
 
+  //only change color
   async modify(carData: modifyCarDto, user: Users): Promise<Car> {
     const car = await this.carRepository.findOne({
       where: { id: carData.id, user: { id: user.id } },
@@ -61,4 +62,27 @@ export class CarService {
 
     return await this.carRepository.save(car);
   }
+
+  // turn True isDelete property in car
+  async deleteCar(user : Users, carId : number){
+    const car = await this.carRepository.findOne({
+      where: {id: carId, user : { id: user.id } }
+    });
+
+    if(!car){
+      throw new HttpException(
+        'Car not found or does not belong to user',
+        404,
+      );
+    }
+
+    car.isDeleted = true;
+    await this.carRepository.save(car);
+    return HttpCode(200);
+  }
+
+
+
+
+
 }

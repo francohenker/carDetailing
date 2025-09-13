@@ -26,7 +26,7 @@ export class TurnoController {
   ) {}
 
   @Post('create')
-  async createTurno(@Req() request,@Body() createTurnoDto: CreateTurnoDto,): Promise<any> {
+  async createTurno(@Req() request,@Body() createTurnoDto: CreateTurnoDto,): Promise<Turno> {
     const car = await this.carService.findById(createTurnoDto.carId);
     return this.turnoService.createTurno(car, createTurnoDto);
   }
@@ -36,7 +36,7 @@ export class TurnoController {
   async modifyTurno(
     @Req() request,
     @Body() modifyTurnoDto: ModifyTurnoDto,
-  ): Promise<string> {
+  ): Promise<Turno> {
     return this.turnoService.modifyTurno(modifyTurnoDto);
   }
 

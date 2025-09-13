@@ -37,6 +37,7 @@ export class ServicioController {
   ): Promise<Servicio | null> {
     return this.servicioService.modify(servicio);
   }
+  
   @Post('delete')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
