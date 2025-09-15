@@ -30,6 +30,7 @@ export default function login() {
             localStorage.setItem('jwt', data.access_token);
 
             const {setUser} = useUserStore.getState()
+            useUserStore.getState().login();
             //
             // useUserStore.getState().setUser({name: data.name, role: data.role})
             setUser({name: data.name, role: data.role})              

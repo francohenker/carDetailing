@@ -175,7 +175,7 @@ export default function Home() {
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                       </svg>
-                      Lavado exterior con espuma activa
+                      Lavado exterior
                     </li>
                     <li className="flex items-start">
                       <svg

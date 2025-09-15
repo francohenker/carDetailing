@@ -27,6 +27,7 @@ import { toast } from "@/hooks/use-toast"
 import HeaderDefault from "@/app/header"
 import ProtectedRoute from "@/components/ProtectedRoutes"
 import router from "next/router"
+import { useUserStore } from "@/app/store/useUserStore"
 
 
 interface UserProfile {
@@ -57,6 +58,14 @@ export default function UserProfile() {
         phone: "",
         address: "",
         profileLetter: "",
+    })
+
+
+    useEffect(() => {
+        if (!useUserStore.getState().isAuthenticated) {
+            window.location.href = "/login"
+            return
+        }
     })
 
 
@@ -231,14 +240,6 @@ export default function UserProfile() {
             description: "Has cerrado sesión correctamente.",
         })
     }
-
-
-
-
-
-
-
-
 
 
     useEffect(() => {

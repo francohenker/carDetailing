@@ -10,10 +10,18 @@ export default function HeaderDefault() {
     const handlerLogout = () => {
         if (typeof window !== "undefined") {
             localStorage.removeItem("jwt");
+            useUserStore.getState().logout();
             window.location.href = "/";
         }
     }
 
+    const handleLogin = () => {
+        if (typeof window !== "undefined") {
+            window.location.href = "/login";
+        }
+    }
+
+    const { isAuthenticated, login, logout } = useUserStore();
     const user = useUserStore((state) => state.user)
     const initial = user?.name?.charAt(0).toUpperCase() ?? '?'
 
@@ -27,10 +35,10 @@ export default function HeaderDefault() {
                 </div>
 
                 <nav className="text-base-content absolute left-1/2 transform -translate-x-1/2 hidden md:flex gap-6 items-center">                    
-                    <Link href="/servicios" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
+                    <Link href="#/servicios" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
                         Servicios
                     </Link>
-                    <Link href="/turno" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
+                    <Link href="#/turno" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
                         Reservar Turno
                     </Link>
                     <Link href="#contacto" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
@@ -70,7 +78,8 @@ export default function HeaderDefault() {
                             </a>
                         </li>
                         <li><a href="/user/settings">Configuración</a></li>
-                        <li><a href="#" onClick={handlerLogout}>Cerrar sesión</a></li>
+                        {/* <li><a href="#" onClick={handlerLogout}>Cerrar sesión</a></li> */}
+                        <li><a href="#" onClick={isAuthenticated ? handlerLogout : handleLogin}>{isAuthenticated ? 'Cerrar sesión' : 'Iniciar sesión'}</a></li>
                     </ul>
                 </div>
             </div>

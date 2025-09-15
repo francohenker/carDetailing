@@ -24,7 +24,6 @@ import { PagoModule } from './pago/pago.module';
 import { ProductoController } from './producto/producto.controller';
 import { ProductoModule } from './producto/producto.module';
 import { ProductoService } from './producto/producto.service';
-import { ProductoController } from './producto/producto.controller';
 
 @Module({
   imports: [

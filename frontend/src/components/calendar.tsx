@@ -22,18 +22,18 @@ interface CalendarEvent extends Event {
 
 const MyCalendar: React.FC = () => {
     const [events, setEvents] = useState<CalendarEvent[]>([
-        {
-            id: '1',
-            title: 'Mi evento',
-            start: new Date(),
-            end: new Date(Date.now() + 3600000), // 1 hora después
-        },
-        {
-            id: '2',
-            title: 'Reunión',
-            start: new Date(Date.now() + 86400000), // Mañana
-            end: new Date(Date.now() + 86400000 + 3600000), // Mañana + 1 hora
-        }
+    //     {
+    //         id: '1',
+    //         title: 'Mi evento',
+    //         start: new Date(),
+    //         end: new Date(Date.now() + 3600000), // 1 hora después
+    //     },
+    //     {
+    //         id: '2',
+    //         title: 'Reunión',
+    //         start: new Date(Date.now() + 86400000), // Mañana
+    //         end: new Date(Date.now() + 86400000 + 3600000), // Mañana + 1 hora
+    //     }
     ])
 
     const handleSelectSlot = ({ start, end }: { start: Date; end: Date }) => {
@@ -57,7 +57,7 @@ const MyCalendar: React.FC = () => {
         <div style={{ height: 600 }}>
             <Calendar<CalendarEvent>
                 localizer={localizer}
-                events={events}
+                // events={events}
                 startAccessor="start"
                 endAccessor="end"
                 onSelectSlot={handleSelectSlot}

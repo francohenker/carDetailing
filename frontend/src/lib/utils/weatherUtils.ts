@@ -15,9 +15,9 @@ export function getWeatherDescription(code: number): string {
         71: "Nieve ligera",
         73: "Nieve moderada",
         75: "Nieve intensa",
-        80: "Chubascos ligeros",
-        81: "Chubascos moderados",
-        82: "Chubascos intensos",
+        80: "Lluvia ligera",
+        81: "Lluvia moderada",
+        82: "Lluvia intensa",
         95: "Tormenta",
         96: "Tormenta con granizo ligero",
         99: "Tormenta con granizo intenso"

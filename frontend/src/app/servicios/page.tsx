@@ -13,7 +13,7 @@ const services = [
         category: "Básico",
         image: "/placeholder.svg?height=300&width=400",
         features: [
-            "Lavado exterior con espuma activa",
+            "Lavado exterior",
             "Enjuague a presión",
             "Secado con toallas de microfibra",
             "Limpieza de llantas",
