@@ -26,7 +26,7 @@ export default function register() {
 
     const registerUser = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/register`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -38,12 +38,12 @@ export default function register() {
                 window.location.href = '/login'
                 // Podés redirigir o mostrar notificación acá
             }else{
-                alert('Error: ' + res.statusText)
+                // alert('Error: ' + res.statusText)
                 alert('Error al crear el usuario')
             }
         } catch (error) {
             alert('Error al crear el usuario')
-            console.error('Error al registrar:', error)
+            // console.error('Error al registrar:', error)
         }
     }
 

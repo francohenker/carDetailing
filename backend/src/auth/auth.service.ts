@@ -4,6 +4,11 @@ import { Users } from 'src/users/entities/users.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm/dist/common/typeorm.decorators';
 
+interface Token {
+  userId: number;
+  email: string;
+  role: string;
+};
 @Injectable()
 export class AuthService {
   constructor(
@@ -12,6 +17,7 @@ export class AuthService {
     private userRepository: Repository<Users>,
     private jwtService: JwtService,
   ) { }
+
 
   //inicio de sesion, todavia nose si se va a usar1
 
@@ -27,7 +33,7 @@ export class AuthService {
   //     };
   // }
 
-  async generateAccessToken(user: Users) {
+  async generateAccessToken(user: Users) : Promise<{ access_token: string; name: string; role: string }> {
     const payload = { name: user.email, userId: user.id, role: user.role };
     return {
       access_token: this.jwtService.sign(payload, {

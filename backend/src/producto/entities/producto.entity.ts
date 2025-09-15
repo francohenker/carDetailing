@@ -9,7 +9,7 @@ export class Producto {
   @Column()
   nombre: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   stock_minimo: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
@@ -21,9 +21,8 @@ export class Producto {
   @Column({ default: false })
   isDeleted: boolean;
 
-  constructor(nombre: string, stock_minimo: number, stock_actual: number) {
+  constructor(nombre: string, stock_actual: number) {
     this.nombre = nombre;
-    this.stock_minimo = stock_minimo;
     this.stock_actual = stock_actual;
   }
 }

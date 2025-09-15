@@ -21,6 +21,10 @@ import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './roles/role.guard';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PagoModule } from './pago/pago.module';
+import { ProductoController } from './producto/producto.controller';
+import { ProductoModule } from './producto/producto.module';
+import { ProductoService } from './producto/producto.service';
+import { ProductoController } from './producto/producto.controller';
 
 @Module({
   imports: [
@@ -36,6 +40,7 @@ import { PagoModule } from './pago/pago.module';
     CarModule,
     TurnoModule,
     PagoModule,
+    ProductoModule,
   ],
   controllers: [
     AppController,
@@ -43,6 +48,7 @@ import { PagoModule } from './pago/pago.module';
     ServicioController,
     TurnoController,
     CarController,
+    ProductoController,
   ],
   providers: [
     AppService,
@@ -50,6 +56,7 @@ import { PagoModule } from './pago/pago.module';
     UserService,
     TurnoService,
     JwtService,
+    ProductoService,
     // {
     //   provide: APP_GUARD,
     //   useClass: RolesGuard,
