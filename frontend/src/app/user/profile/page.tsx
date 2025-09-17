@@ -291,7 +291,7 @@ export default function UserProfile() {
     }, [])
 
     return (
-        <ProtectedRoute allowedRoles={['admin']}>
+        <ProtectedRoute allowedRoles={['user']}>
 
 
         <div className="flex min-h-screen w-full flex-col bg-base-300">
