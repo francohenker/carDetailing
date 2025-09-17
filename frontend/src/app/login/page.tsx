@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label"
 import HeaderDefault from "../header"
 import { useState } from "react"
 import { useUserStore } from "../store/useUserStore"
-
+import { useRouter } from "next/navigation"
 
 
 export default function login() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const router = useRouter();
 
     const handlerLogin = async () => {
         try {
@@ -29,17 +30,14 @@ export default function login() {
             const data = await response.json();
             localStorage.setItem('jwt', data.access_token);
 
-            const {setUser} = useUserStore.getState()
+            const { setUser } = useUserStore.getState()
             useUserStore.getState().login();
-            //
-            // useUserStore.getState().setUser({name: data.name, role: data.role})
-            setUser({name: data.name, role: data.role})              
-            window.location.href = '/';
+            setUser({ name: data.name, role: data.role })
 
-
+            router.push('/');
 
         } catch (error) {
-            alert('Error al iniciar sesión');
+            alert('Error al iniciar sesión' + error);
         }
     }
 

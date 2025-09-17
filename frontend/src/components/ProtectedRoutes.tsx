@@ -6,21 +6,25 @@ import { useUserStore } from '@/app/store/useUserStore'
 
 interface ProtectedRouteProps {
     children: React.ReactNode
-    allowedRoles?: ('admin' | 'user' )[]
+    allowedRoles?: ('admin' | 'user')[]
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
     const router = useRouter()
     const user = useUserStore((state) => state.user)
+    const hasHydrated = useUserStore((state) => state.hasHydrated)
+
 
     useEffect(() => {
+        if (!hasHydrated) return 
         if (!user) {
             router.push('/login')
         } else if (allowedRoles && !allowedRoles.includes(user.role)) {
             router.push('/unauthorized') // pantalla de acceso denegado
         }
-    }, [user, router, allowedRoles])
+    }, [user, hasHydrated, router, allowedRoles])
 
+    if (!hasHydrated) return <p>Cargando...</p>
     if (!user) return null // Evita mostrar contenido antes de redirigir
     if (allowedRoles && !allowedRoles.includes(user.role)) return null
 

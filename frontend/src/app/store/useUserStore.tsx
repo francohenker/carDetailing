@@ -12,6 +12,7 @@ interface UserStore {
     setUser: (user: User) => void
     logout: () => void
     login: () => void;
+    hasHydrated: boolean;
 }
 
 
@@ -23,9 +24,15 @@ export const useUserStore = create<UserStore>()(
             setUser: (user) => set({ user }),
             logout: () => set({ isAuthenticated: false, user: null }),
             login: () => set({ isAuthenticated: true }),
+            hasHydrated: false,
         }),
         {
             name: 'user-storage', // clave en localStorage
+            onRehydrateStorage: () => (state) => {
+                if(state){
+                    state.hasHydrated = true;
+                }
+            },
         }
     )
 )
