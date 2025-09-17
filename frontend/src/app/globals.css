@@ -78,6 +78,7 @@
     @apply h-full w-full m-0 p-0 overflow-x-hidden;
   }
   body {
+    font-family: 'montserrat', sans-serif;
     @apply bg-background text-foreground;
   }
   .container {
