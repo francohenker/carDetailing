@@ -7,12 +7,13 @@ import HeaderDefault from "../header"
 import { useState } from "react"
 import { useUserStore } from "../store/useUserStore"
 import { useRouter } from "next/navigation"
-
+import Alert from "@/components/Alert"
 
 export default function login() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const router = useRouter();
+    const [error, setError] = useState<string | null>(null) // Nuevo estado
 
     const handlerLogin = async () => {
         try {
@@ -24,7 +25,8 @@ export default function login() {
                 body: JSON.stringify({ email, password })
             })
             if (!response.ok) {
-                alert('Error al iniciar sesión');
+                setError('Error al iniciar sesión');
+                setTimeout(() => setError(null), 5000); // Limpiar el error después de 3 segundos
                 return;
             }
             const data = await response.json();
@@ -37,7 +39,8 @@ export default function login() {
             router.push('/');
 
         } catch (error) {
-            alert('Error al iniciar sesión' + error);
+            setError('Error al iniciar sesión');
+            setTimeout(() => setError(null), 5000);
         }
     }
 
@@ -56,6 +59,7 @@ export default function login() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        {error && <Alert type="error" message={error} />}
                         <div className="space-y-2">
                             <Label htmlFor="email">Correo electrónico</Label>
                             <Input

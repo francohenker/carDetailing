@@ -16,7 +16,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
 
     useEffect(() => {
-        if (!hasHydrated) return 
+        if (!hasHydrated) return
         if (!user) {
             router.push('/login')
         } else if (allowedRoles && !allowedRoles.includes(user.role)) {
@@ -24,7 +24,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
         }
     }, [user, hasHydrated, router, allowedRoles])
 
-    if (!hasHydrated) return <p>Cargando...</p>
+    if (!hasHydrated) return <div className='flex items-center justify-center h-screen'><span className="loading loading-spinner w-32 h-32 "></span></div>
     if (!user) return null // Evita mostrar contenido antes de redirigir
     if (allowedRoles && !allowedRoles.includes(user.role)) return null
 
