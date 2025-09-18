@@ -14,6 +14,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { RolesGuard } from 'src/roles/role.guard';
 import { Roles } from 'src/roles/role.decorator';
 import { AuthService } from 'src/auth/auth.service';
+import { Users } from './entities/users.entity';
 
 @Controller('users')
 export class UsersController {
@@ -50,7 +51,7 @@ export class UsersController {
   //return user data (profile) to frontend
   @Get('profile')
   @UseGuards(AuthGuard)
-  async getProfile(@Req() request): Promise<any> {
+  async getProfile(@Req() request): Promise<Users> {
     const jwt = await this.authService.validateToken(
       request.headers.authorization,
     );

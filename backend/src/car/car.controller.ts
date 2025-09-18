@@ -4,6 +4,7 @@ import { CarService } from './car.service';
 import { UserService } from 'src/users/users.service';
 import { modifyCarDto } from './dto/modify-car.dto';
 import { AuthService } from 'src/auth/auth.service';
+import { Car } from './entities/car.entity';
 
 @Controller('car')
 export class CarController {
@@ -23,7 +24,7 @@ export class CarController {
 
     //return car's user 
     @Get('get-cars-user')
-    async getCarsByUser(@Req() request): Promise<any> {
+    async getCarsByUser(@Req() request): Promise<Car[]> {
         const user = await this.authService.findUserByToken(
             request.headers.authorization,
         );
@@ -39,7 +40,7 @@ export class CarController {
         );
         // Assuming you have a method to modify the car
         await this.carService.modify(carData, user);
-        return 'Car modified successfully';
+        return {'message': 'Car modified successfully'};
     }
 
     @Post('delete')

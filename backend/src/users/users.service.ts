@@ -60,7 +60,7 @@ export class UserService {
 
 
 
-  async getProfile(id: number): Promise<any> {
+  async getProfile(id: number): Promise<Users> {
     const user = await this.findOne(id);
     if (!user) {
       throw new HttpException('User not found', 404);
