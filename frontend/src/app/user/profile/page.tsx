@@ -39,7 +39,7 @@ interface UserProfile {
     profileLetter: string
 }
 
-interface Vehicle {
+interface car {
     id: string
     model: string
     marca: string
@@ -62,10 +62,10 @@ export default function UserProfile() {
     })
 
 
-    const [vehicles, setVehicles] = useState<Vehicle[]>([])
+    const [cars, setcars] = useState<car[]>([])
 
     // Estado para el formulario de nuevo vehículo
-    const [newVehicle, setNewVehicle] = useState<Omit<Vehicle, "id">>({
+    const [newcar, setNewcar] = useState<Omit<car, "id">>({
         model: "",
         marca: "",
         color: "",
@@ -77,11 +77,11 @@ export default function UserProfile() {
     const [editedProfile, setEditedProfile] = useState<UserProfile>({ ...profile })
 
     // Estado para el vehículo en edición
-    const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
+    const [editingcar, setEditingcar] = useState<car | null>(null)
 
     // Estado para los diálogos
-    const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false)
-    const [isEditVehicleOpen, setIsEditVehicleOpen] = useState(false)
+    const [isAddcarOpen, setIsAddcarOpen] = useState(false)
+    const [isEditcarOpen, setIsEditcarOpen] = useState(false)
 
     // Manejadores de eventos para el perfil
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,30 +99,30 @@ export default function UserProfile() {
     }
 
     // Manejadores de eventos para vehículos
-    const handleNewVehicleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleNewcarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target
-        setNewVehicle((prev) => ({ ...prev, [name]: value }))
+        setNewcar((prev) => ({ ...prev, [name]: value }))
     }
 
-    const handleNewVehicleSelect = (name: string, value: string) => {
-        setNewVehicle((prev) => ({ ...prev, [name]: value }))
+    const handleNewcarSelect = (name: string, value: string) => {
+        setNewcar((prev) => ({ ...prev, [name]: value }))
     }
 
 
     const patenteRegex = /^([a-zA-Z]{3}\d{3}|[a-zA-Z]{2}\d{3}[a-zA-Z]{2})$/
 
-    const handleAddVehicle = () => {
-        if (!patenteRegex.test(newVehicle.patente)) {
+    const handleAddcar = () => {
+        if (!patenteRegex.test(newcar.patente)) {
             alert("Patente inválida (formato: ABC123 o AB123CD)")
             return
         }
 
-        const vehicle = {
+        const car = {
             id: Date.now().toString(),
-            ...newVehicle,
+            ...newcar,
         }
-        setVehicles((prev) => [...prev, vehicle])
-        setNewVehicle({
+        setcars((prev) => [...prev, car])
+        setNewcar({
             model: "",
             marca: "",
             color: "",
@@ -136,7 +136,7 @@ export default function UserProfile() {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${localStorage.getItem("jwt")}`,
             },
-            body: JSON.stringify(vehicle),
+            body: JSON.stringify(car),
         })
             .then((response) => {
                 if (!response.ok) {
@@ -151,7 +151,7 @@ export default function UserProfile() {
                 alert(error)
             })
 
-        setIsAddVehicleOpen(false)
+        setIsAddcarOpen(false)
         toast({
             title: "Vehículo agregado",
             description: "Tu vehículo ha sido agregado correctamente.",
@@ -159,28 +159,28 @@ export default function UserProfile() {
 
     }
 
-    const handleEditVehicle = (vehicle: Vehicle) => {
-        setEditingVehicle(vehicle)
-        setIsEditVehicleOpen(true)
+    const handleEditcar = (car: car) => {
+        setEditingcar(car)
+        setIsEditcarOpen(true)
     }
 
-    const handleEditingVehicleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleEditingcarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target
-        if (editingVehicle) {
-            setEditingVehicle((prev) => ({ ...prev!, [name]: value }))
+        if (editingcar) {
+            setEditingcar((prev) => ({ ...prev!, [name]: value }))
         }
     }
 
-    const handleEditingVehicleSelect = (name: string, value: string) => {
-        if (editingVehicle) {
-            setEditingVehicle((prev) => ({ ...prev!, [name]: value }))
+    const handleEditingcarSelect = (name: string, value: string) => {
+        if (editingcar) {
+            setEditingcar((prev) => ({ ...prev!, [name]: value }))
         }
     }
 
-    const handleUpdateVehicle = () => {
-        if (editingVehicle) {
-            setVehicles((prev) =>
-                prev.map((v) => (v.id === editingVehicle.id ? { ...editingVehicle } : v)),
+    const handleUpdatecar = () => {
+        if (editingcar) {
+            setcars((prev) =>
+                prev.map((v) => (v.id === editingcar.id ? { ...editingcar } : v)),
             )
             fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/car/modify`, {
                 method: "POST",
@@ -189,8 +189,8 @@ export default function UserProfile() {
                     Authorization: `Bearer ${localStorage.getItem("jwt")}`,
                 },
                 body: JSON.stringify({
-                    "id": editingVehicle.id,
-                    "color": editingVehicle.color
+                    "id": editingcar.id,
+                    "color": editingcar.color
                 }),
             })
                 .then((response) => {
@@ -207,7 +207,7 @@ export default function UserProfile() {
                 .catch((error) => {
                     alert(error)
                 })
-            setIsEditVehicleOpen(false)
+            setIsEditcarOpen(false)
             toast({
                 title: "Vehículo actualizado",
                 description: "La información de tu vehículo ha sido actualizada correctamente.",
@@ -215,8 +215,8 @@ export default function UserProfile() {
         }
     }
 
-    const handleDeleteVehicle = (id: string) => {
-        setVehicles((prev) => prev.filter((v) => v.id !== id))
+    const handleDeletecar = (id: string) => {
+        setcars((prev) => prev.filter((v) => v.id !== id))
         toast({
             title: "Vehículo eliminado",
             description: "Tu vehículo ha sido eliminado correctamente.",
@@ -224,8 +224,8 @@ export default function UserProfile() {
     }
 
     // Función para obtener el vehículo por ID
-    const getVehicleById = (id: string) => {
-        return vehicles.find((v) => v.id === id)
+    const getcarById = (id: string) => {
+        return cars.find((v) => v.id === id)
     }
 
     // Función para cerrar sesión
@@ -288,7 +288,7 @@ export default function UserProfile() {
                 const data = await response.json();
                 console.log("Profile data:", data);
 
-                setVehicles(data);
+                setcars(data);
             } catch (error) {
                 console.error("Error fetching profile:", error);
             }
@@ -342,7 +342,7 @@ export default function UserProfile() {
                                                 <div className="space-y-3">
                                                     <div className="flex justify-between text-sm">
                                                         <span className="text-muted-foreground">Vehículos:</span>
-                                                        <span className="font-medium">{vehicles.length}</span>
+                                                        <span className="font-medium">{cars.length}</span>
                                                     </div>
                                                     <div className="flex justify-between text-sm">
                                                         <span className="text-muted-foreground">Servicios:</span>
@@ -396,7 +396,7 @@ export default function UserProfile() {
                                             <User className="h-4 w-4 mr-2" />
                                             Datos personales
                                         </TabsTrigger>
-                                        <TabsTrigger value="vehicles">
+                                        <TabsTrigger value="cars">
                                             <Car className="h-4 w-4 mr-2" />
                                             Mis vehículos
                                         </TabsTrigger>
@@ -467,14 +467,14 @@ export default function UserProfile() {
                                     </TabsContent>
 
                                     {/* Pestaña de vehículos */}
-                                    <TabsContent value="vehicles">
+                                    <TabsContent value="cars">
                                         <Card>
                                             <CardHeader className="flex flex-row items-center justify-between">
                                                 <div>
                                                     <CardTitle>Mis vehículos</CardTitle>
                                                     <CardDescription>Administra los vehículos registrados para tus servicios.</CardDescription>
                                                 </div>
-                                                <Dialog open={isAddVehicleOpen} onOpenChange={setIsAddVehicleOpen}>
+                                                <Dialog open={isAddcarOpen} onOpenChange={setIsAddcarOpen}>
                                                     <DialogTrigger asChild>
                                                         <button className="btn btn-neutral btn-ghost">
                                                             <Plus className="mr-2 h-4 w-4" />
@@ -495,8 +495,8 @@ export default function UserProfile() {
                                                                     <Input
                                                                         id="marca"
                                                                         name="marca"
-                                                                        value={newVehicle.marca}
-                                                                        onChange={handleNewVehicleChange}
+                                                                        value={newcar.marca}
+                                                                        onChange={handleNewcarChange}
                                                                     />
                                                                 </div>
                                                                 <div className="space-y-2">
@@ -504,8 +504,8 @@ export default function UserProfile() {
                                                                     <Input
                                                                         id="model"
                                                                         name="model"
-                                                                        value={newVehicle.model}
-                                                                        onChange={handleNewVehicleChange}
+                                                                        value={newcar.model}
+                                                                        onChange={handleNewcarChange}
                                                                     />
                                                                 </div>
                                                             </div>
@@ -516,8 +516,8 @@ export default function UserProfile() {
                                                                     id="year"
                                                                     name="year"
                                                                     type="number"
-                                                                    value={newVehicle.year}
-                                                                    onChange={handleNewVehicleChange}
+                                                                    value={newcar.year}
+                                                                    onChange={handleNewcarChange}
                                                                 />
                                                             </div> */}
                                                             <div className="space-y-2">
@@ -525,8 +525,8 @@ export default function UserProfile() {
                                                                 <Input
                                                                     id="color"
                                                                     name="color"
-                                                                    value={newVehicle.color}
-                                                                    onChange={handleNewVehicleChange}
+                                                                    value={newcar.color}
+                                                                    onChange={handleNewcarChange}
                                                                 />
                                                             </div>
                                                         </div>
@@ -538,15 +538,15 @@ export default function UserProfile() {
                                                                     pattern="^([a-zA-Z]{3}\d{3}|[a-zA-Z]{2}\d{3}[a-zA-Z]{2})$"
                                                                     id="patente"
                                                                     name="patente"
-                                                                    value={newVehicle.patente}
-                                                                    onChange={handleNewVehicleChange}
+                                                                    value={newcar.patente}
+                                                                    onChange={handleNewcarChange}
                                                                 />
                                                             </div>
                                                             <div className="space-y-2">
                                                                 <Label htmlFor="type">Tipo</Label>
                                                                 <Select
-                                                                    value={newVehicle.type}
-                                                                    onValueChange={(value) => handleNewVehicleSelect("type", value)}
+                                                                    value={newcar.type}
+                                                                    onValueChange={(value) => handleNewcarSelect("type", value)}
                                                                 >
                                                                     <SelectTrigger id="type">
                                                                         <SelectValue placeholder="Seleccionar tipo" />
@@ -563,52 +563,52 @@ export default function UserProfile() {
                                                             </div>
                                                         </div>
                                                         <DialogFooter>
-                                                            <button className="btn btn-error" onClick={() => setIsAddVehicleOpen(false)}>
+                                                            <button className="btn btn-error" onClick={() => setIsAddcarOpen(false)}>
                                                                 Cancelar
                                                             </button>
-                                                            <button className="btn btn-success" onClick={handleAddVehicle}>Agregar vehículo</button>
+                                                            <button className="btn btn-success" onClick={handleAddcar}>Agregar vehículo</button>
                                                         </DialogFooter>
                                                     </DialogContent>
                                                 </Dialog>
                                             </CardHeader>
                                             <CardContent>
-                                                {vehicles.length === 0 ? (
+                                                {cars.length === 0 ? (
                                                     <div className="text-center py-6">
                                                         <Car className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                                         <p className="text-muted-foreground">No tienes vehículos registrados.</p>
-                                                        <button className="btn btn-neutral btn-ghost mt-4" onClick={() => setIsAddVehicleOpen(true)}>
+                                                        <button className="btn btn-neutral btn-ghost mt-4" onClick={() => setIsAddcarOpen(true)}>
                                                             <Plus className="mr-2 h-4 w-4" />
                                                             Agregar vehículo
                                                         </button>
                                                     </div>
                                                 ) : (
                                                     <div className="space-y-4">
-                                                        {vehicles.map((vehicle) => (
-                                                            <Card key={vehicle.id}>
+                                                        {cars.map((car) => (
+                                                            <Card key={car.id}>
                                                                 <CardContent className="p-4">
                                                                     <div className="flex items-start justify-between">
                                                                         <div>
                                                                             <div className="flex items-center gap-2">
                                                                                 <h3 className="font-semibold">
-                                                                                    {vehicle.marca} {vehicle.model}
+                                                                                    {car.marca} {car.model}
                                                                                 </h3>
-                                                                                <Badge variant="outline">{vehicle.type}</Badge>
+                                                                                <Badge variant="outline">{car.type}</Badge>
                                                                             </div>
                                                                             <div className="mt-1 text-sm text-muted-foreground">
                                                                                 <p>
-                                                                                    Color: {vehicle.color}
+                                                                                    Color: {car.color}
                                                                                 </p>
-                                                                                <p>Patente: {vehicle.patente}</p>
+                                                                                <p>Patente: {car.patente}</p>
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex gap-2">
-                                                                            <button onClick={() => handleEditVehicle(vehicle)} className="btn btn-ghost sm">
+                                                                            <button onClick={() => handleEditcar(car)} className="btn btn-ghost sm">
                                                                                 <Edit2 className="h-4 w-4" />
                                                                                 <span className="sr-only">Editar</span>
                                                                             </button>
                                                                             <button
                                                                                 className="btn btn-ghosttext-destructive hover:text-destructive sm"
-                                                                                onClick={() => handleDeleteVehicle(vehicle.id)}
+                                                                                onClick={() => handleDeletecar(car.id)}
                                                                             >
                                                                                 <Trash2 className="h-4 w-4" />
                                                                                 <span className="sr-only">Eliminar</span>
@@ -624,13 +624,13 @@ export default function UserProfile() {
                                         </Card>
 
                                         {/* Diálogo para editar vehículo */}
-                                        <Dialog open={isEditVehicleOpen} onOpenChange={setIsEditVehicleOpen}>
+                                        <Dialog open={isEditcarOpen} onOpenChange={setIsEditcarOpen}>
                                             <DialogContent>
                                                 <DialogHeader>
                                                     <DialogTitle>Editar vehículo</DialogTitle>
                                                     <DialogDescription>Actualiza la información de tu vehículo.</DialogDescription>
                                                 </DialogHeader>
-                                                {editingVehicle && (
+                                                {editingcar && (
                                                     <div className="grid gap-4 py-4">
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <div className="space-y-2">
@@ -638,8 +638,8 @@ export default function UserProfile() {
                                                                 <Input
                                                                     id="edit-brand"
                                                                     name="marca"
-                                                                    value={editingVehicle.marca}
-                                                                    onChange={handleEditingVehicleChange}
+                                                                    value={editingcar.marca}
+                                                                    onChange={handleEditingcarChange}
                                                                 />
                                                             </div>
                                                             <div className="space-y-2">
@@ -647,8 +647,8 @@ export default function UserProfile() {
                                                                 <Input
                                                                     id="edit-model"
                                                                     name="model"
-                                                                    value={editingVehicle.model}
-                                                                    onChange={handleEditingVehicleChange}
+                                                                    value={editingcar.model}
+                                                                    onChange={handleEditingcarChange}
                                                                 />
                                                             </div>
                                                         </div>
@@ -659,8 +659,8 @@ export default function UserProfile() {
                                                             id="edit-year"
                                                             name="year"
                                                             type="number"
-                                                            value={editingVehicle.year}
-                                                            onChange={handleEditingVehicleChange}
+                                                            value={editingcar.year}
+                                                            onChange={handleEditingcarChange}
                                                         />
                                                     </div> */}
                                                             <div className="space-y-2">
@@ -668,8 +668,8 @@ export default function UserProfile() {
                                                                 <Input
                                                                     id="edit-color"
                                                                     name="color"
-                                                                    value={editingVehicle.color}
-                                                                    onChange={handleEditingVehicleChange}
+                                                                    value={editingcar.color}
+                                                                    onChange={handleEditingcarChange}
                                                                 />
                                                             </div>
                                                         </div>
@@ -679,16 +679,16 @@ export default function UserProfile() {
                                                                 <Input
                                                                     id="edit-licensePlate"
                                                                     name="patente"
-                                                                    value={editingVehicle.patente}
-                                                                    onChange={handleEditingVehicleChange}
+                                                                    value={editingcar.patente}
+                                                                    onChange={handleEditingcarChange}
                                                                     readOnly
                                                                 />
                                                             </div>
                                                             <div className="space-y-2">
                                                                 <Label htmlFor="edit-type">Tipo</Label>
                                                                 <Select
-                                                                    value={editingVehicle.type}
-                                                                    onValueChange={(value) => handleEditingVehicleSelect("type", value)}
+                                                                    value={editingcar.type}
+                                                                    onValueChange={(value) => handleEditingcarSelect("type", value)}
                                                                 >
                                                                     <SelectTrigger id="edit-type">
                                                                         <SelectValue placeholder="Seleccionar tipo" />
@@ -707,10 +707,10 @@ export default function UserProfile() {
                                                     </div>
                                                 )}
                                                 <DialogFooter>
-                                                    <button className="btn btn-error" onClick={() => setIsEditVehicleOpen(false)}>
+                                                    <button className="btn btn-error" onClick={() => setIsEditcarOpen(false)}>
                                                         Cancelar
                                                     </button>
-                                                    <button onClick={handleUpdateVehicle} className="btn btn-success">Guardar cambios</button>
+                                                    <button onClick={handleUpdatecar} className="btn btn-success">Guardar cambios</button>
                                                 </DialogFooter>
                                             </DialogContent>
                                         </Dialog>
@@ -737,7 +737,7 @@ export default function UserProfile() {
                                         ) : (
                                             <div className="space-y-4">
                                                 {serviceHistory.map((service) => {
-                                                    const vehicle = getVehicleById(service.vehicleId)
+                                                    const car = getcarById(service.carId)
                                                     return (
                                                         <Card key={service.id}>
                                                             <CardContent className="p-4">
@@ -763,7 +763,7 @@ export default function UserProfile() {
                                                                         </div>
                                                                         <div className="mt-1 text-sm text-muted-foreground">
                                                                             <p>Fecha: {new Date(service.date).toLocaleDateString("es-AR")}</p>
-                                                                            <p>Vehículo: {vehicle ? `${vehicle.brand} ${vehicle.model}` : "Desconocido"}</p>
+                                                                            <p>Vehículo: {car ? `${car.brand} ${car.model}` : "Desconocido"}</p>
                                                                             <p>Precio: ${service.price.toLocaleString("es-AR")}</p>
                                                                         </div>
                                                                     </div>

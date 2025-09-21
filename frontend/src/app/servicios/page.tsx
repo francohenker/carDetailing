@@ -1,9 +1,27 @@
+'use client'
 import HeaderDefault from "../header";
 import RootLayout from "../layout";
 import Link from "next/link"
 import { Car, CheckCircle, Clock, Droplets, Shield, Sparkles, Star, Wrench } from "lucide-react"
+import Name from "@/components/Name";
+import { useEffect, useState } from "react";
 
-const services = [
+interface Service {
+    id: number;
+    name: string;
+    description: string;
+    precio: number;
+    // duration: string;
+    // category: string;
+    // features: string[];
+    // popular: boolean;
+    // image?: string; // URL de la imagen del servicio
+}
+
+
+
+
+const servicess = [
     {
         id: 1,
         name: "Lavado Básico",
@@ -11,7 +29,6 @@ const services = [
         price: 2500,
         duration: "45 min",
         category: "Básico",
-        image: "/placeholder.svg?height=300&width=400",
         features: [
             "Lavado exterior",
             "Enjuague a presión",
@@ -28,7 +45,6 @@ const services = [
         price: 3800,
         duration: "90 min",
         category: "Premium",
-        image: "/placeholder.svg?height=300&width=400",
         features: [
             "Todo lo del lavado básico",
             "Limpieza profunda del interior",
@@ -46,7 +62,6 @@ const services = [
         price: 7500,
         duration: "3-4 horas",
         category: "Profesional",
-        image: "/placeholder.svg?height=300&width=400",
         features: [
             "Lavado premium incluido",
             "Pulido de carrocería",
@@ -65,7 +80,6 @@ const services = [
         price: 5200,
         duration: "2-3 horas",
         category: "Especializado",
-        image: "/placeholder.svg?height=300&width=400",
         features: [
             "Evaluación del estado de la pintura",
             "Pulido profesional multi-etapa",
@@ -83,7 +97,6 @@ const services = [
         price: 12000,
         duration: "6-8 horas",
         category: "Premium",
-        image: "/placeholder.svg?height=300&width=400",
         features: [
             "Preparación completa de la superficie",
             "Descontaminación química",
@@ -102,7 +115,6 @@ const services = [
         price: 4200,
         duration: "2 horas",
         category: "Especializado",
-        image: "/placeholder.svg?height=300&width=400",
         features: [
             "Aspirado profundo",
             "Limpieza con vapor",
@@ -118,10 +130,60 @@ const services = [
 const categories = ["Todos", "Básico", "Premium", "Profesional", "Especializado"]
 
 export default function Servicios() {
+    const [services, setServices] = useState<Service[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true)
+                const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/getAll`)
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar servicios')
+                }
+                
+                const data = await response.json()
+                setServices(data)
+            } catch (error) {
+                console.error("Error fetching services:", error)
+                setError('Error al cargar los servicios')
+                setServices([]) // Fallback a array vacío
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchData()
+    }, [])
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-base-100">
+                <HeaderDefault />
+                <div className="flex justify-center items-center min-h-[400px]">
+                    <span className="loading loading-spinner loading-lg"></span>
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-base-100">
+                <HeaderDefault />
+                <div className="alert alert-error max-w-md mx-auto mt-8">
+                    <span>{error}</span>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="min-h-screen bg-base-100">
             <HeaderDefault />
-            
+
 
             {/* Hero Section */}
             <div className="hero min-h-[400px] bg-gradient-to-r from-primary to-secondary">
@@ -133,9 +195,9 @@ export default function Servicios() {
                             Descubre nuestra amplia gama de servicios de detailing profesional. Desde lavados básicos hasta
                             tratamientos cerámicos de última generación.
                         </p>
-                        <Link href="#servicios" className="btn btn-accent btn-lg">
+                        {/* <Link href="#servicios" className="btn btn-accent btn-lg">
                             Ver Servicios
-                        </Link>
+                        </Link> */}
                     </div>
                 </div>
             </div>
@@ -170,39 +232,30 @@ export default function Servicios() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {services.map((service) => (
                         <div key={service.id} className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow ">
-                            {service.popular && (
+                            {/* {service.popular && (
                                 <div className="badge badge-secondary absolute top-4 right-4 z-10">
                                     <Star className="w-3 h-3 mr-1" />
                                     Popular
                                 </div>
-                            )}
-
-                            <figure className="relative">
-                                <img
-                                    src={service.image || "/placeholder.svg"}
-                                    alt={service.name}
-                                    className="w-full h-48 object-cover"
-                                />
-                                <div className="badge badge-primary absolute bottom-4 left-4">{service.category}</div>
-                            </figure>
+                            )} */}
 
                             <div className="card-body text-base-content">
                                 <h2 className="card-title">
                                     {service.name}
-                                    <div className="badge ">${service.price.toLocaleString()}</div>
+                                    <div className="badge ">${service.precio.toLocaleString()}</div>
                                 </h2>
 
                                 <p className="text-sm mb-4">{service.description}</p>
 
                                 <div className="flex items-center gap-2 mb-4">
                                     <Clock className="w-4 h-4 text-primary" />
-                                    <span className="text-sm">Duración: {service.duration}</span>
+                                    {/* <span className="text-sm">Duración: {service.duration}</span> */}
                                 </div>
 
                                 <div className="space-y-2 mb-4">
                                     <h4 className="font-semibold text-sm">Incluye:</h4>
                                     <ul className="space-y-1">
-                                        {service.features.slice(0, 3).map((feature, index) => (
+                                        {/* {service.features.slice(0, 3).map((feature, index) => (
                                             <li key={index} className="flex items-start gap-2 text-xs">
                                                 <CheckCircle className="w-3 h-3 text-success mt-0.5 flex-shrink-0" />
                                                 <span>{feature}</span>
@@ -210,7 +263,7 @@ export default function Servicios() {
                                         ))}
                                         {service.features.length > 3 && (
                                             <li className="text-xs text-primary">+{service.features.length - 3} servicios más</li>
-                                        )}
+                                        )} */}
                                     </ul>
                                 </div>
 
@@ -228,7 +281,7 @@ export default function Servicios() {
             <section className="bg-base-200 py-16 text-base-content">
                 <div className="container mx-auto px-4">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold mb-4">¿Por qué elegir DetailCar?</h2>
+                        <h2 className="text-3xl font-bold mb-4">¿Por qué elegir <Name />?</h2>
                         <p className="max-w-2xl mx-auto">
                             Somos especialistas en detailing automotriz con más de 10 años de experiencia y los mejores productos del
                             mercado.

@@ -58,4 +58,13 @@ export class ServicioService {
     }
     return servicios;
   }
+
+  async getAll(): Promise<Servicio[]> {
+    return this.servicioRepository.find({
+      where: {
+        isDeleted: false,
+      },
+    });
+  }
+
 }

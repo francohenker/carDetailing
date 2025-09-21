@@ -1,7 +1,7 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Turno } from './entities/turno.entity';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { CreateTurnoDto } from './dto/create.turno.dto';
 import { Car } from 'src/car/entities/car.entity';
 import { ServicioService } from 'src/servicio/servicio.service';
@@ -123,5 +123,23 @@ export class TurnoService {
     //     );
     // }
   }
+
+  async findDate(): Promise<any> {
+    const startDate = new Date(Date.now());
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(Date.now());
+    endDate.setHours(23, 59, 59, 999);
+
+    const turnos = await this.turnoRepository.find({
+      where: {
+        fechaHora: Between(startDate, endDate),
+      },
+      relations: ['car', 'car.user', 'servicio'],
+    });
+
+    return turnos;
+  }
+
+
 
 }

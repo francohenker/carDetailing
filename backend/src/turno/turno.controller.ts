@@ -54,6 +54,15 @@ export class TurnoController {
     return turno;
   }
 
+  @Get('get-date')
+  async getTurnosByDate(@Req() request): Promise<any> {
+    // const date = request.query.date;
+    // if (!date) {
+    //   throw new HttpException('Date query parameter is required', 400);
+    // }
+    return this.turnoService.findDate();
+  }
+
   // @Post('delete')
   // async deleteTurno(@Req() request): Promise<void> {
   //     return this.turnoService.deleteTurno(user);

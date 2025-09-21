@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { ServicioService } from './servicio.service';
 import { UserService } from 'src/users/users.service';
 import { CreateServicioDto } from './dto/create.servicio.dto';
@@ -10,7 +10,7 @@ import { RolesGuard } from 'src/roles/role.guard';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { AuthService } from 'src/auth/auth.service';
 
-@Controller('servicio')
+@Controller('services')
 export class ServicioController {
   constructor(
     private servicioService: ServicioService,
@@ -45,4 +45,10 @@ export class ServicioController {
   async deleteServicio(@Body() body): Promise<any> {
     return this.servicioService.delete(body.id);
   }
+
+  @Get('getAll')
+  async getAllServicios(): Promise<Servicio[]> {
+    return this.servicioService.getAll();
+  }
+
 }
