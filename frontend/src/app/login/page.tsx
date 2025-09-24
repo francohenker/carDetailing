@@ -22,7 +22,7 @@ export default function login() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email: email.toLowerCase(), password })
             })
             if (!response.ok) {
                 setError('Error al iniciar sesión');
