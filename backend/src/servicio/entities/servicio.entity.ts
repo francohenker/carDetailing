@@ -21,8 +21,11 @@ export class Servicio {
   @Column({ nullable: true })
   description: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { precision: 10, scale: 0 })
   precio: number;
+
+  @Column()
+  timeSlot: number;
 
   @Column({ default: false })
   isDeleted: boolean;
