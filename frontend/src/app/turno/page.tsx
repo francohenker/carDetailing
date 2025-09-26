@@ -3,10 +3,10 @@ import HeaderDefault from "../header"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Calendar, momentLocalizer } from "react-big-calendar"
 import moment from "moment"
 import "moment/locale/es"
-import "react-big-calendar/lib/css/react-big-calendar.css"
+import { Calendar as ShadCalendar } from "@/components/ui/calendar"
+import { Button } from "@/components/ui/button"
 import {
     Car,
     ChevronLeft,
@@ -25,7 +25,6 @@ import Alert from "@/components/Alert"
 
 // Configurar moment en español
 moment.locale("es")
-const localizer = momentLocalizer(moment)
 
 // Tipos de datos
 interface Service {
@@ -51,13 +50,7 @@ interface TimeSlot {
     available: boolean
 }
 
-interface CalendarEvent {
-    id: string
-    title: string
-    start: Date
-    end: Date
-    resource?: any
-}
+// No usamos eventos (react-big-calendar eliminado)
 
 interface BookingData {
     services: Service[]
@@ -78,7 +71,6 @@ export default function TurnoPage() {
     const [cars, setcars] = useState<car[]>([])
     const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
     const [slotsLoading, setSlotsLoading] = useState(false)
-    const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -94,7 +86,7 @@ export default function TurnoPage() {
 
     // Estados para el calendario
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-    const [calendarView, setCalendarView] = useState<"month" | "week" | "day">("month")
+    // Shadcn Calendar maneja su propia vista
 
     // Rango de fechas seleccionables: hoy hasta dentro de 2 meses (incluye fines de semana)
     const today = moment().startOf('day').toDate()
@@ -139,6 +131,10 @@ export default function TurnoPage() {
                 })
                 const data = await response.json()
                 setcars(data)
+                if (data.statusCode === 401) {
+                    setError("Token expirado");
+                    setcars([]);
+                }
             } catch (error) {
                 setError("Error fetching cars")
             } finally {
@@ -254,18 +250,7 @@ export default function TurnoPage() {
         fetchAvailableSlots(date)
     }
 
-    const handleNavigate = (date: Date) => {
-        // Evitar navegar a fechas fuera del rango, ajustar a bordes
-        if (moment(date).isBefore(today, 'day')) {
-            setSelectedDate(today)
-            return
-        }
-        if (moment(date).isAfter(maxSelectableDate, 'day')) {
-            setSelectedDate(maxSelectableDate)
-            return
-        }
-        setSelectedDate(date)
-    }
+    // Navegación manejada por selección en ShadCalendar
 
     // Manejar selección de horario
     const handleTimeSlotSelect = (slot: TimeSlot) => {
@@ -311,9 +296,9 @@ export default function TurnoPage() {
     const canProceedToNextStep = () => {
         switch (currentStep) {
             case 1:
-                return bookingData.services.length > 0
-            case 2:
                 return bookingData.car !== null
+            case 2:
+                return bookingData.services.length > 0
             case 3:
                 return bookingData.date !== null && bookingData.timeSlot !== null
             default:
@@ -366,7 +351,10 @@ export default function TurnoPage() {
                     {/* Contenido Principal */}
                     <div className="lg:col-span-2">
                         {/* Paso 1: Selección de Vehículo */}
-                        {currentStep === 2 && (
+                        <div>
+                            {error && <Alert type='error' message={error} />}
+                        </div>
+                        {currentStep === 1 && (
                             <div className="card bg-base-100 shadow-xl">
                                 <div className="card-body">
                                     <h2 className="card-title text-2xl mb-6">
@@ -375,7 +363,8 @@ export default function TurnoPage() {
                                     </h2>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {cars.map((car) => {
+
+                                        {cars.length > 0 && cars.map((car) => {
                                             const isSelected = bookingData.car?.id === car.id
                                             return (
                                                 <div
@@ -401,18 +390,23 @@ export default function TurnoPage() {
                                             )
                                         })}
                                     </div>
-
+                                    
                                     <div className="divider">O</div>
-
-                                    <Link href="/perfil" className="btn btn-outline">
+                                    <Link href="/user/profile" className="btn btn-outline">
                                         <Car className="h-4 w-4 mr-2" />
                                         Agregar Nuevo Vehículo
                                     </Link>
+
+                                    {error == "Token expirado" && (
+                                        <button className="btn btn-neutral mb-4" onClick={() => router.push('/login')}>
+                                            Login
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}
                         {/* Paso 2: Selección de Servicios */}
-                        {currentStep === 1 && (
+                        {currentStep === 2 && (
                             <div className="card bg-base-100 shadow-xl">
                                 <div className="card-body">
                                     <h2 className="card-title text-2xl mb-6">
@@ -484,101 +478,70 @@ export default function TurnoPage() {
                                         Selecciona Fecha y Hora
                                     </h2>
 
-                                    {/* Calendario */}
+                                    {/* Calendario + horarios (shadcn-style) */}
                                     <div className="mb-6">
-                                        <div className="bg-base-200 p-4 rounded-lg">
-                                            <Calendar
-                                                localizer={localizer}
-                                                events={calendarEvents}
-                                                startAccessor="start"
-                                                endAccessor="end"
-                                                style={{ height: 400 }}
-                                                view={calendarView}
-                                                // onView={setCalendarView}
-                                                date={selectedDate}
-                                                onNavigate={handleNavigate}
-                                                onSelectSlot={({ start }) => handleDateSelect(start)}
-                                                selectable
-                                                dayPropGetter={(date) => {
-                                                    const selectable = isSelectableDate(date as Date)
-                                                    if (!selectable) {
-                                                        return {
-                                                            style: { opacity: 0.5, pointerEvents: 'none', backgroundColor: 'var(--fallback-b1, #f3f4f6)' },
-                                                            className: 'rbc-day-out-of-range'
-                                                        }
-                                                    }
-                                                    return {}
-                                                }}
-                                                messages={{
-                                                    next: "Siguiente",
-                                                    previous: "Anterior",
-                                                    today: "Hoy",
-                                                    month: "Mes",
-                                                    week: "Semana",
-                                                    day: "Día",
-                                                    agenda: "Agenda",
-                                                    date: "Fecha",
-                                                    time: "Hora",
-                                                    event: "Evento",
-                                                    noEventsInRange: "No hay eventos en este rango",
-                                                }}
-                                                formats={{
-                                                    monthHeaderFormat: "MMMM YYYY",
-                                                    dayHeaderFormat: "dddd DD/MM",
-                                                    dayRangeHeaderFormat: ({ start, end }) =>
-                                                        `${moment(start).format("DD/MM")} - ${moment(end).format("DD/MM")}`,
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Horarios Disponibles */}
-                                    {bookingData.date && (
-                                        <div>
-                                            <h3 className="text-lg font-semibold mb-4">
-                                                Horarios disponibles para {moment(bookingData.date).format("dddd, DD [de] MMMM")}
-                                            </h3>
-                                            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                                                {slotsLoading && (
-                                                    <div className="col-span-full flex items-center gap-2 text-sm text-base-content/70">
-                                                        <span className="loading loading-spinner loading-sm" />
-                                                        Cargando horarios...
-                                                    </div>
-                                                )}
-                                                {!slotsLoading && availableSlots.length === 0 && (
-                                                    <div className="col-span-full text-sm text-base-content/70">
-                                                        No hay horarios disponibles para esta fecha.
-                                                    </div>
-                                                )}
-                                                {!slotsLoading && availableSlots.map((slot) => (
-                                                    <button
-                                                        key={slot.id}
-                                                        className={`btn btn-sm ${bookingData.timeSlot?.id === slot.id
-                                                            ? "btn-primary"
-                                                            : slot.available
-                                                                ? "btn-outline"
-                                                                : "btn-disabled"
-                                                            }`}
-                                                        onClick={() => handleTimeSlotSelect(slot)}
-                                                        disabled={!slot.available}
-                                                    >
-                                                        {slot.time}
-                                                    </button>
-                                                ))}
+                                        <div className="relative bg-base-200 rounded-lg p-0 md:pr-48">
+                                            <div className="p-4">
+                                                <ShadCalendar
+                                                    mode="single"
+                                                    selected={selectedDate}
+                                                    onSelect={(d) => d && handleDateSelect(d)}
+                                                    fromDate={today}
+                                                    toDate={maxSelectableDate}
+                                                    captionLayout="dropdown"
+                                                    showOutsideDays={false}
+                                                    className="bg-transparent p-0 rounded-md"
+                                                    formatters={{
+                                                        formatWeekdayName: (date: Date) =>
+                                                            date.toLocaleString("es-AR", { weekday: "short" }),
+                                                    }}
+                                                />
                                             </div>
-                                            {bookingData.totalDuration > 0 && (
-                                                <div className="alert alert-info mt-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <Clock className="h-5 w-5" />
-                                                        <span>
-                                                            Duración estimada: {Math.floor(bookingData.totalDuration / 60)}h{" "}
-                                                            {bookingData.totalDuration % 60}min
-                                                        </span>
-                                                    </div>
+                                            {/* Sidebar de horarios */}
+                                            <div className="no-scrollbar inset-y-0 right-0 flex max-h-72 w-full scroll-pb-6 flex-col gap-4 overflow-y-auto border-t p-4 md:absolute md:max-h-none md:w-48 md:border-t-0 md:border-l">
+                                                <div className="grid gap-2">
+                                                    {!bookingData.date && (
+                                                        <div className="text-sm text-base-content/70">
+                                                            Selecciona una fecha para ver horarios.
+                                                        </div>
+                                                    )}
+                                                    {bookingData.date && slotsLoading && (
+                                                        <div className="flex items-center gap-2 text-sm text-base-content/70">
+                                                            <span className="loading loading-spinner loading-sm" />
+                                                            Cargando horarios...
+                                                        </div>
+                                                    )}
+                                                    {bookingData.date && !slotsLoading && availableSlots.length === 0 && (
+                                                        <div className="text-sm text-base-content/70">
+                                                            No hay horarios disponibles para esta fecha.
+                                                        </div>
+                                                    )}
+                                                    {bookingData.date && !slotsLoading && availableSlots.map((slot) => (
+                                                        <Button
+                                                            key={slot.id}
+                                                            variant={bookingData.timeSlot?.id === slot.id ? "default" : "outline"}
+                                                            onClick={() => handleTimeSlotSelect(slot)}
+                                                            disabled={!slot.available}
+                                                            className="w-full shadow-none"
+                                                        >
+                                                            {slot.time}
+                                                        </Button>
+                                                    ))}
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
-                                    )}
+                                        {bookingData.totalDuration > 0 && (
+                                            <div className="alert alert-info mt-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Clock className="h-5 w-5" />
+                                                    <span>
+                                                        Duración estimada: {Math.floor(bookingData.totalDuration / 60)}h{" "}
+                                                        {bookingData.totalDuration % 60}min
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -653,7 +616,7 @@ export default function TurnoPage() {
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-3 p-3 bg-base-200 rounded">
                                                     <MapPin className="h-5 w-5 text-primary" />
-                                                    <span>Av. Libertador 1234, Buenos Aires</span>
+                                                    <span>Ruta Nacional 14 km 974, San Vicente, Misiones</span>
                                                 </div>
                                                 <div className="flex items-center gap-3 p-3 bg-base-200 rounded">
                                                     <Phone className="h-5 w-5 text-primary" />
@@ -672,6 +635,15 @@ export default function TurnoPage() {
                         <div className="card bg-base-100 shadow-xl sticky top-24">
                             <div className="card-body">
                                 <h3 className="card-title">Resumen del Turno</h3>
+                                {/* Vehículo */}
+                                {bookingData.car && (
+                                    <div>
+                                        <h4 className="font-semibold text-sm">Vehículo:</h4>
+                                        <p className="text-sm">
+                                            {bookingData.car.marca} {bookingData.car.model}
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Servicios */}
                                 {bookingData.services.length > 0 && (
@@ -686,15 +658,6 @@ export default function TurnoPage() {
                                     </div>
                                 )}
 
-                                {/* Vehículo */}
-                                {bookingData.car && (
-                                    <div>
-                                        <h4 className="font-semibold text-sm">Vehículo:</h4>
-                                        <p className="text-sm">
-                                            {bookingData.car.marca} {bookingData.car.model}
-                                        </p>
-                                    </div>
-                                )}
 
                                 {/* Fecha y Hora */}
                                 {bookingData.date && bookingData.timeSlot && (

@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import UserTurnos from "@/components/UserTurnos"
 import {
     Dialog,
     DialogContent,
@@ -346,13 +347,11 @@ export default function UserProfile() {
                                                     </div>
                                                     <div className="flex justify-between text-sm">
                                                         <span className="text-muted-foreground">Servicios:</span>
-                                                        {/* <span className="font-medium">{serviceHistory.length}</span> */}
+                                                        <span className="font-medium">3</span>
                                                     </div>
                                                     <div className="flex justify-between text-sm">
                                                         <span className="text-muted-foreground">Próximos:</span>
-                                                        <span className="font-medium">
-                                                            {/* {serviceHistory.filter((s) => s.status === "scheduled").length} */}
-                                                        </span>
+                                                        <span className="font-medium">2</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -725,61 +724,12 @@ export default function UserProfile() {
                                                     Consulta los servicios realizados y programados para tus vehículos.
                                                 </CardDescription>
                                             </CardHeader>
-                                            {/* <CardContent>
-                                        {serviceHistory.length === 0 ? (
-                                            <div className="text-center py-6">
-                                                <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                                <p className="text-muted-foreground">No tienes servicios registrados.</p>
-                                                <button className="btn btn-outline mt-4" asChild>
-                                                    <Link href="/">Reservar un servicio</Link>
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-4">
-                                                {serviceHistory.map((service) => {
-                                                    const car = getcarById(service.carId)
-                                                    return (
-                                                        <Card key={service.id}>
-                                                            <CardContent className="p-4">
-                                                                <div className="flex items-start justify-between">
-                                                                    <div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <h3 className="font-semibold">{service.serviceName}</h3>
-                                                                            <Badge
-                                                                                variant={
-                                                                                    service.status === "completed"
-                                                                                        ? "default"
-                                                                                        : service.status === "scheduled"
-                                                                                            ? "outline"
-                                                                                            : "secondary"
-                                                                                }
-                                                                            >
-                                                                                {service.status === "completed"
-                                                                                    ? "Completado"
-                                                                                    : service.status === "scheduled"
-                                                                                        ? "Programado"
-                                                                                        : "Cancelado"}
-                                                                            </Badge>
-                                                                        </div>
-                                                                        <div className="mt-1 text-sm text-muted-foreground">
-                                                                            <p>Fecha: {new Date(service.date).toLocaleDateString("es-AR")}</p>
-                                                                            <p>Vehículo: {car ? `${car.brand} ${car.model}` : "Desconocido"}</p>
-                                                                            <p>Precio: ${service.price.toLocaleString("es-AR")}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                    {service.status === "scheduled" && (
-                                                                        <button className="btn btn-outline sm">
-                                                                            Reprogramar
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
-                                                    )
-                                                })}
-                                            </div>
-                                        )}
-                                    </CardContent> */}
+                                            <CardContent>
+                                                {/* Importamos el componente UserTurnos */}
+                                                <div className="mt-2">
+                                                    <UserTurnos />
+                                                </div>
+                                            </CardContent>
                                         </Card>
                                     </TabsContent>
 

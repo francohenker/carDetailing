@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import FooterDefault from "./footer"
 import { WeatherWidget } from "@/components/weatherDisplay"
 import MyCalendar from "@/components/calendar"
+import { CalendarDemo } from "@/components/Calendar2"
 
 
 export default function Home() {
@@ -65,8 +66,8 @@ export default function Home() {
                     Elige el día que prefieras para tu servicio de detailing.
                   </p>
                   
-                  
-                  <MyCalendar/>
+                  <CalendarDemo />
+                  {/* <MyCalendar/> */}
                 </CardContent>
               </Card>
 
