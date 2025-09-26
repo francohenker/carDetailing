@@ -266,24 +266,32 @@ export default function TurnoPage() {
     const handleConfirmBooking = async () => {
         setLoading(true)
         try {
-            // Simulación de envío al backend
             await new Promise((resolve) => setTimeout(resolve, 2000))
-
-            // Aquí iría la llamada real al backend
             const bookingPayload = {
                 services: bookingData.services.map((s) => s.id),
                 carId: bookingData.car?.id,
                 date: bookingData.date?.toISOString(),
                 time: bookingData.timeSlot?.time,
                 totalPrice: bookingData.totalPrice,
-                totalDuration: bookingData.totalDuration,
+                duration: bookingData.totalDuration,
+                observacion: '',
             }
+            //creacion del turno
+            await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/create`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+                },
+                body: JSON.stringify(bookingPayload),
+            })
+
 
             console.log("Booking payload:", bookingPayload)
 
             // Mostrar mensaje de éxito y redirigir
             alert("¡Turno reservado exitosamente!")
-            router.push("/perfil")
+            // router.push("/perfil")
         } catch (error) {
             console.error("Error confirming booking:", error)
             alert("Error al reservar el turno. Por favor, intenta nuevamente.")

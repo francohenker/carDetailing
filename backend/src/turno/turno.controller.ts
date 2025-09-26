@@ -17,18 +17,33 @@ import { ModifyTurnoDto } from './dto/modify.turno.dto';
 import { TurnoOwnerGuard } from 'src/auth/turno.owner.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/roles/role.guard';
+import { AuthService } from 'src/auth/auth.service';
 
 @Controller('turno')
 export class TurnoController {
   constructor(
     private carService: CarService,
     private turnoService: TurnoService,
-  ) {}
+    private authService: AuthService,
+  ) { }
 
   @Post('create')
-  async createTurno(@Req() request,@Body() createTurnoDto: CreateTurnoDto,): Promise<Turno> {
+  async createTurno(@Req() request, @Body() createTurnoDto: CreateTurnoDto,): Promise<Turno> {
+    try {
+      const user = await this.authService.findUserByToken(
+      request.headers.authorization,
+    );
     const car = await this.carService.findById(createTurnoDto.carId);
+    if(car.user.id !== user.id){
+      throw new HttpException('Car does not belong to the user', 403);
+    }
+    if (!car) {
+      throw new HttpException('Car not found', 404);
+    }
     return this.turnoService.createTurno(car, createTurnoDto);
+  } catch (error) {
+      throw new HttpException('User unauthorized', 401);
+    }
   }
 
   @UseGuards(TurnoOwnerGuard)

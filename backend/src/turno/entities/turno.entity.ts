@@ -30,11 +30,16 @@ export class Turno {
   @Column()
   observacion: string;
 
+  @Column()
+  duration: number;
+
+  @Column()
+  totalPrice: number;
+
   @ManyToMany(() => Servicio, (Servicio) => Servicio.turno)
   @JoinTable()
   servicio: Servicio[];
 
-  // @Column({ nullable: true })
   @OneToOne(() => Pago, (pago) => pago.turno)
   pago: Pago;
 
@@ -43,10 +48,16 @@ export class Turno {
     estado: estado_turno,
     observacion: string,
     servicio: Servicio[],
+    fechaHora?: Date,
+    duration?: number,
+    totalPrice?: number,
   ) {
     this.car = car;
     this.estado = estado;
     this.observacion = observacion;
+    this.fechaHora = fechaHora;
     this.servicio = servicio;
+    this.duration = duration;
+    this.totalPrice = totalPrice;
   }
 }

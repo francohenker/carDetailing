@@ -7,6 +7,7 @@ import { Car } from 'src/car/entities/car.entity';
 import { ServicioService } from 'src/servicio/servicio.service';
 import { ModifyTurnoDto } from './dto/modify.turno.dto';
 import { fetchWeatherApi } from 'openmeteo';
+import { estado_turno } from 'src/enums/estado_turno.enum';
 
 
 @Injectable()
@@ -18,12 +19,15 @@ export class TurnoService {
   ) { }
 
   async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
-    const servicios = await this.servicioService.findByIds(turnoView.servicios);
+    const servicios = await this.servicioService.findByIds(turnoView.services);
     const newTurno = new Turno(
       car,
-      turnoView.estado,
+      estado_turno.PENDIENTE,
       turnoView.observacion,
       servicios,
+      turnoView.date,
+      turnoView.duration,
+      turnoView.totalPrice
     );
     const turno = this.turnoRepository.create(newTurno);
     this.turnoRepository.save(turno);

@@ -16,16 +16,21 @@ export class CreateTurnoDto {
   carId: number;
 
   @IsDate()
-  fechaHora: Date;
+  date: Date;
 
-  @IsEnum(estado_turno)
-  estado: estado_turno;
+  // @IsEnum(estado_turno)
+  // estado: estado_turno;
 
   @IsString()
   observacion: string;
 
+  duration: number;
+
+  totalPrice: number;
+
+
   @IsArray()
   @ArrayNotEmpty()
   @IsInt({ each: true })
-  servicios: number[];
+  services: number[];
 }
