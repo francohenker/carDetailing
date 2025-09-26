@@ -807,7 +807,6 @@ export default function UserProfile() {
                 </main>
 
             </div>
-        // </ProtectedRoute>
 
     )
 

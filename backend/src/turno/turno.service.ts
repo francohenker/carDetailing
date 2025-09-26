@@ -8,6 +8,7 @@ import { ServicioService } from 'src/servicio/servicio.service';
 import { ModifyTurnoDto } from './dto/modify.turno.dto';
 import { fetchWeatherApi } from 'openmeteo';
 import { estado_turno } from 'src/enums/estado_turno.enum';
+import { Users } from 'src/users/entities/users.entity';
 
 
 @Injectable()
@@ -15,7 +16,7 @@ export class TurnoService {
   constructor(
     @InjectRepository(Turno)
     private readonly turnoRepository: Repository<Turno>,
-    private servicioService: ServicioService, 
+    private servicioService: ServicioService,
   ) { }
 
   async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
@@ -74,6 +75,17 @@ export class TurnoService {
   }
 
 
+  // NEED TO FIX THIS METHOD TO GET TURNOS BY USER,dont work properly
+  async findByUser(user: Users): Promise<Turno[]> {
+    return await this.turnoRepository
+      .createQueryBuilder('turno')
+      .leftJoinAndSelect('turno.car', 'car')
+      .leftJoinAndSelect('car.user', 'user')
+      .leftJoinAndSelect('turno.servicio', 'servicio')
+      .where('user.id = :userId', { userId: user.id })
+      .orderBy('turno.fechaHora', 'DESC')
+      .getMany();
+  }
 
 
   // APARTADO DE LA API DEL TIEMPO

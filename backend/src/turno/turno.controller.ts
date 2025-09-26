@@ -56,17 +56,25 @@ export class TurnoController {
   }
 
   //use in tests only for now
-  @Get(':id')
-  async findTurnoById(@Req() request): Promise<Turno> {
-    const turnoId = parseInt(request.params.id, 10);
-    if (isNaN(turnoId)) {
-      throw new HttpException('Invalid turno ID', 400);
-    }
-    const turno = await this.turnoService.findById(turnoId);
-    if (!turno) {
-      throw new HttpException('Turno not found', 404);
-    }
-    return turno;
+  // @Get(':id')
+  // async findTurnoById(@Req() request): Promise<Turno> {
+  //   const turnoId = parseInt(request.params.id, 10);
+  //   if (isNaN(turnoId)) {
+  //     throw new HttpException('Invalid turno ID', 400);
+  //   }
+  //   const turno = await this.turnoService.findById(turnoId);
+  //   if (!turno) {
+  //     throw new HttpException('Turno not found', 404);
+  //   }
+  //   return turno;
+  // }
+  
+  @Get('/history')
+  async getUserTurnos(@Req() request): Promise<Turno[]> {
+    const user = await this.authService.findUserByToken(
+      request.headers.authorization,
+    );
+    return this.turnoService.findByUser(user);
   }
 
   @Get('get-date')
@@ -87,4 +95,6 @@ export class TurnoController {
   // async listTurnos(@Req() request): Promise<Turno[]> {
   //     return this.turnoService.listTurnos(user);
   // }
+
+
 }
