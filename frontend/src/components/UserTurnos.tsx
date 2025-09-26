@@ -15,7 +15,7 @@ interface Turno {
     servicio: { name: string }[];
     car: { marca: string; model: string };
     totalPrice: number;
-    estado: 'pendiente' | 'pagado';
+    estadoPago: 'pendiente' | 'pagado';
     estado: 'pendiente' | 'completado' | 'cancelado';
     metodoPago?: 'efectivo' | 'mercadopago';
 }
@@ -78,8 +78,8 @@ export default function UserTurnos() {
         // window.location.href = data.redirectUrl;
     };
 
-    const proximosTurnos = turnos.filter(t => t.estado === 'pendiente').sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime());
-    const historialTurnos = turnos.filter(t => t.estado !== 'pendiente').sort((a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime());
+    const proximosTurnos = turnos.filter(t => t.estadoPago === 'pendiente').sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime());
+    const historialTurnos = turnos.filter(t => t.estadoPago !== 'pendiente').sort((a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime());
 
     if (loading) {
         return (
@@ -113,8 +113,8 @@ export default function UserTurnos() {
                                     <div>
                                         <div className="flex items-center gap-4 mb-2">
                                             <h4 className="font-semibold">{turno.servicio.map(s => s.name).join(', ')}</h4>
-                                            <Badge variant={turno.estado === 'pagado' ? 'default' : 'secondary'}>
-                                                {turno.estado === 'pagado' ? `Pagado (${turno.metodoPago})` : 'Pendiente de pago'}
+                                            <Badge variant={turno.estadoPago === 'pagado' ? 'default' : 'secondary'}>
+                                                {turno.estadoPago === 'pagado' ? `Pagado (${turno.metodoPago})` : 'Pendiente de pago'}
                                             </Badge>
                                         </div>
                                         <div className="text-sm text-muted-foreground space-y-1">
@@ -124,7 +124,7 @@ export default function UserTurnos() {
                                     </div>
                                     <div className="flex flex-col items-end justify-between">
                                         <div className="text-lg font-bold mb-2">${turno.totalPrice.toLocaleString('es-AR')}</div>
-                                        {turno.estado === 'pendiente' && (
+                                        {turno.estadoPago === 'pendiente' && (
                                             <div className="flex gap-2">
                                                 <Button variant="outline" size="sm" onClick={() => handlePagarEfectivo(turno.id)}>
                                                     <DollarSign className="mr-2 h-4 w-4" /> Pagar en local
