@@ -21,7 +21,7 @@ export class Turno {
   @ManyToOne(() => Car, (Car) => Car.turno)
   car: Car;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp' })
   fechaHora: Date;
 
   @Column()

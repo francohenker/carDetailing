@@ -25,7 +25,7 @@ export class Servicio {
   precio: number;
 
   @Column()
-  timeSlot: number;
+  duration: number;
 
   @Column({ default: false })
   isDeleted: boolean;

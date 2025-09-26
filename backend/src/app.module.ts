@@ -29,7 +29,7 @@ import { ProductoService } from './producto/producto.service';
   imports: [
     JwtModule.register({
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '3360h' }, // 3360 minutes
+      signOptions: { expiresIn: '30d' }, // 3360 minutes
     }),
     ConfigModule.forRoot(),
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
