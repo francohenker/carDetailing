@@ -82,6 +82,7 @@ export class TurnoService {
       .leftJoinAndSelect('turno.car', 'car')
       .leftJoinAndSelect('car.user', 'user')
       .leftJoinAndSelect('turno.servicio', 'servicio')
+      .leftJoinAndSelect('turno.pago', 'pago')
       .where('user.id = :userId', { userId: user.id })
       .orderBy('turno.fechaHora', 'DESC')
       .getMany();

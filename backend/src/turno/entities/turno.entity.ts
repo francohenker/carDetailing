@@ -5,6 +5,7 @@ import { Servicio } from 'src/servicio/entities/servicio.entity';
 import {
   Column,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
@@ -40,8 +41,8 @@ export class Turno {
   @JoinTable()
   servicio: Servicio[];
 
-  @OneToOne(() => Pago, (pago) => pago.turno)
-  pago: Pago;
+  @OneToMany(() => Pago, (pago) => pago.turno)
+  pago: Pago[];
 
   constructor(
     car: Car,
