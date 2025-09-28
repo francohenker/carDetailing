@@ -67,4 +67,14 @@ export class UserService {
     }
     return user;
   }
+
+
+  async getAllUsers(): Promise<Users[]> {
+    return this.userRepository.find();
+  }
+
+
+
+
+
 }

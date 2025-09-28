@@ -14,8 +14,22 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     const user = useUserStore((state) => state.user)
     const hasHydrated = useUserStore((state) => state.hasHydrated)
 
+    const fetchUserRole = async () => {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/profile`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem("jwt")}`
+            }
+        });
+        const data = await response.json();        
+        if(data.role != 'admin'){
+            router.push('/unauthorized');
+        }
+    }
 
     useEffect(() => {
+        fetchUserRole();
         if (!hasHydrated) return
         if (!user) {
             router.push('/login')

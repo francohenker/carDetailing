@@ -74,8 +74,11 @@ export default function HeaderDefault() {
                         className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow text-base-content">
                         {isAuthenticated ?
                             <>
+                                {user?.role === 'admin' &&
+                                    <li><a href="/admin" className="justify-between">Admin</a></li>
+                                }
                                 <li><a href="/user/profile" className="justify-between">Perfil</a></li>
-                                <li><a href="/user/settings">Configuración</a></li>
+                                {/* <li><a href="/user/settings">Configuración</a></li> */}
                                 <li><a href="#" onClick={handlerLogout}>{'Cerrar sesión'}</a></li>
                             </> :
                             <li><a href="#" onClick={handleLogin}>{'Iniciar sesión'}</a></li>

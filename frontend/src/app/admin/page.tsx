@@ -74,6 +74,7 @@ interface User {
     firstname: string
     lastname: string
     email: string
+    phone: string
     role: 'admin' | 'user'
 }
 
@@ -367,7 +368,7 @@ export default function AdminPage() {
 
     const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/updateRole/${userId}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/change-role/${userId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -599,6 +600,7 @@ export default function AdminPage() {
                                             <TableRow>
                                                 <TableHead>Nombre</TableHead>
                                                 <TableHead>Email</TableHead>
+                                                <TableHead>Telefono</TableHead>
                                                 <TableHead>Rol Actual</TableHead>
                                                 <TableHead>Cambiar Rol</TableHead>
                                             </TableRow>
@@ -610,6 +612,7 @@ export default function AdminPage() {
                                                         {user.firstname} {user.lastname}
                                                     </TableCell>
                                                     <TableCell>{user.email}</TableCell>
+                                                    <TableCell>{user.phone}</TableCell>
                                                     <TableCell>
                                                         <Badge variant={user.role === 'admin' ? "default" : "secondary"}>
                                                             {user.role === 'admin' ? (

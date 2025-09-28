@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
+  Put,
   Req,
   UnauthorizedException,
   UseGuards,
@@ -32,10 +34,10 @@ export class UsersController {
     };
   }
 
-  @Post('change-role')
+  @Put('change-role/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  async changeRole(@Body('id') id: number, @Body('role') role: Role) {
+  async changeRole(@Param('id') id: number, @Body('role') role: Role) {
     return this.userService.changeRole(id, role);
   }
 
@@ -61,6 +63,13 @@ export class UsersController {
       throw new UnauthorizedException('User not found');
     }
     return user;
+  }
+
+  @Get('getall')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async getAllUsers(): Promise<Users[]> {
+    return this.userService.getAllUsers();
   }
 
   //use Guard @UseGuards(AuthGuard) for protected routes
