@@ -63,10 +63,11 @@ interface Service {
 interface Product {
     id: number
     name: string
-    description: string
+    // description: string
     price: number
-    stock: number
-    category: string
+    stock_actual: number
+    stock_minimo: number
+    // category: string
 }
 
 interface User {
@@ -98,10 +99,10 @@ export default function AdminPage() {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [productForm, setProductForm] = useState({
         name: '',
-        description: '',
+        // description: '',
         price: 0,
-        stock: 0,
-        category: ''
+        stock_actual: 0,
+        stock_minimo: 0
     })
 
     // Estados para usuarios
@@ -251,7 +252,7 @@ export default function AdminPage() {
     // ============ PRODUCTOS ============
     const fetchProducts = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/products/getAll`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/getAll`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('jwt')}`
                 }
@@ -268,8 +269,8 @@ export default function AdminPage() {
         e.preventDefault()
         try {
             const url = editingProduct 
-                ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/products/update/${editingProduct.id}`
-                : `${process.env.NEXT_PUBLIC_BACKEND_URL}/products/create`
+                ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/update/${editingProduct.id}`
+                : `${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/create`
             
             const response = await fetch(url, {
                 method: editingProduct ? 'PUT' : 'POST',
@@ -304,17 +305,17 @@ export default function AdminPage() {
         setEditingProduct(product)
         setProductForm({
             name: product.name,
-            description: product.description,
+            // description: product.description,
             price: product.price,
-            stock: product.stock,
-            category: product.category
+            stock_actual: product.stock_actual,
+            stock_minimo: product.stock_minimo
         })
         setIsProductDialogOpen(true)
     }
 
     const handleDeleteProduct = async (id: number) => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/products/delete/${id}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/delete/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('jwt')}`
@@ -342,10 +343,10 @@ export default function AdminPage() {
     const resetProductForm = () => {
         setProductForm({
             name: '',
-            description: '',
+            // description: '',
             price: 0,
-            stock: 0,
-            category: ''
+            stock_actual: 0,
+            stock_minimo: 0
         })
         setEditingProduct(null)
     }
@@ -432,7 +433,7 @@ export default function AdminPage() {
         <ProtectedRoute allowedRoles={['admin']}>
             <div className="min-h-screen bg-base-100">
                 <HeaderDefault />
-                
+                ombre	Descripción	Precio	Stock	Categoría	Accio
                 <main className="container mx-auto p-6">
                     <div className="flex items-center gap-2 mb-6">
                         <Link href="/" className="text-muted-foreground hover:text-foreground">
@@ -540,10 +541,10 @@ export default function AdminPage() {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Nombre</TableHead>
-                                                <TableHead>Descripción</TableHead>
+                                                {/* <TableHead>Descripción</TableHead> */}
                                                 <TableHead>Precio</TableHead>
                                                 <TableHead>Stock</TableHead>
-                                                <TableHead>Categoría</TableHead>
+                                                <TableHead>Stock Mínimo</TableHead>
                                                 <TableHead>Acciones</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -551,14 +552,14 @@ export default function AdminPage() {
                                             {products.map((product) => (
                                                 <TableRow key={product.id}>
                                                     <TableCell className="font-medium">{product.name}</TableCell>
-                                                    <TableCell>{product.description}</TableCell>
+                                                    {/* <TableCell>{product.description}</TableCell> */}
                                                     <TableCell>${product.price.toLocaleString()}</TableCell>
                                                     <TableCell>
-                                                        <Badge variant={product.stock > 0 ? "default" : "destructive"}>
-                                                            {product.stock}
+                                                        <Badge variant={product.stock_actual > 0 ? "default" : "destructive"}>
+                                                            {product.stock_actual}
                                                         </Badge>
                                                     </TableCell>
-                                                    <TableCell>{product.category}</TableCell>
+                                                    <TableCell>{product.stock_minimo}</TableCell>
                                                     <TableCell>
                                                         <div className="flex gap-2">
                                                             <Button
@@ -757,7 +758,7 @@ export default function AdminPage() {
                                         required
                                     />
                                 </div>
-                                <div className="space-y-2">
+                                {/* <div className="space-y-2">
                                     <Label htmlFor="product-description">Descripción</Label>
                                     <Textarea
                                         id="product-description"
@@ -765,7 +766,7 @@ export default function AdminPage() {
                                         onChange={(e) => setProductForm({...productForm, description: e.target.value})}
                                         rows={3}
                                     />
-                                </div>
+                                </div> */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="product-price">Precio ($)</Label>
@@ -782,13 +783,13 @@ export default function AdminPage() {
                                         <Input
                                             id="product-stock"
                                             type="number"
-                                            value={productForm.stock}
-                                            onChange={(e) => setProductForm({...productForm, stock: Number(e.target.value)})}
+                                            value={productForm.stock_actual}
+                                            onChange={(e) => setProductForm({...productForm, stock_actual: Number(e.target.value)})}
                                             required
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
+                                {/* <div className="space-y-2">
                                     <Label htmlFor="product-category">Categoría</Label>
                                     <Input
                                         id="product-category"
@@ -796,7 +797,7 @@ export default function AdminPage() {
                                         onChange={(e) => setProductForm({...productForm, category: e.target.value})}
                                         placeholder="Ej: Ceras, Shampoos, Herramientas"
                                     />
-                                </div>
+                                </div> */}
                             </div>
                             <DialogFooter>
                                 <Button 

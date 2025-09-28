@@ -7,13 +7,16 @@ export class Producto {
   id: number;
 
   @Column()
-  nombre: string;
+  name: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 10, default: 0 })
   stock_minimo: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10})
   stock_actual: number;
+
+  @Column({ type: 'decimal', precision: 10 })
+  price: number;
 
   @ManyToMany(() => Servicio, (servicio) => servicio.Producto)
   servicio: Servicio[];
@@ -21,8 +24,11 @@ export class Producto {
   @Column({ default: false })
   isDeleted: boolean;
 
-  constructor(nombre: string, stock_actual: number) {
-    this.nombre = nombre;
+  constructor(name: string, stock_actual: number, price: number) {
+    this.name = name;
     this.stock_actual = stock_actual;
+    this.stock_minimo = 0;
+    this.price = price;
+    this.isDeleted = false;
   }
 }

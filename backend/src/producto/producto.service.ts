@@ -12,7 +12,7 @@ export class ProductoService {
     ) { }
 
     create(createProductoDto: CreateProductoDto): Promise<Producto> {
-        const producto = new Producto(createProductoDto.nombre, createProductoDto.stock_actual);
+        const producto = new Producto(createProductoDto.name, createProductoDto.stock_actual, createProductoDto.price);
         return this.productoRepository.save(producto);
     }
 

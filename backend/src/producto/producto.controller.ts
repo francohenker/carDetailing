@@ -1,7 +1,10 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { ProductoService } from './producto.service';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { RolesGuard } from 'src/roles/role.guard';
+import { Role } from 'src/roles/role.enum';
+import { Roles } from 'src/roles/role.decorator';
 
 @Controller('producto')
 export class ProductoController {
@@ -11,13 +14,14 @@ export class ProductoController {
 
     //crea un nuevo producto
     @Post('create')
-    // @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles(Role.ADMIN)
     createProducto(@Body() createProductoDto: CreateProductoDto) {
         return this.productoService.create(createProductoDto);
     }
 
     //obtiene todos los productos
-    @Get('all')
+    @Get('getall')
     findAllProductos() {
         return this.productoService.findAll();
     }
@@ -29,8 +33,9 @@ export class ProductoController {
     }
 
 
-    @Post('update-stock')
-    // @UseGuards(AuthGuard)
+    @Put('update-stock')
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles(Role.ADMIN)
     async updateStock(@Body('id') id: number, @Body('stock_actual') stock_actual: number) {
         return this.productoService.updateStock(id, stock_actual);
     }
@@ -42,9 +47,9 @@ export class ProductoController {
         return this.productoService.ajustStock(id, cantidad);
     }
 
-    @Post('delete')
+    @Delete('delete/:id')
     // @UseGuards(AuthGuard)
-    deleteProducto(@Body('id') id: number) {
+    deleteProducto(@Param('id') id: number) {
         return this.productoService.delete(id);
     }
 
