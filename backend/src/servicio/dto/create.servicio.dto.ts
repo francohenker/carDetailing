@@ -8,4 +8,7 @@ export class CreateServicioDto {
   @IsNumber()
   @Max(9999999)
   precio: number;
+  @IsNumber()
+  @Max(10000)
+  duration: number;
 }

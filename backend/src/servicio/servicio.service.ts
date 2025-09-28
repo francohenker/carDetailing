@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Servicio } from './entities/servicio.entity';
 import { In, Repository } from 'typeorm';
 import { CreateServicioDto } from './dto/create.servicio.dto';
-import { ModifyServicioDto } from './dto/modify.servicio.dto';
+import { UpdateServicioDto } from './dto/update.servicio.dto';
 
 @Injectable()
 export class ServicioService {
@@ -17,13 +17,14 @@ export class ServicioService {
       servicio.name,
       servicio.description,
       servicio.precio,
+      servicio.duration,
     );
     return this.servicioRepository.save(service);
   }
 
-  async modify(servicio: ModifyServicioDto): Promise<Servicio> {
+  async update(servicio: UpdateServicioDto, id: number): Promise<Servicio> {
     const oldService = await this.servicioRepository.findOneBy({
-      id: servicio.id,
+      id: id,
     });
     if (!oldService) {
       throw new HttpException('Servicio not found', 404);
@@ -31,6 +32,7 @@ export class ServicioService {
     oldService.name = servicio.name;
     oldService.description = servicio.description;
     oldService.precio = servicio.precio;
+    oldService.duration = servicio.duration;
     return await this.servicioRepository.save(oldService);
   }
 

@@ -37,9 +37,10 @@ export class Servicio {
   @ManyToMany(() => Turno, (turno) => turno.servicio)
   turno: Turno[];
 
-  constructor(name: string, description: string, precio: number) {
+  constructor(name: string, description: string, precio: number, duration: number) {
     this.name = name;
     this.description = description;
     this.precio = precio;
+    this.duration = duration;
   }
 }

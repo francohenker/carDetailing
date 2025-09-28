@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ServicioService } from './servicio.service';
 import { UserService } from 'src/users/users.service';
 import { CreateServicioDto } from './dto/create.servicio.dto';
-import { ModifyServicioDto } from './dto/modify.servicio.dto';
+import { UpdateServicioDto } from './dto/update.servicio.dto';
 import { Servicio } from './entities/servicio.entity';
 import { Role } from 'src/roles/role.enum';
 import { Roles } from 'src/roles/role.decorator';
@@ -30,20 +30,21 @@ export class ServicioController {
     return this.servicioService.create(servicio);
   }
 
-  @Post('modify')
+  @Put('update/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  async modifyServicio(
-    @Body() servicio: ModifyServicioDto,
+  async updateServicio(
+    @Body() servicio: UpdateServicioDto,
+    @Param('id') id: number,
   ): Promise<Servicio | null> {
-    return this.servicioService.modify(servicio);
+    return this.servicioService.update(servicio, id);
   }
   
-  @Post('delete')
+  @Delete('delete/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  async deleteServicio(@Body() body): Promise<any> {
-    return this.servicioService.delete(body.id);
+  async deleteServicio(@Body() body, @Param('id') id: number): Promise<any> {
+    return this.servicioService.delete(id);
   }
 
   @Get('getAll')

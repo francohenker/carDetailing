@@ -1,6 +1,6 @@
 import { IsNumber, IsString, Max, Min } from 'class-validator';
 
-export class ModifyServicioDto {
+export class UpdateServicioDto {
   @IsNumber()
   @Min(1)
   @Max(999999999)
@@ -16,4 +16,11 @@ export class ModifyServicioDto {
   @Min(0)
   @Max(99999999)
   precio: number;
+
+
+  @IsNumber()
+  @Min(30)
+  @Max(10000)
+  duration: number;
+
 }
