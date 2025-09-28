@@ -53,8 +53,8 @@ interface car {
 export default function UserProfile() {
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
-
-
+    
+    
     const [profile, setProfile] = useState<UserProfile>({
         id: "",
         firstname: "",
@@ -64,10 +64,10 @@ export default function UserProfile() {
         address: "",
         profileLetter: "",
     })
-
-
+    
+    
     const [cars, setcars] = useState<car[]>([])
-
+    
     // Estado para el formulario de nuevo vehículo
     const [newcar, setNewcar] = useState<Omit<car, "id">>({
         model: "",
@@ -76,17 +76,17 @@ export default function UserProfile() {
         patente: "",
         type: "",
     })
-
+    
     //Estado para el formulario de editar perfil
     const [editedProfile, setEditedProfile] = useState<UserProfile>({ ...profile })
-
+    
     // Estado para el vehículo en edición
     const [editingcar, setEditingcar] = useState<car | null>(null)
-
+    
     // Estado para los diálogos
     const [isAddcarOpen, setIsAddcarOpen] = useState(false)
     const [isEditcarOpen, setIsEditcarOpen] = useState(false)
-
+    
     // Manejadores de eventos para el perfil
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target
@@ -246,6 +246,10 @@ export default function UserProfile() {
     }
 
 
+
+
+
+
     useEffect(() => {
         const token = localStorage.getItem("jwt");
         if (!useUserStore.getState().isAuthenticated) {
@@ -262,7 +266,7 @@ export default function UserProfile() {
                         Authorization: `Bearer ${token}`,
                     },
                 });
-                if(response.status === 401){
+                if (response.status === 401) {
                     router.push('/login');
                     return;
                 }
@@ -288,7 +292,7 @@ export default function UserProfile() {
                     },
                 });
 
-                if(response.status === 401){
+                if (response.status === 401) {
                     router.push('/login');
                     return;
                 }
