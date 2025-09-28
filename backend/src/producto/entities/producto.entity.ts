@@ -9,13 +9,13 @@ export class Producto {
   @Column()
   name: string;
 
-  @Column({ type: 'decimal', precision: 10, default: 0 })
+  @Column({ type: 'decimal', default: 0 })
   stock_minimo: number;
 
-  @Column({ type: 'decimal', precision: 10})
+  @Column({ type: 'decimal'})
   stock_actual: number;
 
-  @Column({ type: 'decimal', precision: 10 })
+  @Column({ type: 'decimal' })
   price: number;
 
   @ManyToMany(() => Servicio, (servicio) => servicio.Producto)

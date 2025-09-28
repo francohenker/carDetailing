@@ -47,6 +47,7 @@ import {
     SelectValue 
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import ProtectedRoute from "@/components/ProtectedRoutes"
 import HeaderDefault from "../header"
 import { toast } from "@/hooks/use-toast"
@@ -58,6 +59,7 @@ interface Service {
     description: string
     precio: number
     duration: number
+    products?: Product[]
 }
 
 interface Product {
@@ -90,7 +92,8 @@ export default function AdminPage() {
         name: '',
         description: '',
         precio: 0,
-        duration: 30
+        duration: 30,
+        productIds: [] as number[]
     })
 
     // Estados para productos
@@ -99,7 +102,6 @@ export default function AdminPage() {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [productForm, setProductForm] = useState({
         name: '',
-        // description: '',
         price: 0,
         stock_actual: 0,
         stock_minimo: 0
@@ -109,6 +111,14 @@ export default function AdminPage() {
     const [users, setUsers] = useState<User[]>([])
     const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<User | null>(null)
+    const [userForm, setUserForm] = useState({
+        firstname: '',
+        lastname: '',
+        email: '',
+        phone: '',
+        password: '',
+        role: 'user' as 'admin' | 'user'
+    })
 
     // Estados generales
     const [loading, setLoading] = useState(true)
@@ -207,7 +217,8 @@ export default function AdminPage() {
             name: service.name,
             description: service.description,
             precio: service.precio,
-            duration: service.duration
+            duration: service.duration,
+            productIds: service.products?.map(p => p.id) || []
         })
         setIsServiceDialogOpen(true)
     }
@@ -244,7 +255,8 @@ export default function AdminPage() {
             name: '',
             description: '',
             precio: 0,
-            duration: 30
+            duration: 30,
+            productIds: []
         })
         setEditingService(null)
     }
@@ -305,7 +317,6 @@ export default function AdminPage() {
         setEditingProduct(product)
         setProductForm({
             name: product.name,
-            // description: product.description,
             price: product.price,
             stock_actual: product.stock_actual,
             stock_minimo: product.stock_minimo
@@ -343,7 +354,6 @@ export default function AdminPage() {
     const resetProductForm = () => {
         setProductForm({
             name: '',
-            // description: '',
             price: 0,
             stock_actual: 0,
             stock_minimo: 0
@@ -365,6 +375,42 @@ export default function AdminPage() {
         } catch (error) {
             console.error('Error fetching users:', error)
         }
+    }
+
+    const handleUserSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify(userForm)
+            })
+
+            if (!response.ok) throw new Error('Error creating user')
+
+            alert('Usuario creado correctamente.')
+            setIsUserDialogOpen(false)
+            resetUserForm()
+            fetchUsers()
+        } catch (error) {
+            console.error('Error creating user:', error)
+            alert('No se pudo crear el usuario.')
+        }
+    }
+
+    const resetUserForm = () => {
+        setUserForm({
+            firstname: '',
+            lastname: '',
+            email: '',
+            phone: '',
+            password: '',
+            role: 'user'
+        })
+        setEditingUser(null)
     }
 
     const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') => {
@@ -589,11 +635,17 @@ export default function AdminPage() {
                         {/* PESTAÑA DE USUARIOS */}
                         <TabsContent value="users" className="space-y-6">
                             <Card>
-                                <CardHeader>
-                                    <CardTitle>Gestión de Usuarios</CardTitle>
-                                    <CardDescription>
-                                        Administra los permisos y roles de los usuarios del sistema.
-                                    </CardDescription>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Gestión de Usuarios</CardTitle>
+                                        <CardDescription>
+                                            Administra los permisos y roles de los usuarios del sistema.
+                                        </CardDescription>
+                                    </div>
+                                    <Button onClick={() => setIsUserDialogOpen(true)}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Nuevo Usuario
+                                    </Button>
                                 </CardHeader>
                                 <CardContent>
                                     <Table>
@@ -711,6 +763,44 @@ export default function AdminPage() {
                                         />
                                     </div>
                                 </div>
+                                <div className="space-y-2">
+                                    <Label>Productos utilizados (opcional)</Label>
+                                    <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
+                                        {products.length === 0 ? (
+                                            <p className="text-sm text-muted-foreground">No hay productos disponibles</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {products.map((product) => (
+                                                    <div key={product.id} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`product-${product.id}`}
+                                                            checked={serviceForm.productIds.includes(product.id)}
+                                                            onCheckedChange={(checked) => {
+                                                                if (checked) {
+                                                                    setServiceForm({
+                                                                        ...serviceForm,
+                                                                        productIds: [...serviceForm.productIds, product.id]
+                                                                    })
+                                                                } else {
+                                                                    setServiceForm({
+                                                                        ...serviceForm,
+                                                                        productIds: serviceForm.productIds.filter(id => id !== product.id)
+                                                                    })
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Label 
+                                                            htmlFor={`product-${product.id}`}
+                                                            className="text-sm font-normal"
+                                                        >
+                                                            {product.name} - ${product.price.toLocaleString()}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <Button 
@@ -767,7 +857,7 @@ export default function AdminPage() {
                                         rows={3}
                                     />
                                 </div> */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="product-price">Precio ($)</Label>
                                         <Input
@@ -779,12 +869,22 @@ export default function AdminPage() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="product-stock">Stock</Label>
+                                        <Label htmlFor="product-stock">Stock Actual</Label>
                                         <Input
                                             id="product-stock"
                                             type="number"
                                             value={productForm.stock_actual}
                                             onChange={(e) => setProductForm({...productForm, stock_actual: Number(e.target.value)})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="product-stock-min">Stock Mínimo</Label>
+                                        <Input
+                                            id="product-stock-min"
+                                            type="number"
+                                            value={productForm.stock_minimo}
+                                            onChange={(e) => setProductForm({...productForm, stock_minimo: Number(e.target.value)})}
                                             required
                                         />
                                     </div>
@@ -820,6 +920,107 @@ export default function AdminPage() {
                     </DialogContent>
                 </Dialog>
 
+                {/* DIALOG PARA USUARIOS */}
+                <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+                            <DialogDescription>
+                                Completa la información para crear un nuevo usuario del sistema.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleUserSubmit} className="space-y-4">
+                            <div className="grid gap-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="user-firstname">Nombre</Label>
+                                        <Input
+                                            id="user-firstname"
+                                            value={userForm.firstname}
+                                            onChange={(e) => setUserForm({...userForm, firstname: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="user-lastname">Apellido</Label>
+                                        <Input
+                                            id="user-lastname"
+                                            value={userForm.lastname}
+                                            onChange={(e) => setUserForm({...userForm, lastname: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="user-email">Email</Label>
+                                    <Input
+                                        id="user-email"
+                                        type="email"
+                                        value={userForm.email}
+                                        onChange={(e) => setUserForm({...userForm, email: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="user-phone">Teléfono</Label>
+                                        <Input
+                                            id="user-phone"
+                                            value={userForm.phone}
+                                            onChange={(e) => setUserForm({...userForm, phone: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="user-role">Rol</Label>
+                                        <Select
+                                            value={userForm.role}
+                                            onValueChange={(value: 'admin' | 'user') => 
+                                                setUserForm({...userForm, role: value})
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="user">Usuario</SelectItem>
+                                                <SelectItem value="admin">Administrador</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="user-password">Contraseña</Label>
+                                    <Input
+                                        id="user-password"
+                                        type="password"
+                                        value={userForm.password}
+                                        onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    onClick={() => {
+                                        setIsUserDialogOpen(false)
+                                        resetUserForm()
+                                    }}
+                                >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancelar
+                                </Button>
+                                <Button type="submit">
+                                    <Save className="h-4 w-4 mr-2" />
+                                    Crear Usuario
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
                 {/* DIALOG DE CONFIRMACIÓN DE ELIMINACIÓN */}
                 <Dialog open={deleteConfirmDialog.isOpen} onOpenChange={(open) => 
                     setDeleteConfirmDialog({...deleteConfirmDialog, isOpen: open})
@@ -839,7 +1040,7 @@ export default function AdminPage() {
                             >
                                 Cancelar
                             </Button>
-                            <Button 
+            <Button 
                                 variant="destructive" 
                                 onClick={handleConfirmDelete}
                             >
