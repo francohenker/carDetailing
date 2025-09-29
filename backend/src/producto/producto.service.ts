@@ -25,24 +25,25 @@ export class ProductoService {
         return this.productoRepository.findOne({ where: { id, isDeleted: false } });
     }
 
-    async updateStock(id: number, stock_actual: number): Promise<Producto> {
+    async updateStock(id: number, stock_actual: number, stock_minimo: number): Promise<Producto> {
         const producto = await this.productoRepository.findOne({ where: { id, isDeleted: false } });
         if (!producto) {
             throw new HttpException('Producto not found', 404);
         }
         producto.stock_actual = stock_actual;
+        producto.stock_minimo = stock_minimo;
         return this.productoRepository.save(producto);
     }
 
     //adjust stock alert (stock_minimo)
-    async ajustStock(id: number, cantidad: number): Promise<Producto> {
-        const producto = await this.productoRepository.findOne({ where: { id, isDeleted: false } });
-        if (!producto) {
-            throw new HttpException('Producto not found', 404);
-        }
-        producto.stock_minimo = cantidad;
-        return this.productoRepository.save(producto);
-    }
+    // async ajustStock(id: number, cantidad: number): Promise<Producto> {
+    //     const producto = await this.productoRepository.findOne({ where: { id, isDeleted: false } });
+    //     if (!producto) {
+    //         throw new HttpException('Producto not found', 404);
+    //     }
+    //     producto.stock_minimo = cantidad;
+    //     return this.productoRepository.save(producto);
+    // }
 
     async delete(id: number): Promise<void> {
         const producto = await this.productoRepository.findOne({ where: { id, isDeleted: false } });
