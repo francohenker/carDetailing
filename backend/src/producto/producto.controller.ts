@@ -33,19 +33,19 @@ export class ProductoController {
     }
 
 
-    @Put('update-stock')
+    @Put('update/:id')
     @UseGuards(AuthGuard, RolesGuard)
     @Roles(Role.ADMIN)
-    async updateStock(@Body('id') id: number, @Body('stock_actual') stock_actual: number) {
-        return this.productoService.updateStock(id, stock_actual);
+    async updateStock(@Param('id') id: number, @Body('stock_actual') stock_actual: number, @Body('stock_minimo') stock_minimo: number) {
+        return this.productoService.updateStock(id, stock_actual, stock_minimo);
     }
 
     //use for change stock_minimo alert
-    @Post('ajust-stock')
-    // @UseGuards(AuthGuard)
-    async ajustStock(@Body('id') id: number, @Body('cantidad') cantidad: number) {
-        return this.productoService.ajustStock(id, cantidad);
-    }
+    // @Post('ajust-stock')
+    // // @UseGuards(AuthGuard)
+    // async ajustStock(@Body('id') id: number, @Body('cantidad') cantidad: number) {
+    //     return this.productoService.ajustStock(id, cantidad);
+    // }
 
     @Delete('delete/:id')
     // @UseGuards(AuthGuard)
