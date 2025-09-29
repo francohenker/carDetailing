@@ -65,11 +65,9 @@ interface Service {
 interface Product {
     id: number
     name: string
-    // description: string
     price: number
     stock_actual: number
     stock_minimo: number
-    // category: string
 }
 
 interface User {
@@ -479,7 +477,6 @@ export default function AdminPage() {
         <ProtectedRoute allowedRoles={['admin']}>
             <div className="min-h-screen bg-base-100">
                 <HeaderDefault />
-                ombre	Descripción	Precio	Stock	Categoría	Accio
                 <main className="container mx-auto p-6">
                     <div className="flex items-center gap-2 mb-6">
                         <Link href="/" className="text-muted-foreground hover:text-foreground">
