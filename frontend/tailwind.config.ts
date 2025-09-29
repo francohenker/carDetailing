@@ -61,7 +61,7 @@ const config: Config = {
 	darkMode: ["class", "class"],
 	plugins: [require("daisyui"), require("tailwindcss-animate")],
 	daisyui: {
-		themes: [ "dark", "light"]
+		themes: ["light", "black"]
 	}
 };
 export default config;

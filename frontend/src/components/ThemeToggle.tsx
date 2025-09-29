@@ -3,25 +3,49 @@
 import { useEffect, useState } from 'react'
 
 export default function ThemeToggleButton() {
-    const [theme, setTheme] = useState<'light' | 'night'>('light')
+    const [theme, setTheme] = useState<'light' | 'black'>('light')
 
     useEffect(() => {
-        const savedTheme = localStorage.getItem('theme') as 'light' | 'night' | null
+        const savedTheme = localStorage.getItem('theme') as 'light' | 'black' | null
         const initialTheme = savedTheme || 'light'
+        
+        // Configurar DaisyUI theme
         document.documentElement.setAttribute('data-theme', initialTheme)
+        
+        // Sincronizar con shadcn/ui dark mode
+        if (initialTheme === 'black') {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+        
         setTheme(initialTheme)
     }, [])
 
     const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'night' : 'light'
+        const newTheme = theme === 'light' ? 'black' : 'light'
+        
+        // Configurar DaisyUI theme
         document.documentElement.setAttribute('data-theme', newTheme)
+        
+        // Sincronizar con shadcn/ui dark mode
+        if (newTheme === 'black') {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+        
         localStorage.setItem('theme', newTheme)
         setTheme(newTheme)
     }
 
     return (
             <label className="swap swap-rotate">
-                <input onClick={toggleTheme} type="checkbox" />
+                <input 
+                    onClick={toggleTheme} 
+                    type="checkbox" 
+                    checked={theme === 'black'}
+                />
 
                 {/* sun icon */}
                 <svg
