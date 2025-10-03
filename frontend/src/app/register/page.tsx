@@ -1,6 +1,5 @@
 'use client'
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,9 +8,7 @@ import { useState } from "react"
 
 
 
-export default function register() {
-    const [success, setSuccess] = useState(false)
-
+export default function Register() {
     const [formData, setFormData] = useState({
         firstname: "",
         lastname: "",
@@ -42,8 +39,7 @@ export default function register() {
                 alert('Error al crear el usuario')
             }
         } catch (error) {
-            alert('Error al crear el usuario')
-            // console.error('Error al registrar:', error)
+            alert('Error al crear el usuario: ' + error)
         }
     }
 

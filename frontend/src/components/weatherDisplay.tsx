@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { fetchWeatherApi } from "openmeteo"
@@ -22,7 +22,7 @@ export function WeatherWidget() {
     const loading = useWeatherStore((state) => state.loading)
     const error = useWeatherStore((state) => state.error)
     const setWeather = useWeatherStore((state) => state.setWeather)
-    const setLoading = useWeatherStore((state) => state.setLoading)
+    // const setLoading = useWeatherStore((state) => state.setLoading)
     const setError = useWeatherStore((state) => state.setError)
 
     const lastUpdated = useWeatherStore((state) => state.lastUpdated)
@@ -38,14 +38,14 @@ export function WeatherWidget() {
                 hourly: ["temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation"],
                 current: ["temperature_2m", "precipitation", "weather_code", "cloud_cover", "apparent_temperature", "wind_speed_10m", "relative_humidity_2m"],
                 timezone: "America/Sao_Paulo",
-                start_date: "2025-06-25",
-                end_date: "2025-06-26",
+                start_date: new Date().toISOString().split("T")[0],
+                end_date: new Date().setMonth(new Date().getMonth() + 2).toString().split("T")[0],
             }
 
             const url = "https://api.open-meteo.com/v1/forecast"
             const responses = await fetchWeatherApi(url, params)
             const response = responses[0]
-            const utcOffsetSeconds = response.utcOffsetSeconds()
+            // const utcOffsetSeconds = response.utcOffsetSeconds()
             const current = response.current()!
 
             const weatherData = {
@@ -71,7 +71,7 @@ export function WeatherWidget() {
 
             useWeatherStore.setState({ lastUpdated: Date.now() })
             useWeatherStore.setState({ error: null })
-        } catch (err) {
+        } catch {
             useWeatherStore.setState({ error: "Error al obtener el clima" })
         } finally {
             useWeatherStore.setState({ loading: false })
@@ -95,7 +95,7 @@ export function WeatherWidget() {
         console.log(weather)
         console.log(isHydrated)
         return () => unsub();
-    }, [])
+    }, [fetchWeather, weather, isHydrated])
 
     if (!isHydrated) {
         return (

@@ -1,8 +1,7 @@
 'use client'
 import HeaderDefault from "../header";
-import RootLayout from "../layout";
 import Link from "next/link"
-import { Car, CheckCircle, Clock, Droplets, Shield, Sparkles, Star, Wrench } from "lucide-react"
+import { Clock, Droplets, Shield, Sparkles, Star, Wrench } from "lucide-react"
 import Name from "@/components/Name";
 import { useEffect, useState } from "react";
 
@@ -11,121 +10,9 @@ interface Service {
     name: string;
     description: string;
     precio: number;
-    // duration: string;
-    // category: string;
-    // features: string[];
-    // popular: boolean;
-    // image?: string; // URL de la imagen del servicio
+    duration: string;
 }
 
-
-
-
-const servicess = [
-    {
-        id: 1,
-        name: "Lavado Básico",
-        description: "Lavado exterior completo con productos de calidad premium",
-        price: 2500,
-        duration: "45 min",
-        category: "Básico",
-        features: [
-            "Lavado exterior",
-            "Enjuague a presión",
-            "Secado con toallas de microfibra",
-            "Limpieza de llantas",
-            "Aspirado básico interior",
-        ],
-        popular: false,
-    },
-    {
-        id: 2,
-        name: "Lavado Premium",
-        description: "Servicio completo interior y exterior con acabado profesional",
-        price: 3800,
-        duration: "90 min",
-        category: "Premium",
-        features: [
-            "Todo lo del lavado básico",
-            "Limpieza profunda del interior",
-            "Tratamiento de plásticos",
-            "Limpieza de cristales interior/exterior",
-            "Aromatización del habitáculo",
-            "Protección de neumáticos",
-        ],
-        popular: true,
-    },
-    {
-        id: 3,
-        name: "Detailing Completo",
-        description: "Restauración y protección integral de tu vehículo",
-        price: 7500,
-        duration: "3-4 horas",
-        category: "Profesional",
-        features: [
-            "Lavado premium incluido",
-            "Pulido de carrocería",
-            "Eliminación de rayones menores",
-            "Encerado de protección",
-            "Tratamiento de cuero y vinilo",
-            "Restauración de faros",
-            "Limpieza del motor",
-        ],
-        popular: false,
-    },
-    {
-        id: 4,
-        name: "Pulido y Encerado",
-        description: "Restaura el brillo original y protege la pintura",
-        price: 5200,
-        duration: "2-3 horas",
-        category: "Especializado",
-        features: [
-            "Evaluación del estado de la pintura",
-            "Pulido profesional multi-etapa",
-            "Eliminación de micro-rayones",
-            "Aplicación de cera premium",
-            "Protección UV",
-            "Acabado espejo",
-        ],
-        popular: false,
-    },
-    {
-        id: 5,
-        name: "Tratamiento Cerámico",
-        description: "Máxima protección con nanotecnología cerámica",
-        price: 12000,
-        duration: "6-8 horas",
-        category: "Premium",
-        features: [
-            "Preparación completa de la superficie",
-            "Descontaminación química",
-            "Pulido de corrección",
-            "Aplicación de coating cerámico",
-            "Protección por 2-3 años",
-            "Efecto hidrofóbico",
-            "Resistencia a rayones",
-        ],
-        popular: false,
-    },
-    {
-        id: 6,
-        name: "Limpieza de Tapicería",
-        description: "Limpieza profunda y sanitización del interior",
-        price: 4200,
-        duration: "2 horas",
-        category: "Especializado",
-        features: [
-            "Aspirado profundo",
-            "Limpieza con vapor",
-            "Tratamiento de manchas",
-            "Desinfección y sanitización",
-            "Eliminación de olores",
-            "Protección de tejidos",
-        ],
-        popular: false,
-    },
-]
 
 const categories = ["Todos", "Básico", "Premium", "Profesional", "Especializado"]
 
@@ -249,7 +136,7 @@ export default function Servicios() {
 
                                 <div className="flex items-center gap-2 mb-4">
                                     <Clock className="w-4 h-4 text-primary" />
-                                    {/* <span className="text-sm">Duración: {service.duration}</span> */}
+                                    <span className="text-sm">Duración: {service.duration}</span>
                                 </div>
 
                                 <div className="space-y-2 mb-4">
@@ -365,7 +252,6 @@ export default function Servicios() {
                         <div className="collapse-content">
                             <p>
                                 Trabajamos exclusivamente con productos premium de marcas reconocidas internacionalmente como Chemical
-                                Guys, Meguiar's, y Gtechniq. Todos nuestros productos son biodegradables y seguros.
                             </p>
                         </div>
                     </div>

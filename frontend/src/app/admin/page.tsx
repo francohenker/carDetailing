@@ -17,6 +17,9 @@ import {
     Shield,
     ShieldCheck
 } from "lucide-react"
+
+import { toast } from "sonner"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -50,7 +53,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import ProtectedRoute from "@/components/ProtectedRoutes"
 import HeaderDefault from "../header"
-import { toast } from "sonner"
 
 // Tipos de datos
 interface Service {
@@ -80,7 +82,7 @@ interface User {
 }
 
 export default function AdminPage() {
-    const router = useRouter()
+    // const router = useRouter()
 
     // Estados para servicios
     const [services, setServices] = useState<Service[]>([])
@@ -108,7 +110,7 @@ export default function AdminPage() {
     // Estados para usuarios
     const [users, setUsers] = useState<User[]>([])
     const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
-    const [editingUser, setEditingUser] = useState<User | null>(null)
+    const [setEditingUser] = useState<User | null>(null)
     const [userForm, setUserForm] = useState({
         firstname: '',
         lastname: '',
@@ -147,10 +149,8 @@ export default function AdminPage() {
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
-            toast({
-                title: "Error",
+            toast.error("Error", {
                 description: "No se pudieron cargar los datos del panel de administración.",
-                variant: "destructive",
             })
         } finally {
             setLoading(false)
@@ -201,10 +201,8 @@ export default function AdminPage() {
         fetchServices()
     } catch (error) {
         console.error('Error saving service:', error)
-        toast({
-            title: "Error",
+        toast.error("Error", {
             description: "No se pudo guardar el servicio.",
-            variant: "destructive",
         })
     }
 }
@@ -232,18 +230,15 @@ const handleDeleteService = async (id: number) => {
 
         if (!response.ok) throw new Error('Error deleting service')
 
-        toast({
-            title: "Éxito",
+        toast.success("Éxito", {
             description: "Servicio eliminado correctamente.",
         })
 
         fetchServices()
     } catch (error) {
         console.error('Error deleting service:', error)
-        toast({
-            title: "Error",
+        toast.error("Error", {
             description: "No se pudo eliminar el servicio.",
-            variant: "destructive",
         })
     }
 }
@@ -293,8 +288,7 @@ const handleProductSubmit = async (e: React.FormEvent) => {
 
         if (!response.ok) throw new Error('Error saving product')
 
-        toast({
-            title: "Éxito",
+        toast.success("Éxito", {
             description: `Producto ${editingProduct ? 'actualizado' : 'creado'} correctamente.`,
         })
 
@@ -303,10 +297,8 @@ const handleProductSubmit = async (e: React.FormEvent) => {
         fetchProducts()
     } catch (error) {
         console.error('Error saving product:', error)
-        toast({
-            title: "Error",
+        toast.error("Error", {
             description: "No se pudo guardar el producto.",
-            variant: "destructive",
         })
     }
 }
@@ -333,18 +325,15 @@ const handleDeleteProduct = async (id: number) => {
 
         if (!response.ok) throw new Error('Error deleting product')
 
-        toast({
-            title: "Éxito",
+        toast.success("Éxito", {
             description: "Producto eliminado correctamente.",
         })
 
         fetchProducts()
     } catch (error) {
         console.error('Error deleting product:', error)
-        toast({
-            title: "Error",
+        toast.error("Error", {
             description: "No se pudo eliminar el producto.",
-            variant: "destructive",
         })
     }
 }
@@ -389,13 +378,15 @@ const handleUserSubmit = async (e: React.FormEvent) => {
 
         if (!response.ok) throw new Error('Error creating user')
 
-        alert('Usuario creado correctamente.')
+        toast.success( "Usuario creado correctamente")
         setIsUserDialogOpen(false)
         resetUserForm()
         fetchUsers()
     } catch (error) {
         console.error('Error creating user:', error)
-        alert('No se pudo crear el usuario.')
+        toast.error("Error", {
+            description: "No se pudo crear el usuario."
+        })
     }
 }
 
@@ -408,7 +399,7 @@ const resetUserForm = () => {
         password: '',
         role: 'user'
     })
-    setEditingUser(null)
+    // setEditingUser(null)
 }
 
 const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') => {
@@ -424,18 +415,15 @@ const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') =
 
         if (!response.ok) throw new Error('Error updating user role')
 
-        toast({
-            title: "Éxito",
+        toast.success("Éxito", {
             description: "Rol de usuario actualizado correctamente.",
         })
 
         fetchUsers()
     } catch (error) {
         console.error('Error updating user role:', error)
-        toast({
-            title: "Error",
+        toast.error("Error", {
             description: "No se pudo actualizar el rol del usuario.",
-            variant: "destructive",
         })
     }
 }
@@ -1026,7 +1014,7 @@ return (
                     <DialogHeader>
                         <DialogTitle>Confirmar eliminación</DialogTitle>
                         <DialogDescription>
-                            ¿Estás seguro que deseas eliminar "{deleteConfirmDialog.name}"?
+                            ¿Estás seguro que deseas eliminar &quote;{deleteConfirmDialog.name}&quote;?
                             Esta acción no se puede deshacer.
                         </DialogDescription>
                     </DialogHeader>

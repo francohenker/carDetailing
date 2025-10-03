@@ -4,7 +4,6 @@ import { Car } from "lucide-react"
 import Link from "next/link"
 import ThemeToggleButton from "../components/ThemeToggle";
 import { useUserStore } from "./store/useUserStore";
-import user_icon from '../../public/user_icon.svg'
 export default function HeaderDefault() {
 
     const handlerLogout = () => {
@@ -21,7 +20,7 @@ export default function HeaderDefault() {
         }
     }
 
-    const { isAuthenticated, login, logout } = useUserStore();
+    const { isAuthenticated } = useUserStore();
     const user = useUserStore((state) => state.user);
     const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
 

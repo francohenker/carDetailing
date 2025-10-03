@@ -1,4 +1,4 @@
-import { access } from 'fs';
+// import { access } from 'fs';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
         });
         if (!response.ok) {
             return NextResponse.json(
-                { error: 'Error al iniciar sesiónahjsgdjksag' },
+                { error: 'Error al iniciar sesión' },
                 { status: 401 }
             );
         }

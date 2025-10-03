@@ -67,7 +67,7 @@ const MyCalendar: React.FC = () => {
                 defaultView={Views.MONTH}
                 step={60}
                 showMultiDayTimes
-                eventPropGetter={(event) => ({
+                eventPropGetter={() => ({
                     style: {
                         backgroundColor: '#3174ad',
                         borderRadius: '5px',

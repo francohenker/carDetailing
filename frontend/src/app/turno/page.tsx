@@ -15,7 +15,6 @@ import {
     CreditCard,
     MapPin,
     Phone,
-    User,
     CheckCircle,
     CalendarIcon,
     Wrench,
@@ -117,7 +116,7 @@ export default function TurnoPage() {
         }
 
         fetchServices()
-    }, [])
+    }, [error])
 
     // Cargar vehículos del usuario
     useEffect(() => {
@@ -136,7 +135,7 @@ export default function TurnoPage() {
                     setcars([]);
                 }
             } catch (error) {
-                setError("Error fetching cars")
+                setError("Error fetching cars: " + error);
             } finally {
                 if (error) {
                     return <Alert type='error' message={error} />
@@ -145,7 +144,7 @@ export default function TurnoPage() {
         }
 
         fetchcars()
-    }, [])
+    }, [error])
 
     // Genera slots de 09:00 a 18:00 cada 30 minutos y marca ocupados
     const generateSlotsWithBooked = (date: Date, bookedTimes: Set<string>) => {
@@ -192,8 +191,8 @@ export default function TurnoPage() {
                 booked.add(moment(fecha).format('HH:mm'))
             }
             setAvailableSlots(generateSlotsWithBooked(date, booked))
-        } catch (e: any) {
-            console.error('Error obteniendo horarios:', e)
+        } catch (error) {
+            console.error('Error obteniendo horarios:', error)
             // Si falla, mostramos todos como disponibles para no bloquear
             setAvailableSlots(generateSlotsWithBooked(date, new Set()))
             setError('No se pudieron cargar los horarios del día, mostrando disponibilidad general')

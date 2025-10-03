@@ -1,9 +1,9 @@
 import HeaderDefault from "./header"
-import { CalendarDays, Car, Shield, Sparkles, Wrench } from "lucide-react"
+import { CalendarDays, Car, Shield, Sparkles } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import FooterDefault from "./footer"
 import { WeatherWidget } from "@/components/weatherDisplay"
-import MyCalendar from "@/components/calendar"
+// import MyCalendar from "@/components/calendar"
 import { CalendarDemo } from "@/components/Calendar2"
 
 

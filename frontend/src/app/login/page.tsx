@@ -9,7 +9,7 @@ import { useUserStore } from "../store/useUserStore"
 import { useRouter } from "next/navigation"
 import Alert from "@/components/Alert"
 
-export default function login() {
+export default function Login() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const router = useRouter();
@@ -39,7 +39,7 @@ export default function login() {
             router.push('/');
 
         } catch (error) {
-            setError('Error al iniciar sesión');
+            setError('Error al iniciar sesión: ' + error);
             setTimeout(() => setError(null), 5000);
         }
     }

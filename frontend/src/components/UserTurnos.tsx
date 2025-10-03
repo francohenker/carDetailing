@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { History, CreditCard, DollarSign, Calendar, Car } from "lucide-react"
+import { CreditCard, DollarSign, Calendar, Car } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import moment from "moment"
+import { toast } from "sonner"
 
 // Tipos de datos (puedes moverlos a un archivo de tipos si lo prefieres)
 interface Turno {
@@ -67,7 +68,7 @@ const getMontoFaltante = (turno: Turno): number => {
 export default function UserTurnos() {
     const [turnos, setTurnos] = useState<Turno[]>([])
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    // const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchTurnos = async () => {
@@ -86,8 +87,10 @@ export default function UserTurnos() {
                 // await new Promise(resolve => setTimeout(resolve, 1000)); // Simular delay de red
                 // setTurnos(mockTurnos);
 
-            } catch (err: any) {
-                setError(err.message || "Ocurrió un error.")
+            } catch (error) {
+                toast.error("Error", {
+                    description: "No se pudieron cargar los turnos. Intenta nuevamente más tarde.",
+                });
             } finally {
                 setLoading(false)
             }
@@ -140,13 +143,13 @@ export default function UserTurnos() {
         )
     }
 
-    if (error) {
-        return (
-            <div className="text-center py-6 text-destructive">
-                <p>{error}</p>
-            </div>
-        )
-    }
+    // if (error) {
+    //     return (
+    //         <div className="text-center py-6 text-destructive">
+    //             <p>{error}</p>
+    //         </div>
+    //     )
+    // }
 
     return (
         <div className="space-y-8">

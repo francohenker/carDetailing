@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Car, ChevronLeft, Edit2, History, LogOut, Plus, Save, Settings, Trash2, User } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,9 +23,8 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import HeaderDefault from "@/app/header"
-import ProtectedRoute from "@/components/ProtectedRoutes"
 // import router from "next/router"
 import { useUserStore } from "@/app/store/useUserStore"
 import Alert from "@/components/Alert"
@@ -53,8 +51,8 @@ interface car {
 export default function UserProfile() {
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
-    
-    
+
+
     const [profile, setProfile] = useState<UserProfile>({
         id: "",
         firstname: "",
@@ -64,10 +62,10 @@ export default function UserProfile() {
         address: "",
         profileLetter: "",
     })
-    
-    
+
+
     const [cars, setcars] = useState<car[]>([])
-    
+
     // Estado para el formulario de nuevo vehículo
     const [newcar, setNewcar] = useState<Omit<car, "id">>({
         model: "",
@@ -76,17 +74,17 @@ export default function UserProfile() {
         patente: "",
         type: "",
     })
-    
+
     //Estado para el formulario de editar perfil
     const [editedProfile, setEditedProfile] = useState<UserProfile>({ ...profile })
-    
+
     // Estado para el vehículo en edición
     const [editingcar, setEditingcar] = useState<car | null>(null)
-    
+
     // Estado para los diálogos
     const [isAddcarOpen, setIsAddcarOpen] = useState(false)
     const [isEditcarOpen, setIsEditcarOpen] = useState(false)
-    
+
     // Manejadores de eventos para el perfil
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target
@@ -96,8 +94,7 @@ export default function UserProfile() {
     const handleProfileSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setProfile(editedProfile)
-        toast({
-            title: "Perfil actualizado",
+        toast.success("Perfil actualizado", {
             description: "Tus datos personales han sido actualizados correctamente.",
         })
     }
@@ -156,8 +153,7 @@ export default function UserProfile() {
             })
 
         setIsAddcarOpen(false)
-        toast({
-            title: "Vehículo agregado",
+        toast.success("Vehículo agregado", {
             description: "Tu vehículo ha sido agregado correctamente.",
         })
 
@@ -212,8 +208,7 @@ export default function UserProfile() {
                     alert(error)
                 })
             setIsEditcarOpen(false)
-            toast({
-                title: "Vehículo actualizado",
+            toast.success("Vehículo actualizado",   {
                 description: "La información de tu vehículo ha sido actualizada correctamente.",
             })
         }
@@ -221,16 +216,15 @@ export default function UserProfile() {
 
     const handleDeletecar = (id: string) => {
         setcars((prev) => prev.filter((v) => v.id !== id))
-        toast({
-            title: "Vehículo eliminado",
+        toast.success("Vehículo eliminado", {
             description: "Tu vehículo ha sido eliminado correctamente.",
         })
     }
 
     // Función para obtener el vehículo por ID
-    const getcarById = (id: string) => {
-        return cars.find((v) => v.id === id)
-    }
+    // const getcarById = (id: string) => {
+    //     return cars.find((v) => v.id === id)
+    // }
 
     // Función para cerrar sesión
     const handleLogout = () => {
@@ -239,8 +233,7 @@ export default function UserProfile() {
 
         window.location.href = "/";
 
-        toast({
-            title: "Sesión cerrada",
+        toast.success("Sesión cerrada", {
             description: "Has cerrado sesión correctamente.",
         })
     }
@@ -279,7 +272,11 @@ export default function UserProfile() {
 
                 setProfile(data);
                 setEditedProfile(data);
-            } catch (error) { }
+            } catch {
+                toast.error("Error",{
+                    description: "No se pudo obtener la información del perfil.",
+                });
+            }
         };
 
         const fetchDataCars = async () => {
@@ -304,14 +301,14 @@ export default function UserProfile() {
                 console.log("Profile data:", data);
 
                 setcars(data);
-            } catch (error) {
+            } catch {
                 console.error("Error fetching profile:", error);
             }
         };
 
         fetchDataUser();
         fetchDataCars();
-    }, [])
+    }, [router])
 
     return (
         // <ProtectedRoute allowedRoles={['user']}>
