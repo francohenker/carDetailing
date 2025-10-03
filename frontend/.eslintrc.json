@@ -28,13 +28,7 @@
     "@typescript-eslint/no-explicit-any": "off",
     "react/react-in-jsx-scope": "off",
     "react-hooks/exhaustive-deps": "warn",
-    "react/prop-types": "off",          
-    "import/order": [
-      "error",
-      {
-        "groups": ["builtin", "external", "internal", "parent", "sibling", "index"]
-      }
-    ]
+    "react/prop-types": "off"         
   },
   "settings": {
     "react": {

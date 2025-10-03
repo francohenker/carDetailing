@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 
 import { toast } from "sonner"
+import HeaderDefault from "../header"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -52,7 +53,6 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import ProtectedRoute from "@/components/ProtectedRoutes"
-import HeaderDefault from "../header"
 
 // Tipos de datos
 interface Service {
