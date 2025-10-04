@@ -14,7 +14,9 @@ import {
     X,
     ChevronLeft,
     Shield,
-    ShieldCheck
+    ShieldCheck,
+    AlertTriangle,
+    CheckCircle
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -105,6 +107,11 @@ export default function AdminPage() {
         stock_actual: 0,
         stock_minimo: 0
     })
+    
+    // Estados para confirmación de cambio de stock
+    const [isStockConfirmDialogOpen, setIsStockConfirmDialogOpen] = useState(false)
+    const [pendingStockValue, setPendingStockValue] = useState<number>(0)
+    const [originalStockValue, setOriginalStockValue] = useState<number>(0)
 
     // Estados para usuarios
     const [users, setUsers] = useState<User[]>([])
@@ -271,6 +278,19 @@ const fetchProducts = async () => {
 
 const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Si estamos editando y el stock cambió, mostrar confirmación
+    if (editingProduct && productForm.stock_actual !== originalStockValue) {
+        setPendingStockValue(productForm.stock_actual)
+        setIsStockConfirmDialogOpen(true)
+        return // No continuar con el submit hasta confirmar
+    }
+    
+    // Si no cambió el stock o es un producto nuevo, continuar normalmente
+    await submitProduct()
+}
+
+const submitProduct = async () => {
     try {
         const url = editingProduct
             ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/update/${editingProduct.id}`
@@ -310,7 +330,20 @@ const handleEditProduct = (product: Product) => {
         stock_actual: product.stock_actual,
         stock_minimo: product.stock_minimo
     })
+    setOriginalStockValue(product.stock_actual)
     setIsProductDialogOpen(true)
+}
+
+const handleConfirmStockChange = async () => {
+    setIsStockConfirmDialogOpen(false)
+    // Después de confirmar, proceder con el submit
+    await submitProduct()
+}
+
+const handleCancelStockChange = () => {
+    setIsStockConfirmDialogOpen(false)
+    // Restaurar el valor original en el formulario
+    setProductForm({ ...productForm, stock_actual: originalStockValue })
 }
 
 const handleDeleteProduct = async (id: number) => {
@@ -853,14 +886,25 @@ return (
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="product-stock">Stock Actual</Label>
+                                    <Label htmlFor="product-stock" className="flex items-center gap-2">
+                                        Stock Actual
+                                        {editingProduct && (
+                                            <span className="badge badge-warning badge-sm"></span>
+                                        )}
+                                    </Label>
                                     <Input
                                         id="product-stock"
                                         type="number"
                                         value={productForm.stock_actual}
                                         onChange={(e) => setProductForm({ ...productForm, stock_actual: Number(e.target.value) })}
                                         required
+                                        className={editingProduct ? "border-warning" : ""}
                                     />
+                                    {editingProduct && productForm.stock_actual !== originalStockValue && (
+                                        <p className="text-xs text-warning">
+                                            ⚠️ Este cambio requerirá confirmación al actualizar
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="product-stock-min">Stock Mínimo</Label>
@@ -1030,6 +1074,69 @@ return (
                         >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Eliminar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Confirmación de Cambio de Stock */}
+            <Dialog open={isStockConfirmDialogOpen} onOpenChange={setIsStockConfirmDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-warning">
+                            <AlertTriangle className="h-5 w-5" />
+                            ⚠️ Confirmar Actualización de Stock
+                        </DialogTitle>
+                        <DialogDescription>
+                            Estás a punto de modificar el stock de un producto. Esta es una operación crítica.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="bg-base-200 p-4 rounded-lg space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium">Producto:</span>
+                                <span className="font-bold">{productForm.name}</span>
+                            </div>
+                            <div className="divider my-2"></div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium">Stock Actual:</span>
+                                <span className="text-lg font-bold text-error">{originalStockValue}</span>
+                            </div>
+                            <div className="flex justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium">Nuevo Stock:</span>
+                                <span className="text-lg font-bold text-success">{pendingStockValue}</span>
+                            </div>
+                        </div>
+                        <div className="alert alert-warning">
+                            <AlertTriangle className="h-5 w-5" />
+                            <div className="text-sm">
+                                <p className="font-semibold">¿Estás seguro de este cambio?</p>
+                                <p>Verifica que el nuevo valor sea correcto antes de confirmar.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleCancelStockChange}
+                        >
+                            <X className="h-4 w-4 mr-2" />
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="default"
+                            onClick={handleConfirmStockChange}
+                            className="bg-warning hover:bg-warning/90 text-warning-content"
+                        >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Confirmar Cambio
                         </Button>
                     </DialogFooter>
                 </DialogContent>
