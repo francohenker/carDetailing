@@ -1,4 +1,4 @@
-import { HttpException, Injectable, UsePipes } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Servicio } from './entities/servicio.entity';
 import { In, Repository } from 'typeorm';

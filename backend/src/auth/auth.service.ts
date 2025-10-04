@@ -4,15 +4,15 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Users } from 'src/users/entities/users.entity';
+import { Users } from '../users/entities/users.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm/dist/common/typeorm.decorators';
 
-interface Token {
-  userId: number;
-  email: string;
-  role: string;
-}
+// interface Token {
+//   userId: number;
+//   email: string;
+//   role: string;
+// }
 @Injectable()
 export class AuthService {
   constructor(
@@ -92,7 +92,7 @@ export class AuthService {
         throw new HttpException('Invalid token', 401);
       }
       payload = decoded;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Token inválido o caducado');
     }
     return payload;

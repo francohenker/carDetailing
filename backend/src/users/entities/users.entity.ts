@@ -8,7 +8,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
 import { Role } from '../../roles/role.enum';
-import { Car } from 'src/car/entities/car.entity';
+import { Car } from '../../car/entities/car.entity';
 
 @Entity()
 export class Users {

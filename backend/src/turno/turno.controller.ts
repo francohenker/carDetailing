@@ -10,14 +10,10 @@ import {
 import { TurnoService } from './turno.service';
 import { Turno } from './entities/turno.entity';
 import { CreateTurnoDto } from './dto/create.turno.dto';
-import { Car } from 'src/car/entities/car.entity';
-import { CarService } from 'src/car/car.service';
-import { HttpErrorByCode } from '@nestjs/common/utils/http-error-by-code.util';
+import { CarService } from '../car/car.service';
 import { ModifyTurnoDto } from './dto/modify.turno.dto';
-import { TurnoOwnerGuard } from 'src/auth/turno.owner.guard';
-import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from 'src/roles/role.guard';
-import { AuthService } from 'src/auth/auth.service';
+import { TurnoOwnerGuard } from '../auth/turno.owner.guard';
+import { AuthService } from '../auth/auth.service';
 
 @Controller('turno')
 export class TurnoController {
@@ -44,7 +40,7 @@ export class TurnoController {
         throw new HttpException('Car not found', 404);
       }
       return this.turnoService.createTurno(car, createTurnoDto);
-    } catch (error) {
+    } catch {
       throw new HttpException('User unauthorized', 401);
     }
   }
@@ -81,7 +77,7 @@ export class TurnoController {
   }
 
   @Get('get-date')
-  async getTurnosByDate(@Req() request): Promise<any> {
+  async getTurnosByDate(): Promise<any> {
     // const date = request.query.date;
     // if (!date) {
     //   throw new HttpException('Date query parameter is required', 400);

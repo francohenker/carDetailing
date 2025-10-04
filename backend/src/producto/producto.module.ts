@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from 'src/auth/auth.module';
+import { AuthModule } from '../auth/auth.module';
 import { Producto } from './entities/producto.entity';
 import { ProductoService } from './producto.service';
 import { ProductoController } from './producto.controller';

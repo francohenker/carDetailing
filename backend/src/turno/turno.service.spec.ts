@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TurnoService } from './turno.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Turno } from './entities/turno.entity';
-import { Repository } from 'typeorm';
+// import { Repository } from 'typeorm';
 import { CarService } from '../car/car.service';
 import { ServicioService } from '../servicio/servicio.service';
 
@@ -14,7 +14,7 @@ const mockTurnoRepository = () => ({
 
 describe('TurnoService', () => {
   let service: TurnoService;
-  let turnoRepository: jest.Mocked<Repository<Turno>>;
+  // let turnoRepository: jest.Mocked<Repository<Turno>>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -40,7 +40,7 @@ describe('TurnoService', () => {
     }).compile();
 
     service = module.get<TurnoService>(TurnoService);
-    turnoRepository = module.get(getRepositoryToken(Turno));
+    // turnoRepository = module.get(getRepositoryToken(Turno));
   });
 
   it('should be defined', () => {

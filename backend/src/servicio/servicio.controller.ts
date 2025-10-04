@@ -10,15 +10,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ServicioService } from './servicio.service';
-import { UserService } from 'src/users/users.service';
 import { CreateServicioDto } from './dto/create.servicio.dto';
 import { UpdateServicioDto } from './dto/update.servicio.dto';
 import { Servicio } from './entities/servicio.entity';
-import { Role } from 'src/roles/role.enum';
-import { Roles } from 'src/roles/role.decorator';
-import { RolesGuard } from 'src/roles/role.guard';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { AuthService } from 'src/auth/auth.service';
+import { Role } from '../roles/role.enum';
+import { Roles } from '../roles/role.decorator';
+import { RolesGuard } from '../roles/role.guard';
+import { AuthGuard } from '../auth/auth.guard';
+import { AuthService } from '../auth/auth.service';
 
 @Controller('services')
 export class ServicioController {

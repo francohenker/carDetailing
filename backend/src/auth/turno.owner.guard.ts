@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { TurnoService } from 'src/turno/turno.service';
+import { TurnoService } from '../turno/turno.service';
 
 @Injectable()
 export class TurnoOwnerGuard implements CanActivate {

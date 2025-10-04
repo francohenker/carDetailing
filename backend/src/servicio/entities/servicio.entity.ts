@@ -1,12 +1,10 @@
-import { Producto } from 'src/producto/entities/producto.entity';
-import { Turno } from 'src/turno/entities/turno.entity';
+import { Producto } from '../../producto/entities/producto.entity';
+import { Turno } from '../../turno/entities/turno.entity';
 import {
   Column,
   Entity,
   JoinTable,
   ManyToMany,
-  ManyToOne,
-  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 

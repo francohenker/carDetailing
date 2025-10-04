@@ -7,7 +7,7 @@ import {
   IsNumber,
   IsString,
 } from 'class-validator';
-import { estado_turno } from 'src/enums/estado_turno.enum';
+import { estado_turno } from '../../enums/estado_turno.enum';
 
 export class ModifyTurnoDto {
   @IsNumber()

@@ -1,6 +1,6 @@
-import { TIPO_AUTO } from 'src/enums/tipo_auto.enum';
-import { Turno } from 'src/turno/entities/turno.entity';
-import { Users } from 'src/users/entities/users.entity';
+import { TIPO_AUTO } from '../../enums/tipo_auto.enum';
+import { Turno } from '../../turno/entities/turno.entity';
+import { Users } from '../../users/entities/users.entity';
 import {
   Column,
   Entity,

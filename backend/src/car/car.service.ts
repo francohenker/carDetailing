@@ -1,18 +1,9 @@
-import {
-  forwardRef,
-  HttpCode,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { HttpCode, HttpException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Car } from './entities/car.entity';
 import { Repository } from 'typeorm';
 import { createCarDto } from './dto/create-car.dto';
-import { Users } from 'src/users/entities/users.entity';
-import { AuthService } from 'src/auth/auth.service';
-import { UserService } from 'src/users/users.service';
+import { Users } from '../users/entities/users.entity';
 import { modifyCarDto } from './dto/modify-car.dto';
 
 @Injectable()

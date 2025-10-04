@@ -3,12 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Turno } from './entities/turno.entity';
 import { Between, Repository } from 'typeorm';
 import { CreateTurnoDto } from './dto/create.turno.dto';
-import { Car } from 'src/car/entities/car.entity';
-import { ServicioService } from 'src/servicio/servicio.service';
+import { Car } from '../car/entities/car.entity';
+import { ServicioService } from '../servicio/servicio.service';
 import { ModifyTurnoDto } from './dto/modify.turno.dto';
 import { fetchWeatherApi } from 'openmeteo';
-import { estado_turno } from 'src/enums/estado_turno.enum';
-import { Users } from 'src/users/entities/users.entity';
+import { estado_turno } from '../enums/estado_turno.enum';
+import { Users } from '../users/entities/users.entity';
 
 @Injectable()
 export class TurnoService {
@@ -89,7 +89,7 @@ export class TurnoService {
   // APARTADO DE LA API DEL TIEMPO
   //falta ver bien su implmementacion, filtrar por la fecha de inicio y de fin
 
-  async wheater(startDate: string, endDate: string): Promise<any> {
+  async wheater(): Promise<any> {
     const params = {
       latitude: [-27.0005],
       longitude: [-54.4816],
@@ -115,10 +115,10 @@ export class TurnoService {
 
     // Attributes for timezone and location
     const utcOffsetSeconds = response.utcOffsetSeconds();
-    const timezone = response.timezone();
-    const timezoneAbbreviation = response.timezoneAbbreviation();
-    const latitude = response.latitude();
-    const longitude = response.longitude();
+    // const timezone = response.timezone();
+    // const timezoneAbbreviation = response.timezoneAbbreviation();
+    // const latitude = response.latitude();
+    // const longitude = response.longitude();
 
     const hourly = response.hourly()!;
 

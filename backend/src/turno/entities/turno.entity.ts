@@ -1,16 +1,14 @@
-import { Car } from 'src/car/entities/car.entity';
-import { estado_turno } from 'src/enums/estado_turno.enum';
-import { Pago } from 'src/pago/entities/pago.entity';
-import { Servicio } from 'src/servicio/entities/servicio.entity';
+import { Car } from '../../car/entities/car.entity';
+import { estado_turno } from '../../enums/estado_turno.enum';
+import { Pago } from '../../pago/entities/pago.entity';
+import { Servicio } from '../../servicio/entities/servicio.entity';
 import {
   Column,
   Entity,
-  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 

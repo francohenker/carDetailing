@@ -5,13 +5,11 @@ import {
   HttpException,
   Post,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { createCarDto } from './dto/create-car.dto';
 import { CarService } from './car.service';
-import { UserService } from 'src/users/users.service';
 import { modifyCarDto } from './dto/modify-car.dto';
-import { AuthService } from 'src/auth/auth.service';
+import { AuthService } from '../auth/auth.service';
 import { Car } from './entities/car.entity';
 
 @Controller('car')
