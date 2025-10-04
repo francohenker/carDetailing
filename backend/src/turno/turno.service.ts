@@ -10,14 +10,13 @@ import { fetchWeatherApi } from 'openmeteo';
 import { estado_turno } from 'src/enums/estado_turno.enum';
 import { Users } from 'src/users/entities/users.entity';
 
-
 @Injectable()
 export class TurnoService {
   constructor(
     @InjectRepository(Turno)
     private readonly turnoRepository: Repository<Turno>,
     private servicioService: ServicioService,
-  ) { }
+  ) {}
 
   async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
     const servicios = await this.servicioService.findByIds(turnoView.services);
@@ -28,7 +27,7 @@ export class TurnoService {
       servicios,
       turnoView.date,
       turnoView.duration,
-      turnoView.totalPrice
+      turnoView.totalPrice,
     );
     const turno = this.turnoRepository.create(newTurno);
     this.turnoRepository.save(turno);
@@ -74,7 +73,6 @@ export class TurnoService {
     });
   }
 
-
   // NEED TO FIX THIS METHOD TO GET TURNOS BY USER,dont work properly
   async findByUser(user: Users): Promise<Turno[]> {
     return await this.turnoRepository
@@ -88,25 +86,28 @@ export class TurnoService {
       .getMany();
   }
 
-
   // APARTADO DE LA API DEL TIEMPO
   //falta ver bien su implmementacion, filtrar por la fecha de inicio y de fin
 
   async wheater(startDate: string, endDate: string): Promise<any> {
-
     const params = {
-      "latitude": [-27.0005],
-      "longitude": [-54.4816],
+      latitude: [-27.0005],
+      longitude: [-54.4816],
       // "hourly": "temperature_2m",
-      "hourly": ["temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation"],
-      "timezone": "America/Sao_Paulo",
-      "start_date": "2025-06-17",
-      "end_date": "2025-07-01"
+      hourly: [
+        'temperature_2m',
+        'apparent_temperature',
+        'precipitation_probability',
+        'precipitation',
+      ],
+      timezone: 'America/Sao_Paulo',
+      start_date: '2025-06-17',
+      end_date: '2025-07-01',
       // "start_date": startDate,
       // "end_date": endDate
     };
 
-    const url = "https://api.open-meteo.com/v1/forecast";
+    const url = 'https://api.open-meteo.com/v1/forecast';
     const responses = await fetchWeatherApi(url, params);
 
     // Process first location. Add a for-loop for multiple locations or weather models
@@ -124,8 +125,19 @@ export class TurnoService {
     // Note: The order of weather variables in the URL query and the indices below need to match!
     const weatherData = {
       hourly: {
-        time: [...Array((Number(hourly.timeEnd()) - Number(hourly.time())) / hourly.interval())].map(
-          (_, i) => new Date((Number(hourly.time()) + i * hourly.interval() + utcOffsetSeconds) * 1000)
+        time: [
+          ...Array(
+            (Number(hourly.timeEnd()) - Number(hourly.time())) /
+              hourly.interval(),
+          ),
+        ].map(
+          (_, i) =>
+            new Date(
+              (Number(hourly.time()) +
+                i * hourly.interval() +
+                utcOffsetSeconds) *
+                1000,
+            ),
         ),
         temperature2m: hourly.variables(0)!.valuesArray()!,
       },
@@ -156,7 +168,4 @@ export class TurnoService {
 
     return turnos;
   }
-
-
-
 }

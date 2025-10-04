@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ServicioService } from './servicio.service';
 import { UserService } from 'src/users/users.service';
 import { CreateServicioDto } from './dto/create.servicio.dto';
@@ -39,7 +49,7 @@ export class ServicioController {
   ): Promise<Servicio | null> {
     return this.servicioService.update(servicio, id);
   }
-  
+
   @Delete('delete/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
@@ -51,5 +61,4 @@ export class ServicioController {
   async getAllServicios(): Promise<Servicio[]> {
     return this.servicioService.getAll();
   }
-
 }

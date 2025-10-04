@@ -10,7 +10,12 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
-  imports: [ServicioModule, CarModule, AuthModule, TypeOrmModule.forFeature([Turno])],
+  imports: [
+    ServicioModule,
+    CarModule,
+    AuthModule,
+    TypeOrmModule.forFeature([Turno]),
+  ],
   providers: [TurnoService, CarService, JwtService],
   controllers: [TurnoController],
   exports: [TypeOrmModule],

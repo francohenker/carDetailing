@@ -12,7 +12,7 @@ export class Producto {
   @Column({ type: 'decimal', default: 0 })
   stock_minimo: number;
 
-  @Column({ type: 'decimal'})
+  @Column({ type: 'decimal' })
   stock_actual: number;
 
   @Column({ type: 'decimal' })

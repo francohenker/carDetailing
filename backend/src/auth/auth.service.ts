@@ -1,4 +1,8 @@
-import { HttpException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Users } from 'src/users/entities/users.entity';
 import { Repository } from 'typeorm';
@@ -8,7 +12,7 @@ interface Token {
   userId: number;
   email: string;
   role: string;
-};
+}
 @Injectable()
 export class AuthService {
   constructor(
@@ -16,8 +20,7 @@ export class AuthService {
     @InjectRepository(Users)
     private userRepository: Repository<Users>,
     private jwtService: JwtService,
-  ) { }
-
+  ) {}
 
   //inicio de sesion, todavia nose si se va a usar1
 
@@ -33,7 +36,9 @@ export class AuthService {
   //     };
   // }
 
-  async generateAccessToken(user: Users) : Promise<{ access_token: string; name: string; role: string }> {
+  async generateAccessToken(
+    user: Users,
+  ): Promise<{ access_token: string; name: string; role: string }> {
     const payload = { name: user.email, userId: user.id, role: user.role };
     return {
       access_token: this.jwtService.sign(payload, {
@@ -103,5 +108,4 @@ export class AuthService {
 
     return this.userRepository.findOne({ where: { id: decode.userId } });
   }
-
 }

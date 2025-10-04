@@ -49,7 +49,6 @@ export class UsersController {
     return await this.userService.login(email, password);
   }
 
-
   //return user data (profile) to frontend
   @Get('profile')
   @UseGuards(AuthGuard)

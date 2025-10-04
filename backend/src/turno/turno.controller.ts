@@ -25,23 +25,26 @@ export class TurnoController {
     private carService: CarService,
     private turnoService: TurnoService,
     private authService: AuthService,
-  ) { }
+  ) {}
 
   @Post('create')
-  async createTurno(@Req() request, @Body() createTurnoDto: CreateTurnoDto,): Promise<Turno> {
+  async createTurno(
+    @Req() request,
+    @Body() createTurnoDto: CreateTurnoDto,
+  ): Promise<Turno> {
     try {
       const user = await this.authService.findUserByToken(
-      request.headers.authorization,
-    );
-    const car = await this.carService.findById(createTurnoDto.carId);
-    if(car.user.id !== user.id){
-      throw new HttpException('Car does not belong to the user', 403);
-    }
-    if (!car) {
-      throw new HttpException('Car not found', 404);
-    }
-    return this.turnoService.createTurno(car, createTurnoDto);
-  } catch (error) {
+        request.headers.authorization,
+      );
+      const car = await this.carService.findById(createTurnoDto.carId);
+      if (car.user.id !== user.id) {
+        throw new HttpException('Car does not belong to the user', 403);
+      }
+      if (!car) {
+        throw new HttpException('Car not found', 404);
+      }
+      return this.turnoService.createTurno(car, createTurnoDto);
+    } catch (error) {
       throw new HttpException('User unauthorized', 401);
     }
   }
@@ -68,7 +71,7 @@ export class TurnoController {
   //   }
   //   return turno;
   // }
-  
+
   @Get('/history')
   async getUserTurnos(@Req() request): Promise<Turno[]> {
     const user = await this.authService.findUserByToken(
@@ -95,6 +98,4 @@ export class TurnoController {
   // async listTurnos(@Req() request): Promise<Turno[]> {
   //     return this.turnoService.listTurnos(user);
   // }
-
-
 }

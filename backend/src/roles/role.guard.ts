@@ -15,7 +15,7 @@ export class RolesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [

@@ -17,10 +17,8 @@ export class UpdateServicioDto {
   @Max(99999999)
   precio: number;
 
-
   @IsNumber()
   @Min(30)
   @Max(10000)
   duration: number;
-
 }

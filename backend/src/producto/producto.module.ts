@@ -6,9 +6,9 @@ import { ProductoService } from './producto.service';
 import { ProductoController } from './producto.controller';
 
 @Module({
-    imports: [AuthModule, TypeOrmModule.forFeature([Producto])],
-    providers: [ProductoService],
-    controllers: [ProductoController],
-    exports: [ProductoService, TypeOrmModule],
+  imports: [AuthModule, TypeOrmModule.forFeature([Producto])],
+  providers: [ProductoService],
+  controllers: [ProductoController],
+  exports: [ProductoService, TypeOrmModule],
 })
 export class ProductoModule {}

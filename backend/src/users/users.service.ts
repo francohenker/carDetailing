@@ -13,14 +13,14 @@ export class UserService {
     @InjectRepository(Users)
     private userRepository: Repository<Users>,
     private authService: AuthService,
-  ) { }
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<any> {
     const user = new Users(
       createUserDto.firstname.slice(0, 1).toUpperCase() +
-      createUserDto.firstname.slice(1),
+        createUserDto.firstname.slice(1),
       createUserDto.lastname.slice(0, 1).toUpperCase() +
-      createUserDto.lastname.slice(1),
+        createUserDto.lastname.slice(1),
       createUserDto.password,
       createUserDto.email,
       createUserDto.phone,
@@ -58,8 +58,6 @@ export class UserService {
     return await this.userRepository.findOne({ where: { id } });
   }
 
-
-
   async getProfile(id: number): Promise<Users> {
     const user = await this.findOne(id);
     if (!user) {
@@ -68,13 +66,7 @@ export class UserService {
     return user;
   }
 
-
   async getAllUsers(): Promise<Users[]> {
     return this.userRepository.find();
   }
-
-
-
-
-
 }

@@ -49,7 +49,8 @@ class ConfigService {
       autoLoadEntities: true,
       synchronize: true,
 
-      ssl: this.getValue('POSTGRES_SSL', false) === 'true',
+      // ssl: this.getValue('POSTGRES_SSL', false) === 'true',
+      ssl: true,
     };
   }
 }

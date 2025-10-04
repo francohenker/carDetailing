@@ -2,7 +2,13 @@ import Decimal from 'decimal.js';
 import { estado_pago } from 'src/enums/estado_pago.enum';
 import { metodo_pago } from 'src/enums/metodo_pago.enum';
 import { Turno } from 'src/turno/entities/turno.entity';
-import { Column, Entity, PrimaryGeneratedColumn, OneToOne, ManyToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  OneToOne,
+  ManyToOne,
+} from 'typeorm';
 
 @Entity()
 export class Pago {
@@ -18,14 +24,14 @@ export class Pago {
   @Column()
   metodo: metodo_pago;
 
-  @Column({default: estado_pago.PENDIENTE})
+  @Column({ default: estado_pago.PENDIENTE })
   estado: estado_pago;
 
   @ManyToOne(() => Turno, (turno) => turno.pago)
   turno: Turno;
 
-
-  constructor(monto: number,
+  constructor(
+    monto: number,
     fecha_pago: Date,
     metodo: metodo_pago,
     estado: estado_pago,
@@ -39,5 +45,4 @@ export class Pago {
     this.estado = estado;
     this.turno = turno;
   }
-
 }

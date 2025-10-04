@@ -28,7 +28,6 @@ export class CreateTurnoDto {
 
   totalPrice: number;
 
-
   @IsArray()
   @ArrayNotEmpty()
   @IsInt({ each: true })

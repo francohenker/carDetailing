@@ -1,4 +1,11 @@
-import { forwardRef, HttpCode, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpCode,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Car } from './entities/car.entity';
 import { Repository } from 'typeorm';
@@ -39,7 +46,7 @@ export class CarService {
   }
 
   async findById(carId: number): Promise<Car> {
-    const car = await this.carRepository.findOne({ 
+    const car = await this.carRepository.findOne({
       where: { id: carId },
       relations: ['user'],
     });
@@ -67,25 +74,17 @@ export class CarService {
   }
 
   // turn True isDelete property car
-  async deleteCar(user : Users, carId : number){
+  async deleteCar(user: Users, carId: number) {
     const car = await this.carRepository.findOne({
-      where: {id: carId, user : { id: user.id } }
+      where: { id: carId, user: { id: user.id } },
     });
 
-    if(!car){
-      throw new HttpException(
-        'Car not found or does not belong to user',
-        404,
-      );
+    if (!car) {
+      throw new HttpException('Car not found or does not belong to user', 404);
     }
 
     car.isDeleted = true;
     await this.carRepository.save(car);
     return HttpCode(200);
   }
-
-
-
-
-
 }
