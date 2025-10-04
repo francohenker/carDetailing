@@ -7,6 +7,7 @@ import moment from "moment"
 import "moment/locale/es"
 import { Calendar as ShadCalendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import {
     Car,
     ChevronLeft,
@@ -19,7 +20,6 @@ import {
     CalendarIcon,
     Wrench,
 } from "lucide-react"
-import Alert from "@/components/Alert"
 
 
 // Configurar moment en español
@@ -110,7 +110,9 @@ export default function TurnoPage() {
             } finally {
                 setLoading(false)
                 if (error) {
-                    return <Alert type='error' message={error} />
+                    toast.error("error", {
+                        description: error,
+                    })
                 }
             }
         }
@@ -138,7 +140,9 @@ export default function TurnoPage() {
                 setError("Error fetching cars: " + error);
             } finally {
                 if (error) {
-                    return <Alert type='error' message={error} />
+                    toast.error("error", {
+                        description: error,
+                    })
                 }
             }
         }
@@ -359,7 +363,9 @@ export default function TurnoPage() {
                     <div className="lg:col-span-2">
                         {/* Paso 1: Selección de Vehículo */}
                         <div>
-                            {error && <Alert type='error' message={error} />}
+                            {error && toast.error("error", {
+                                description: error,
+                            })}
                         </div>
                         {currentStep === 1 && (
                             <div className="card bg-base-100 shadow-xl">
@@ -404,7 +410,7 @@ export default function TurnoPage() {
                                         Agregar Nuevo Vehículo
                                     </Link>
 
-                                    {error == "Token expirado" && (
+                                    {error === "Token expirado" && (
                                         <button className="btn btn-neutral mb-4" onClick={() => router.push('/login')}>
                                             Login
                                         </button>

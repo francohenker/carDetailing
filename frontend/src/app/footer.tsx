@@ -67,7 +67,7 @@ export default function FooterDefault() {
                 <div>
                     <h3 className="text-lg font-medium mb-4">Síguenos</h3>
                     <div className="flex space-x-4">
-                        <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                        <a href="#facebook" className="text-gray-400 hover:text-white transition-colors">
                             <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path
                                     fillRule="evenodd"

@@ -23,7 +23,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
             }
         });
         const data = await response.json();        
-        if(data.role != 'admin'){
+        if(data.role !== 'admin'){
             router.push('/unauthorized');
         }
     }

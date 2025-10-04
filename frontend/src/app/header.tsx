@@ -69,7 +69,7 @@ export default function HeaderDefault() {
                         </div>
                     </div>
                     <ul
-                        tabIndex={0}
+                        // tabIndex={0}
                         className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow text-base-content">
                         {isAuthenticated ?
                             <>
@@ -78,9 +78,9 @@ export default function HeaderDefault() {
                                 }
                                 <li><a href="/user/profile" className="justify-between">Perfil</a></li>
                                 {/* <li><a href="/user/settings">Configuración</a></li> */}
-                                <li><a href="#" onClick={handlerLogout}>{'Cerrar sesión'}</a></li>
+                                <li><a href="#/logout" onClick={handlerLogout}>{'Cerrar sesión'}</a></li>
                             </> :
-                            <li><a href="#" onClick={handleLogin}>{'Iniciar sesión'}</a></li>
+                            <li><a href="#/login" onClick={handleLogin}>{'Iniciar sesión'}</a></li>
                         }
                     </ul>
 
