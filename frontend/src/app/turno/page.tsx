@@ -19,6 +19,7 @@ import {
     CheckCircle,
     CalendarIcon,
     Wrench,
+    Settings,
 } from "lucide-react"
 
 
@@ -324,8 +325,21 @@ export default function TurnoPage() {
             {/* Header */}
             <div className="" >
                 <HeaderDefault />
-                <h1 className="text-2xl font-bold">Reservar Turno</h1>
-                <p className="text-gray-600">Seleccione el servicio y la fecha deseada.</p>
+                <main className="container mx-auto p-6">
+
+                    <div className="flex items-center gap-2 mb-6">
+                        <Link href="/" className="text-muted-foreground hover:text-foreground">
+                            <ChevronLeft className="h-4 w-4" />
+                            <span className="sr-only">Volver</span>
+                        </Link>
+                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <Settings className="h-8 w-8 text-primary" />
+                            Reservar Turno
+                        </h1>
+                    </div>
+                </main>
+                {/* <h1 className="text-2xl font-bold">Reservar Turno</h1>
+                <p className="text-gray-600">Seleccione el servicio y la fecha deseada.</p> */}
             </div >
 
             {/* Breadcrumb */}
@@ -412,7 +426,7 @@ export default function TurnoPage() {
                                             )
                                         })}
                                     </div>
-                                    
+
                                     <div className="divider">O</div>
                                     <Link href="/user/profile" className="btn btn-outline">
                                         <Car className="h-4 w-4 mr-2" />

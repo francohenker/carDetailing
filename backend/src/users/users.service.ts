@@ -1,6 +1,6 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { Users } from './entities/users.entity';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Role } from '../roles/role.enum';
@@ -68,5 +68,16 @@ export class UserService {
 
   async getAllUsers(): Promise<Users[]> {
     return this.userRepository.find();
+  }
+
+  async updateProfile(id: number, updatedData: UpdateUserDto): Promise<Users> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new HttpException('User not found', 404);
+    }
+
+    // Actualizar solo los campos proporcionados
+    Object.assign(user, updatedData);
+    return this.userRepository.save(user);
   }
 }

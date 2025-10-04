@@ -12,3 +12,16 @@ export class CreateUserDto {
   @IsString()
   phone: string;
 }
+
+export class UpdateUserDto {
+  @IsString()
+  firstname?: string;
+  @IsString()
+  lastname?: string;
+  @IsString()
+  password?: string;
+  @IsString()
+  email?: string;
+  @IsString()
+  phone?: string;
+}

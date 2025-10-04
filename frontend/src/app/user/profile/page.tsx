@@ -27,7 +27,6 @@ import { toast } from "sonner"
 import HeaderDefault from "@/app/header"
 // import router from "next/router"
 import { useUserStore } from "@/app/store/useUserStore"
-import Alert from "@/components/Alert"
 
 interface UserProfile {
     id: string
@@ -94,8 +93,23 @@ export default function UserProfile() {
     const handleProfileSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setProfile(editedProfile)
-        toast.success("Perfil actualizado", {
-            description: "Tus datos personales han sido actualizados correctamente.",
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/update-profile`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+            },
+            body: JSON.stringify(editedProfile),
+        }).then((res) => {
+            if (!res.ok) {
+                toast.error("Error al actualizar el perfil", {
+                    description: "No se pudo actualizar el perfil.",
+                })
+                return
+            }
+            toast.success("Perfil actualizado", {
+                description: "Tus datos personales han sido actualizados correctamente.",
+            })
         })
     }
 
@@ -114,8 +128,10 @@ export default function UserProfile() {
 
     const handleAddcar = () => {
         if (!patenteRegex.test(newcar.patente)) {
-            alert("Patente inválida (formato: ABC123 o AB123CD)")
-            return <div><Alert type="error" message="Patente inválida (formato: ABC123 o AB123CD)" /></div>
+            toast.error("Patente inválida", {
+                description: "El formato de la patente debe ser ABC123 o AB123CD",
+            })
+            return
         }
 
         const car = {
@@ -146,17 +162,17 @@ export default function UserProfile() {
                 return
             })
             .then(() => {
-                alert("Vehículo agregado")
+                toast.success("Vehículo agregado", {
+                    description: "Tu vehículo ha sido agregado correctamente.",
+                })
             })
             .catch((error) => {
-                alert(error)
+                toast.error("Error", {
+                    description: error.message,
+                })
             })
 
         setIsAddcarOpen(false)
-        toast.success("Vehículo agregado", {
-            description: "Tu vehículo ha sido agregado correctamente.",
-        })
-
     }
 
     const handleEditcar = (car: car) => {
@@ -202,15 +218,17 @@ export default function UserProfile() {
                     return response.json()
                 })
                 .then(() => {
-                    alert("Vehículo actualizado")
+                    toast.success("Vehículo actualizado", {
+                        description: "La información de tu vehículo ha sido actualizada correctamente.",
+                    })
                 })
                 .catch((error) => {
-                    alert(error)
+                    toast.error("Error", {
+                        description: error.message,
+                    })
                 })
             setIsEditcarOpen(false)
-            toast.success("Vehículo actualizado",   {
-                description: "La información de tu vehículo ha sido actualizada correctamente.",
-            })
+
         }
     }
 
@@ -273,7 +291,7 @@ export default function UserProfile() {
                 setProfile(data);
                 setEditedProfile(data);
             } catch {
-                toast.error("Error",{
+                toast.error("Error", {
                     description: "No se pudo obtener la información del perfil.",
                 });
             }
@@ -318,11 +336,11 @@ export default function UserProfile() {
 
             <HeaderDefault />
 
-            <div>
+            {/* <div>
                 {
-                    error && <Alert type="error" message={error} />
+                    error && <router.push('/login') />
                 }
-            </div>
+            </div> */}
             <main className="flex-1 py-8">
                 <div className="container">
                     <div className="flex items-center gap-2 mb-6">

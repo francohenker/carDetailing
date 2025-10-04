@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
 import { UserService } from './users.service';
 import { Role } from '../roles/role.enum';
 import { AuthGuard } from '../auth/auth.guard';
@@ -88,4 +88,19 @@ export class UsersController {
   //     message: 'Token is valid',
   //   };
   // }
+
+  @Put('update-profile')
+  @UseGuards(AuthGuard)
+  async updateProfile(@Req() request, @Body() updateData: UpdateUserDto) {
+    const jwt = await this.authService.validateToken(
+      request.headers.authorization,
+    );
+    const user = await this.userService.getProfile(jwt.userId);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.userService.updateProfile(jwt.userId, updateData);
+  }
 }
