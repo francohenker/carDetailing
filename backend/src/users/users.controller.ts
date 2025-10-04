@@ -15,7 +15,7 @@ import { Role } from '../roles/role.enum';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../roles/role.guard';
 import { Roles } from '../roles/role.decorator';
-import { AuthService } from 'src/auth/auth.service';
+import { AuthService } from '../auth/auth.service';
 import { Users } from './entities/users.entity';
 
 @Controller('users')

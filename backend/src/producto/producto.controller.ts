@@ -10,8 +10,8 @@ import {
 } from '@nestjs/common';
 import { ProductoService } from './producto.service';
 import { CreateProductoDto } from './dto/create-producto.dto';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { RolesGuard } from 'src/roles/role.guard';
+import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../roles/role.guard';
 import { Role } from '../roles/role.enum';
 import { Roles } from '../roles/role.decorator';
 
