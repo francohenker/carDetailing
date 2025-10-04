@@ -384,6 +384,15 @@ export default function TurnoPage() {
                                                     key={car.id}
                                                     className={`card bg-base-200 cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-primary bg-primary/10" : ""}`}
                                                     onClick={() => handlecarSelect(car)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            handlecarSelect(car);
+                                                        }
+                                                    }}
+                                                    tabIndex={0}
+                                                    role="button"
+                                                    aria-label={`Seleccionar vehículo ${car.marca} ${car.model} ${car.patente}`}
                                                 >
                                                     <div className="card-body p-4">
                                                         <div className="flex items-center gap-3">
@@ -443,6 +452,15 @@ export default function TurnoPage() {
                                                         className={`card bg-base-200 cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-primary bg-primary/10" : ""
                                                             }`}
                                                         onClick={() => handleServiceToggle(service)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                                e.preventDefault();
+                                                                handleServiceToggle(service);
+                                                            }
+                                                        }}
+                                                        tabIndex={0}
+                                                        role="button"
+                                                        aria-label={`${isSelected ? 'Deseleccionar' : 'Seleccionar'} servicio ${service.name} - $${service.precio.toLocaleString()}`}
                                                     >
                                                         <div className="card-body p-4">
                                                             <div className="flex items-start justify-between">
