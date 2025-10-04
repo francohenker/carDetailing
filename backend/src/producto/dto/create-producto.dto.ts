@@ -9,4 +9,7 @@ export class CreateProductoDto {
 
   @IsNumber()
   stock_actual: number;
+
+  @IsNumber()
+  stock_minimo: number;
 }

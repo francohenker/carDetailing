@@ -16,6 +16,7 @@ export class ProductoService {
       createProductoDto.name,
       createProductoDto.stock_actual,
       createProductoDto.price,
+      createProductoDto.stock_minimo,
     );
     return this.productoRepository.save(producto);
   }

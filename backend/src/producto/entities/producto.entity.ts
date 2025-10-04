@@ -24,10 +24,15 @@ export class Producto {
   @Column({ default: false })
   isDeleted: boolean;
 
-  constructor(name: string, stock_actual: number, price: number) {
+  constructor(
+    name: string,
+    stock_actual: number,
+    price: number,
+    stock_minimo: number,
+  ) {
     this.name = name;
     this.stock_actual = stock_actual;
-    this.stock_minimo = 0;
+    this.stock_minimo = stock_minimo;
     this.price = price;
     this.isDeleted = false;
   }
