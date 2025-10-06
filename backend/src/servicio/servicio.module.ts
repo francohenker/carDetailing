@@ -6,7 +6,7 @@ import { Servicio } from './entities/servicio.entity';
 import { Precio } from '../precio/entities/precio.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthModule } from '../auth/auth.module';
-import { Producto } from 'src/producto/entities/producto.entity';
+import { Producto } from '../producto/entities/producto.entity';
 
 @Module({
   imports: [

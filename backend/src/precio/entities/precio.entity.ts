@@ -1,5 +1,5 @@
-import { TIPO_AUTO } from 'src/enums/tipo_auto.enum';
-import { Servicio } from 'src/servicio/entities/servicio.entity';
+import { TIPO_AUTO } from '../../enums/tipo_auto.enum';
+import { Servicio } from '../../servicio/entities/servicio.entity';
 import {
   Column,
   Entity,

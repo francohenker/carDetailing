@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsNumber, IsString, Max, Min, ValidateNested } from 'class-validator';
-import { Precio } from 'src/precio/entities/precio.entity';
+import { Precio } from '../../precio/entities/precio.entity';
 
 export class UpdateServicioDto {
   @IsNumber()

@@ -5,7 +5,7 @@ import { Precio } from '../precio/entities/precio.entity';
 import { In, Repository } from 'typeorm';
 import { CreateServicioDto } from './dto/create.servicio.dto';
 import { UpdateServicioDto } from './dto/update.servicio.dto';
-import { Producto } from 'src/producto/entities/producto.entity';
+import { Producto } from '../producto/entities/producto.entity';
 
 @Injectable()
 export class ServicioService {

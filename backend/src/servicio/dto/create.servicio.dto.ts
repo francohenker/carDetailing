@@ -1,5 +1,5 @@
 import { IsNumber, IsString, Max } from 'class-validator';
-import { Precio } from 'src/precio/entities/precio.entity';
+import { Precio } from '../../precio/entities/precio.entity';
 
 export class CreateServicioDto {
   @IsString()

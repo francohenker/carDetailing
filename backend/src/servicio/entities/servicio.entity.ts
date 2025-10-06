@@ -1,4 +1,4 @@
-import { Precio } from 'src/precio/entities/precio.entity';
+import { Precio } from '../../precio/entities/precio.entity';
 import { Producto } from '../../producto/entities/producto.entity';
 import { Turno } from '../../turno/entities/turno.entity';
 import {
