@@ -15,7 +15,7 @@ Este proyecto es un sistema orientado a la gestión de un centro de **detailing 
 ### 🔒 Módulos no funcionales
 
 - Seguridad y control de acceso con roles (cliente, administrador).
-- Interfaz responsive (adaptada a móvil y escritorio).
+- Interfaz responsive 
 - Persistencia de datos con PostgreSQL.
 - Rendimiento aceptable bajo carga normal.
 
@@ -23,7 +23,7 @@ Este proyecto es un sistema orientado a la gestión de un centro de **detailing 
 
 - **Backend:** NestJS + TypeORM
 - **Base de datos:** PostgreSQL
-- **Frontend:** Astro con componentes React
+- **Frontend:** NextJS
 - **Autenticación:** JWT
 - **Pagos:** Mercado Pago API
 
