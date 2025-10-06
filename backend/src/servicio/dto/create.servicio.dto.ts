@@ -1,14 +1,15 @@
 import { IsNumber, IsString, Max } from 'class-validator';
+import { Precio } from 'src/precio/entities/precio.entity';
 
 export class CreateServicioDto {
   @IsString()
   name: string;
   @IsString()
   description: string;
-  @IsNumber()
-  @Max(9999999)
-  precio: number;
+  precio: Precio[];
   @IsNumber()
   @Max(10000)
   duration: number;
+  @IsNumber()
+  productId?: number[];
 }

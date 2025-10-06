@@ -27,11 +27,17 @@ import {
 moment.locale("es")
 
 // Tipos de datos
+interface Precio {
+    id?: number
+    tipoVehiculo: 'AUTO' | 'CAMIONETA' 
+    precio: number
+}
+
 interface Service {
     id: string
     name: string
     description: string
-    precio: number
+    precios?: Precio[]
     duration: number // en minutos
 }
 
@@ -206,6 +212,13 @@ export default function TurnoPage() {
         }
     }
 
+    // Función para calcular el precio según tipo de vehículo
+    const getPriceForCarType = (service: Service, carType: string): number => {
+        const type = carType.toUpperCase()
+        const precio = service.precios?.find(p => p.tipoVehiculo === type)
+        return precio ? precio.precio : 0
+    }
+
     // Manejar selección de servicios
     const handleServiceToggle = (service: Service) => {
         const isSelected = bookingData.services.some((s) => s.id === service.id)
@@ -217,7 +230,9 @@ export default function TurnoPage() {
             updatedServices = [...bookingData.services, service]
         }
 
-        const totalPrice = updatedServices.reduce((sum, s) => sum + s.precio, 0)
+        // Calcular precio total según el tipo de vehículo seleccionado
+        const carType = bookingData.car?.type || 'sedan'
+        const totalPrice = updatedServices.reduce((sum, s) => sum + getPriceForCarType(s, carType), 0)
         const totalDuration = updatedServices.reduce((sum, s) => sum + s.duration, 0)
 
         setBookingData({
@@ -230,9 +245,16 @@ export default function TurnoPage() {
 
     // Manejar selección de vehículo
     const handlecarSelect = (car: car) => {
+        // Recalcular precios con el nuevo tipo de vehículo
+        const totalPrice = bookingData.services.reduce(
+            (sum, s) => sum + getPriceForCarType(s, car.type), 
+            0
+        )
+        
         setBookingData({
             ...bookingData,
             car,
+            totalPrice,
         })
     }
 
@@ -458,8 +480,16 @@ export default function TurnoPage() {
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
+                                            {!bookingData.car && (
+                                                <div className="alert alert-info">
+                                                    <span>Selecciona primero tu vehículo para ver los precios correspondientes</span>
+                                                </div>
+                                            )}
                                             {services.map((service) => {
                                                 const isSelected = bookingData.services.some((s) => s.id === service.id)
+                                                const carType = bookingData.car?.type || 'sedan'
+                                                const servicePrice = getPriceForCarType(service, carType)
+                                                
                                                 return (
                                                     <div
                                                         key={service.id}
@@ -474,7 +504,7 @@ export default function TurnoPage() {
                                                         }}
                                                         tabIndex={0}
                                                         role="button"
-                                                        aria-label={`${isSelected ? 'Deseleccionar' : 'Seleccionar'} servicio ${service.name} - $${service.precio.toLocaleString()}`}
+                                                        aria-label={`${isSelected ? 'Deseleccionar' : 'Seleccionar'} servicio ${service.name} - $${servicePrice.toLocaleString()}`}
                                                     >
                                                         <div className="card-body p-4">
                                                             <div className="flex items-start justify-between">
@@ -490,17 +520,21 @@ export default function TurnoPage() {
                                                                             <h3 className="font-semibold">{service.name}</h3>
                                                                             <p className="text-sm text-base-content/70">{service.description}</p>
                                                                             <div className="flex items-center gap-4 mt-2">
-                                                                                {/* <div className="badge badge-outline">{service.category}</div> */}
                                                                                 <div className="flex items-center gap-1 text-sm">
                                                                                     <Clock className="h-4 w-4" />
                                                                                     {service.duration} min
                                                                                 </div>
+                                                                                {bookingData.car && (
+                                                                                    <div className="badge badge-outline text-xs">
+                                                                                        Para {bookingData.car.type}
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
                                                                 <div className="text-right">
-                                                                    <div className="text-lg font-bold">${service.precio.toLocaleString()}</div>
+                                                                    <div className="text-lg font-bold">${servicePrice.toLocaleString()}</div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -605,15 +639,20 @@ export default function TurnoPage() {
                                         <div>
                                             <h3 className="text-lg font-semibold mb-3">Servicios Seleccionados</h3>
                                             <div className="space-y-2">
-                                                {bookingData.services.map((service) => (
-                                                    <div key={service.id} className="flex justify-between items-center p-3 bg-base-200 rounded">
-                                                        <div>
-                                                            <span className="font-medium">{service.name}</span>
-                                                            <span className="text-sm text-base-content/70 ml-2">({service.duration} min)</span>
+                                                {bookingData.services.map((service) => {
+                                                    const carType = bookingData.car?.type || 'sedan'
+                                                    const servicePrice = getPriceForCarType(service, carType)
+                                                    
+                                                    return (
+                                                        <div key={service.id} className="flex justify-between items-center p-3 bg-base-200 rounded">
+                                                            <div>
+                                                                <span className="font-medium">{service.name}</span>
+                                                                <span className="text-sm text-base-content/70 ml-2">({service.duration} min)</span>
+                                                            </div>
+                                                            <span className="font-semibold">${servicePrice.toLocaleString()}</span>
                                                         </div>
-                                                        <span className="font-semibold">${service.precio.toLocaleString()}</span>
-                                                    </div>
-                                                ))}
+                                                    )
+                                                })}
                                             </div>
                                         </div>
 
@@ -694,12 +733,16 @@ export default function TurnoPage() {
                                 {bookingData.services.length > 0 && (
                                     <div className="space-y-2">
                                         <h4 className="font-semibold text-sm">Servicios:</h4>
-                                        {bookingData.services.map((service) => (
-                                            <div key={service.id} className="flex justify-between text-sm">
-                                                <span>{service.name}</span>
-                                                <span>${service.precio.toLocaleString()}</span>
-                                            </div>
-                                        ))}
+                                        {bookingData.services.map((service) => {
+                                            const carType = bookingData.car?.type || 'sedan'
+                                            const servicePrice = getPriceForCarType(service, carType)
+                                            return (
+                                                <div key={service.id} className="flex justify-between text-sm">
+                                                    <span>{service.name}</span>
+                                                    <span>${servicePrice.toLocaleString()}</span>
+                                                </div>
+                                            )
+                                        })}
                                     </div>
                                 )}
 

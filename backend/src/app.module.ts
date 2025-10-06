@@ -21,6 +21,13 @@ import { PagoModule } from './pago/pago.module';
 import { ProductoController } from './producto/producto.controller';
 import { ProductoModule } from './producto/producto.module';
 import { ProductoService } from './producto/producto.service';
+import { AuditoriaController } from './auditoria/auditoria.controller';
+import { MercadopagoController } from './mercadopago/mercadopago.controller';
+import { AuditoriaService } from './auditoria/auditoria.service';
+import { MercadopagoService } from './mercadopago/mercadopago.service';
+import { MercadopagoModule } from './mercadopago/mercadopago.module';
+import { AuditoriaModule } from './auditoria/auditoria.module';
+import { PrecioModule } from './precio/precio.module';
 
 @Module({
   imports: [
@@ -37,6 +44,9 @@ import { ProductoService } from './producto/producto.service';
     TurnoModule,
     PagoModule,
     ProductoModule,
+    MercadopagoModule,
+    AuditoriaModule,
+    PrecioModule,
   ],
   controllers: [
     AppController,
@@ -45,6 +55,8 @@ import { ProductoService } from './producto/producto.service';
     TurnoController,
     CarController,
     ProductoController,
+    AuditoriaController,
+    MercadopagoController,
   ],
   providers: [
     AppService,
@@ -53,6 +65,8 @@ import { ProductoService } from './producto/producto.service';
     TurnoService,
     JwtService,
     ProductoService,
+    AuditoriaService,
+    MercadopagoService,
     // {
     //   provide: APP_GUARD,
     //   useClass: RolesGuard,

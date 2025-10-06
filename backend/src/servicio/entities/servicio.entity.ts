@@ -1,3 +1,4 @@
+import { Precio } from 'src/precio/entities/precio.entity';
 import { Producto } from '../../producto/entities/producto.entity';
 import { Turno } from '../../turno/entities/turno.entity';
 import {
@@ -5,6 +6,7 @@ import {
   Entity,
   JoinTable,
   ManyToMany,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -19,8 +21,11 @@ export class Servicio {
   @Column({ nullable: true })
   description: string;
 
-  @Column('decimal', { precision: 10, scale: 0 })
-  precio: number;
+  @OneToMany(() => Precio, (precio) => precio.servicio, {
+    cascade: true,
+    eager: false,
+  })
+  precio: Precio[];
 
   @Column()
   duration: number;
@@ -38,12 +43,14 @@ export class Servicio {
   constructor(
     name: string,
     description: string,
-    precio: number,
+    precio: Precio[],
     duration: number,
+    producto?: Producto[],
   ) {
     this.name = name;
     this.description = description;
     this.precio = precio;
     this.duration = duration;
+    this.Producto = producto;
   }
 }

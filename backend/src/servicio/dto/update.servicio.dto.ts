@@ -1,4 +1,6 @@
-import { IsNumber, IsString, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsNumber, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { Precio } from 'src/precio/entities/precio.entity';
 
 export class UpdateServicioDto {
   @IsNumber()
@@ -12,10 +14,12 @@ export class UpdateServicioDto {
   @IsString()
   description: string;
 
+  @ValidateNested({ each: true })
+  @Type(() => Precio)
+  precio: Precio[];
+
   @IsNumber()
-  @Min(0)
-  @Max(99999999)
-  precio: number;
+  productId?: number[];
 
   @IsNumber()
   @Min(30)

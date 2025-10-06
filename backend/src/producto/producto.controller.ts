@@ -58,7 +58,8 @@ export class ProductoController {
   // }
 
   @Delete('delete/:id')
-  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   deleteProducto(@Param('id') id: number) {
     return this.productoService.delete(id);
   }

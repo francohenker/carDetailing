@@ -584,12 +584,8 @@ export default function UserProfile() {
                                                                     <SelectValue placeholder="Seleccionar tipo" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    {/* <SelectItem value="Sedán">Sedán</SelectItem>
-                                                                        <SelectItem value="Hatchback">Hatchback</SelectItem>
-                                                                        <SelectItem value="SUV">SUV</SelectItem> */}
                                                                     <SelectItem value="auto">Auto</SelectItem>
                                                                     <SelectItem value="camioneta">Camioneta</SelectItem>
-                                                                    <SelectItem value="otro">Otro</SelectItem>
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
@@ -726,12 +722,8 @@ export default function UserProfile() {
                                                                     <SelectValue placeholder="Seleccionar tipo" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    {/* <SelectItem value="Sedán">Sedán</SelectItem>
-                                                                    <SelectItem value="Hatchback">Hatchback</SelectItem>
-                                                                    <SelectItem value="SUV">SUV</SelectItem> */}
                                                                     <SelectItem value="camioneta">Camioneta</SelectItem>
                                                                     <SelectItem value="auto">Auto</SelectItem>
-                                                                    <SelectItem value="otro">Otro</SelectItem>
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>

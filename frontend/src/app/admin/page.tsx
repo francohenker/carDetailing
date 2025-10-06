@@ -56,11 +56,17 @@ import { Checkbox } from "@/components/ui/checkbox"
 import ProtectedRoute from "@/components/ProtectedRoutes"
 
 // Tipos de datos
+interface Precio {
+    id?: number
+    tipoVehiculo: 'AUTO' | 'CAMIONETA' 
+    precio: number
+}
+
 interface Service {
     id: number
     name: string
     description: string
-    precio: number
+    precio?: Precio[]
     duration: number
     products?: Product[]
 }
@@ -92,9 +98,12 @@ export default function AdminPage() {
     const [serviceForm, setServiceForm] = useState({
         name: '',
         description: '',
-        precio: 0,
+        precio: [
+            { tipoVehiculo: 'AUTO' as const, precio: 0 },
+            { tipoVehiculo: 'CAMIONETA' as const, precio: 0 },
+        ],
         duration: 30,
-        productIds: [] as number[]
+        productId: [] as number[]
     })
 
     // Estados para productos
@@ -215,12 +224,22 @@ export default function AdminPage() {
 
 const handleEditService = (service: Service) => {
     setEditingService(service)
+    
+    // Extraer precios del servicio o usar valores por defecto
+    const getPrecioByTipo = (tipo: string) => {
+        const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
+        return precio ? precio.precio : 0
+    }
+    
     setServiceForm({
         name: service.name,
         description: service.description,
-        precio: service.precio,
+        precio: [
+            { tipoVehiculo: 'AUTO' as const, precio: getPrecioByTipo('AUTO') },
+            { tipoVehiculo: 'CAMIONETA' as const, precio: getPrecioByTipo('CAMIONETA') },
+        ],
         duration: service.duration,
-        productIds: service.products?.map(p => p.id) || []
+        productId: service.products?.map(p => p.id) || []
     })
     setIsServiceDialogOpen(true)
 }
@@ -253,9 +272,12 @@ const resetServiceForm = () => {
     setServiceForm({
         name: '',
         description: '',
-        precio: 0,
+        precio: [
+            { tipoVehiculo: 'AUTO' as const, precio: 0 },
+            { tipoVehiculo: 'CAMIONETA' as const, precio: 0 },
+        ],
         duration: 30,
-        productIds: []
+        productId: []
     })
     setEditingService(null)
 }
@@ -546,38 +568,50 @@ return (
                                         <TableRow>
                                             <TableHead>Nombre</TableHead>
                                             <TableHead>Descripción</TableHead>
-                                            <TableHead>Precio</TableHead>
+                                            <TableHead>Precios por Tipo</TableHead>
                                             <TableHead>Duración</TableHead>
                                             <TableHead>Acciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {services.map((service) => (
-                                            <TableRow key={service.id}>
-                                                <TableCell className="font-medium">{service.name}</TableCell>
-                                                <TableCell>{service.description}</TableCell>
-                                                <TableCell>${service.precio.toLocaleString()}</TableCell>
-                                                <TableCell>{service.duration} min</TableCell>
-                                                <TableCell>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleEditService(service)}
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={() => openDeleteConfirm('service', service.id, service.name)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                        {services.map((service) => {
+                                            const getPrecio = (tipo: string) => {
+                                                const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
+                                                return precio ? precio.precio : 0
+                                            }
+                                            
+                                            return (
+                                                <TableRow key={service.id}>
+                                                    <TableCell className="font-medium">{service.name}</TableCell>
+                                                    <TableCell>{service.description}</TableCell>
+                                                    <TableCell>
+                                                        <div className="text-xs space-y-1">
+                                                            <div>🚗 Auto: ${getPrecio('AUTO').toLocaleString()}</div>
+                                                            <div>🚙 Camioneta: ${getPrecio('CAMIONETA').toLocaleString()}</div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>{service.duration} min</TableCell>
+                                                    <TableCell>
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleEditService(service)}
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() => openDeleteConfirm('service', service.id, service.name)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
                                     </TableBody>
                                 </Table>
                             </CardContent>
@@ -758,17 +792,38 @@ return (
                                     rows={3}
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="service-price">Precio ($)</Label>
-                                    <Input
-                                        id="service-price"
-                                        type="number"
-                                        value={serviceForm.precio}
-                                        onChange={(e) => setServiceForm({ ...serviceForm, precio: Number(e.target.value) })}
-                                        required
-                                    />
+                            <div className="space-y-4">
+                                <div className="border rounded-lg p-4 space-y-3 bg-base-200">
+                                    <Label className="text-sm font-semibold">Precios por Tipo de Vehículo</Label>
+                                    <p className="text-xs text-muted-foreground">Define el precio para cada tipo de vehículo</p>
+                                    
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {serviceForm.precio.map((precio, index) => (
+                                            <div key={precio.tipoVehiculo} className="space-y-1">
+                                                <Label htmlFor={`service-price-${precio.tipoVehiculo}`} className="text-xs">
+                                                    {precio.tipoVehiculo === 'AUTO' && '🚗 Auto ($)'}
+                                                    {precio.tipoVehiculo === 'CAMIONETA' && '🚙 Camioneta ($)'}
+                                                </Label>
+                                                <Input
+                                                    id={`service-price-${precio.tipoVehiculo}`}
+                                                    type="number"
+                                                    value={precio.precio}
+                                                    onChange={(e) => {
+                                                        const newPrecio = [...serviceForm.precio]
+                                                        newPrecio[index] = {
+                                                            ...newPrecio[index],
+                                                            precio: Number(e.target.value)
+                                                        }
+                                                        setServiceForm({ ...serviceForm, precio: newPrecio })
+                                                    }}
+                                                    placeholder="0"
+                                                    required
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
+                                
                                 <div className="space-y-2">
                                     <Label htmlFor="service-duration">Duración (min)</Label>
                                     <Input
@@ -791,17 +846,17 @@ return (
                                                 <div key={product.id} className="flex items-center space-x-2">
                                                     <Checkbox
                                                         id={`product-${product.id}`}
-                                                        checked={serviceForm.productIds.includes(product.id)}
+                                                        checked={serviceForm.productId.includes(product.id)}
                                                         onCheckedChange={(checked) => {
                                                             if (checked) {
                                                                 setServiceForm({
                                                                     ...serviceForm,
-                                                                    productIds: [...serviceForm.productIds, product.id]
+                                                                    productId: [...serviceForm.productId, product.id]
                                                                 })
                                                             } else {
                                                                 setServiceForm({
                                                                     ...serviceForm,
-                                                                    productIds: serviceForm.productIds.filter(id => id !== product.id)
+                                                                    productId: serviceForm.productId.filter(id => id !== product.id)
                                                                 })
                                                             }
                                                         }}

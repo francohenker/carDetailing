@@ -5,11 +5,17 @@ import { Clock, Droplets, Shield, Sparkles, Star, Wrench } from "lucide-react"
 import Name from "@/components/Name";
 import { useEffect, useState } from "react";
 
+interface Precio {
+    id?: number;
+    tipoVehiculo: 'AUTO' | 'CAMIONETA';
+    precio: number;
+}
+
 interface Service {
     id: number;
     name: string;
     description: string;
-    precio: number;
+    precios?: Precio[];
     duration: string;
 }
 
@@ -129,7 +135,6 @@ export default function Servicios() {
                             <div className="card-body text-base-content">
                                 <h2 className="card-title">
                                     {service.name}
-                                    <div className="badge ">${service.precio.toLocaleString()}</div>
                                 </h2>
 
                                 <p className="text-sm mb-4">{service.description}</p>
@@ -137,6 +142,24 @@ export default function Servicios() {
                                 <div className="flex items-center gap-2 mb-4">
                                     <Clock className="w-4 h-4 text-primary" />
                                     <span className="text-sm">Duración: {service.duration}</span>
+                                </div>
+                                
+                                <div className="mb-4">
+                                    <h4 className="font-semibold text-sm mb-2">Precios por tipo de vehículo:</h4>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                        {[
+                                            { tipo: 'AUTO', label: '🚗 Auto' },
+                                            { tipo: 'CAMIONETA', label: '🚙 Camioneta' },
+                                        ].map(({ tipo, label }) => {
+                                            const precio = service.precios?.find(p => p.tipoVehiculo === tipo)
+                                            return (
+                                                <div key={tipo} className="flex justify-between p-2 bg-base-200 rounded">
+                                                    <span>{label}:</span>
+                                                    <span className="font-bold">${(precio?.precio || 0).toLocaleString()}</span>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2 mb-4">
