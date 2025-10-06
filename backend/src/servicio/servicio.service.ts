@@ -140,7 +140,7 @@ export class ServicioService {
       where: {
         isDeleted: false,
       },
-      relations: ['precio'],
+      relations: ['precio', 'Producto'],
     });
   }
 }

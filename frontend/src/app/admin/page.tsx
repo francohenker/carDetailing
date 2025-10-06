@@ -68,7 +68,7 @@ interface Service {
     description: string
     precio?: Precio[]
     duration: number
-    products?: Product[]
+    Producto?: Product[]
 }
 
 interface Product {
@@ -239,7 +239,7 @@ const handleEditService = (service: Service) => {
             { tipoVehiculo: 'CAMIONETA' as const, precio: getPrecioByTipo('CAMIONETA') },
         ],
         duration: service.duration,
-        productId: service.products?.map(p => p.id) || []
+        productId: service.Producto?.map(p => p.id) || []
     })
     setIsServiceDialogOpen(true)
 }
@@ -569,13 +569,14 @@ return (
                                             <TableHead>Nombre</TableHead>
                                             <TableHead>Descripción</TableHead>
                                             <TableHead>Precios por Tipo</TableHead>
+                                            <TableHead>Productos Asociados</TableHead>
                                             <TableHead>Duración</TableHead>
                                             <TableHead>Acciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {services.map((service) => {
-                                            const getPrecio = (tipo: string) => {
+                                            const getPrecio = (tipo: string): number => {
                                                 const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
                                                 return precio ? precio.precio : 0
                                             }
@@ -589,6 +590,25 @@ return (
                                                             <div>🚗 Auto: ${getPrecio('AUTO').toLocaleString()}</div>
                                                             <div>🚙 Camioneta: ${getPrecio('CAMIONETA').toLocaleString()}</div>
                                                         </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {service.Producto && service.Producto.length > 0 ? (
+                                                            <div className="space-y-1">
+                                                                {service.Producto.map((product) => (
+                                                                    <div key={product.id} className="text-xs bg-base-200 px-2 py-1 rounded flex items-center justify-between">
+                                                                        <span className="font-medium">{product.name}</span>
+                                                                        <span className="text-muted-foreground">${product.price.toLocaleString()}</span>
+                                                                    </div>
+                                                                ))}
+                                                                <div className="text-xs text-muted-foreground mt-1">
+                                                                    Total: {service.Producto.length} producto{service.Producto.length !== 1 ? 's' : ''}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-xs text-muted-foreground italic">
+                                                                Sin productos asociados
+                                                            </div>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>{service.duration} min</TableCell>
                                                     <TableCell>
