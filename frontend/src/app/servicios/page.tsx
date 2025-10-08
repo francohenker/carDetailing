@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Clock, Droplets, Shield, Sparkles, Star, Wrench } from "lucide-react"
 import Name from "@/components/Name";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Precio {
     id?: number;
@@ -20,9 +21,10 @@ interface Service {
 }
 
 
-const categories = ["Todos", "Básico", "Premium", "Profesional", "Especializado"]
+// const categories = ["Todos", "Básico", "Premium", "Profesional", "Especializado"]
 
 export default function Servicios() {
+    const router = useRouter();
     const [services, setServices] = useState<Service[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -86,7 +88,7 @@ export default function Servicios() {
                         <h1 className="mb-5 text-5xl font-bold">Nuestros Servicios</h1>
                         <p className="mb-5 text-lg">
                             Descubre nuestra amplia gama de servicios de detailing profesional. Desde lavados básicos hasta
-                            tratamientos cerámicos de última generación.
+                            tratamientos acrílicos de última generación.
                         </p>
                         {/* <Link href="#servicios" className="btn btn-accent btn-lg">
                             Ver Servicios
@@ -110,7 +112,7 @@ export default function Servicios() {
             </div>
 
             {/* Filtros de Categorías */}
-            <div className="container mx-auto px-4 mb-8">
+            {/* <div className="container mx-auto px-4 mb-8">
                 <div className="flex flex-wrap justify-center gap-2">
                     {categories.map((category) => (
                         <button key={category} className="btn btn-outline btn-sm">
@@ -118,7 +120,7 @@ export default function Servicios() {
                         </button>
                     ))}
                 </div>
-            </div>
+            </div> */}
 
             {/* Grid de Servicios */}
             <section id="servicios" className="container mx-auto px-4 py-8">
@@ -179,7 +181,7 @@ export default function Servicios() {
 
                                 <div className="card-actions justify-between items-center">
                                     <button className="btn btn-ghost btn-sm">Ver Detalles</button>
-                                    <button className="btn btn-primary btn-sm">Reservar Turno</button>
+                                    <button className="btn btn-primary btn-sm" onClick={() => router.push('/turno')}>Reservar Turno</button>
                                 </div>
                             </div>
                         </div>
@@ -193,7 +195,7 @@ export default function Servicios() {
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-bold mb-4">¿Por qué elegir <Name />?</h2>
                         <p className="max-w-2xl mx-auto">
-                            Somos especialistas en detailing automotriz con más de 10 años de experiencia y los mejores productos del
+                            Somos especialistas en detailing automotriz con más de 3 años de experiencia y los mejores productos del
                             mercado.
                         </p>
                     </div>
@@ -263,8 +265,8 @@ export default function Servicios() {
                         <div className="collapse-title text-xl font-medium">¿Cuánto tiempo toma cada servicio?</div>
                         <div className="collapse-content">
                             <p>
-                                Los tiempos varían según el servicio: desde 45 minutos para un lavado básico hasta 8 horas para un
-                                tratamiento cerámico completo. Cada servicio tiene su duración estimada especificada.
+                                Los tiempos varían según el servicio: desde 45 minutos para un lavado básico hasta 2 días para un
+                                tratamiento acrílico completo. Cada servicio tiene su duración estimada especificada.
                             </p>
                         </div>
                     </div>
@@ -274,7 +276,7 @@ export default function Servicios() {
                         <div className="collapse-title text-xl font-medium">¿Qué productos utilizan?</div>
                         <div className="collapse-content">
                             <p>
-                                Trabajamos exclusivamente con productos premium de marcas reconocidas internacionalmente como Chemical
+                                Trabajamos exclusivamente con productos premium de marcas reconocidas internacionalmente como sonax
                             </p>
                         </div>
                     </div>
@@ -284,13 +286,13 @@ export default function Servicios() {
                         <div className="collapse-title text-xl font-medium">¿Ofrecen garantía en sus servicios?</div>
                         <div className="collapse-content">
                             <p>
-                                Sí, todos nuestros servicios incluyen garantía. Los tratamientos cerámicos tienen garantía de 2-3 años,
+                                Sí, todos nuestros servicios incluyen garantía. Los tratamientos acrílicos tienen garantía de 6-8 meses,
                                 mientras que otros servicios tienen garantía de satisfacción de 30 días.
                             </p>
                         </div>
                     </div>
 
-                    <div className="collapse collapse-plus bg-base-200 mb-2">
+                    {/* <div className="collapse collapse-plus bg-base-200 mb-2">
                         <input type="radio" name="my-accordion-3" />
                         <div className="collapse-title text-xl font-medium">¿Puedo esperar mientras trabajan en mi auto?</div>
                         <div className="collapse-content">
@@ -299,14 +301,14 @@ export default function Servicios() {
                                 largos, también ofrecemos servicio de traslado gratuito en un radio de 10km.
                             </p>
                         </div>
-                    </div>
+                    </div> */}
 
                     <div className="collapse collapse-plus bg-base-200">
                         <input type="radio" name="my-accordion-3" />
                         <div className="collapse-title text-xl font-medium">¿Trabajan con todos los tipos de vehículos?</div>
                         <div className="collapse-content">
                             <p>
-                                Sí, trabajamos con todo tipo de vehículos: autos, camionetas, SUVs, motos y vehículos comerciales.
+                                Sí, trabajamos con todo tipo de vehículos: autos, camionetas, motos y vehículos comerciales.
                                 Adaptamos nuestros servicios según las necesidades específicas de cada vehículo.
                             </p>
                         </div>
@@ -327,12 +329,12 @@ export default function Servicios() {
                         <Link href="/" className="btn btn-accent btn-lg">
                             Reservar Turno
                         </Link>
-                        <Link
+                        {/* <Link
                             href="/perfil"
                             className="btn btn-outline btn-lg text-primary-content border-primary-content hover:bg-primary-content hover:text-primary"
                         >
                             Ver Mi Perfil
-                        </Link>
+                        </Link> */}
                     </div>
                 </div>
             </section>

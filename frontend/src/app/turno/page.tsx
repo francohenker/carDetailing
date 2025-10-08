@@ -3,8 +3,7 @@ import HeaderDefault from "../header"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import moment from "moment"
-import "moment/locale/es"
+// Reemplazado moment.js con Intl API nativa
 import { Calendar as ShadCalendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -23,8 +22,42 @@ import {
 } from "lucide-react"
 
 
-// Configurar moment en español
-moment.locale("es")
+// Utilidades de fecha nativas
+const formatDate = (date: Date, options: Intl.DateTimeFormatOptions = {}): string => {
+    return new Intl.DateTimeFormat('es-ES', options).format(date)
+}
+
+const formatTime = (date: Date): string => {
+    return new Intl.DateTimeFormat('es-ES', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false
+    }).format(date)
+}
+
+const addMonths = (date: Date, months: number): Date => {
+    const result = new Date(date)
+    result.setMonth(result.getMonth() + months)
+    return result
+}
+
+const startOfDay = (date: Date): Date => {
+    const result = new Date(date)
+    result.setHours(0, 0, 0, 0)
+    return result
+}
+
+const endOfDay = (date: Date): Date => {
+    const result = new Date(date)
+    result.setHours(23, 59, 59, 999)
+    return result
+}
+
+const isSameDay = (date1: Date, date2: Date): boolean => {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate()
+}
 
 // Tipos de datos
 interface Precio {
@@ -37,7 +70,7 @@ interface Service {
     id: string
     name: string
     description: string
-    precios?: Precio[]
+    precio?: Precio[]
     duration: number // en minutos
 }
 
@@ -95,11 +128,11 @@ export default function TurnoPage() {
     // Shadcn Calendar maneja su propia vista
 
     // Rango de fechas seleccionables: hoy hasta dentro de 2 meses (incluye fines de semana)
-    const today = moment().startOf('day').toDate()
-    const maxSelectableDate = moment(today).add(2, 'months').endOf('day').toDate()
+    const today = startOfDay(new Date())
+    const maxSelectableDate = endOfDay(addMonths(new Date(), 2))
 
-    const isSelectableDate = (date: Date) => {
-        const d = moment(date).startOf('day').toDate()
+    const isSelectableDate = (date: Date): boolean => {
+        const d = startOfDay(date)
         return d >= today && d <= maxSelectableDate
     }
 
@@ -110,7 +143,17 @@ export default function TurnoPage() {
             try {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/getAll`)
                 const data = await response.json()
-                setServices(data)
+                
+                // Asegurar que los precios sean números
+                const servicesWithNumericPrices = data.map((service: Service) => ({
+                    ...service,
+                    precio: service.precio?.map(p => ({
+                        ...p,
+                        precio: Number(p.precio)
+                    }))
+                }))
+                
+                setServices(servicesWithNumericPrices)
             } catch (error) {
                 setError("Error fetching services")
                 console.error("Error fetching services:", error)
@@ -158,14 +201,16 @@ export default function TurnoPage() {
     }, [error])
 
     // Genera slots de 09:00 a 18:00 cada 30 minutos y marca ocupados
-    const generateSlotsWithBooked = (date: Date, bookedTimes: Set<string>) => {
+    const generateSlotsWithBooked = (date: Date, bookedTimes: Set<string>): TimeSlot[] => {
         const slots: TimeSlot[] = []
         const startHour = 9
         const endHour = 18
         const step = 60
         for (let h = startHour; h < endHour; h++) {
             for (let m = 0; m < 60; m += step) {
-                const label = moment(date).hour(h).minute(m).format('HH:mm')
+                const timeDate = new Date(date)
+                timeDate.setHours(h, m, 0, 0)
+                const label = formatTime(timeDate)
                 slots.push({ id: label, time: label, available: !bookedTimes.has(label) })
             }
         }
@@ -173,10 +218,10 @@ export default function TurnoPage() {
     }
 
     // Traer turnos del día actual (el backend usa la fecha actual) y marcar NO disponibles esos horarios
-    const fetchAvailableSlots = async (date: Date) => {
+    const fetchAvailableSlots = async (date: Date): Promise<void> => {
         try {
             setSlotsLoading(true)
-            const isToday = moment(date).isSame(moment(), 'day')
+            const isToday = isSameDay(date, new Date())
             if (!isToday) {
                 // Para fechas futuras (o no hoy) asumimos todos disponibles
                 setAvailableSlots(generateSlotsWithBooked(date, new Set()))
@@ -199,7 +244,7 @@ export default function TurnoPage() {
             for (const t of turnos) {
                 const fecha = t?.fechaHora ? new Date(t.fechaHora) : null
                 if (!fecha) continue
-                booked.add(moment(fecha).format('HH:mm'))
+                booked.add(formatTime(fecha))
             }
             setAvailableSlots(generateSlotsWithBooked(date, booked))
         } catch (error) {
@@ -215,8 +260,8 @@ export default function TurnoPage() {
     // Función para calcular el precio según tipo de vehículo
     const getPriceForCarType = (service: Service, carType: string): number => {
         const type = carType.toUpperCase()
-        const precio = service.precios?.find(p => p.tipoVehiculo === type)
-        return precio ? precio.precio : 0
+        const precio = service.precio?.find(p => p.tipoVehiculo === type)
+        return precio ? Number(precio.precio) : 0
     }
 
     // Manejar selección de servicios
@@ -303,7 +348,7 @@ export default function TurnoPage() {
                 observacion: '',
             }
             //creacion del turno
-            await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/create`, {
+            const a = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -311,16 +356,15 @@ export default function TurnoPage() {
                 },
                 body: JSON.stringify(bookingPayload),
             })
+            const b = a.json();
+            console.log(b);
 
-
-            console.log("Booking payload:", bookingPayload)
-
-            // Mostrar mensaje de éxito y redirigir
-            alert("¡Turno reservado exitosamente!")
+                // Mostrar mensaje de éxito y redirigir
+            toast.success("¡Turno reservado exitosamente!")
             // router.push("/perfil")
         } catch (error) {
             console.error("Error confirming booking:", error)
-            alert("Error al reservar el turno. Por favor, intenta nuevamente.")
+            toast.error("Error al reservar el turno. Por favor, intenta nuevamente.")
         } finally {
             setLoading(false)
         }
@@ -683,7 +727,12 @@ export default function TurnoPage() {
                                                     <CalendarIcon className="h-5 w-5 text-primary" />
                                                     <div>
                                                         <span className="font-medium">
-                                                            {bookingData.date && moment(bookingData.date).format("dddd, DD [de] MMMM [de] YYYY")}
+                                                            {bookingData.date && formatDate(bookingData.date, { 
+                                                                weekday: 'long', 
+                                                                day: 'numeric', 
+                                                                month: 'long', 
+                                                                year: 'numeric' 
+                                                            })}
                                                         </span>
                                                         <div className="text-sm text-base-content/70">
                                                             Hora: {bookingData.timeSlot?.time} • Duración:{" "}
@@ -751,7 +800,11 @@ export default function TurnoPage() {
                                 {bookingData.date && bookingData.timeSlot && (
                                     <div>
                                         <h4 className="font-semibold text-sm">Fecha y Hora:</h4>
-                                        <p className="text-sm">{moment(bookingData.date).format("DD/MM/YYYY")}</p>
+                                        <p className="text-sm">{formatDate(bookingData.date, { 
+                                            day: '2-digit', 
+                                            month: '2-digit', 
+                                            year: 'numeric' 
+                                        })}</p>
                                         <p className="text-sm">{bookingData.timeSlot.time}</p>
                                     </div>
                                 )}

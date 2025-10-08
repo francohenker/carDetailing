@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import HeaderDefault from "../header"
 import { useState } from "react"
-
+import { toast } from "sonner"
 
 
 export default function Register() {
@@ -31,15 +31,13 @@ export default function Register() {
                 body: JSON.stringify(formData),
             })
             if (res.status === 201) {
-                alert('Usuario creado con éxito')
+                toast.success('Usuario creado con éxito')
                 window.location.href = '/login'
-                // Podés redirigir o mostrar notificación acá
             }else{
-                // alert('Error: ' + res.statusText)
-                alert('Error al crear el usuario')
+                toast.error('Error al crear el usuario')
             }
         } catch (error) {
-            alert('Error al crear el usuario: ' + error)
+            toast.error('Error al crear el usuario: ' + error)
         }
     }
 

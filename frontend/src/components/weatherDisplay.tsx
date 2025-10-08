@@ -29,6 +29,7 @@ export function WeatherWidget() {
 
     const clearWeather = useWeatherStore((state) => state.clearWeather)
 
+    const a = new Intl.DateTimeFormat()
     const fetchWeather = async () => {
         useWeatherStore.setState({ loading: true })
         try {
@@ -39,7 +40,8 @@ export function WeatherWidget() {
                 current: ["temperature_2m", "precipitation", "weather_code", "cloud_cover", "apparent_temperature", "wind_speed_10m", "relative_humidity_2m"],
                 timezone: "America/Sao_Paulo",
                 start_date: new Date().toISOString().split("T")[0],
-                end_date: new Date().setMonth(new Date().getMonth() + 2).toString().split("T")[0],
+                end_date: new Date().setMonth(new Date().getMonth() + 2),
+                // end_date: "2025-10-10",
             }
 
             const url = "https://api.open-meteo.com/v1/forecast"

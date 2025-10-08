@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { NestExpressApplication } from '@nestjs/platform-express/interfaces/nest-express-application.interface';
+import { AggregateErrorFilter } from './aggregate-error.filter';
 
 async function bootstrap() {
   // const app = await NestFactory.create(AppModule);
@@ -32,8 +33,7 @@ async function bootstrap() {
   // app.use(helmet());
 
   app.enableCors();
-  await app.listen(4000);
-
+  app.useGlobalFilters(new AggregateErrorFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true, // convierte tipos automáticamente
@@ -41,6 +41,8 @@ async function bootstrap() {
       whitelist: true, // Permite solo campos en la entidad del dto
     }),
   );
+
+  await app.listen(4000);
 }
 
 bootstrap();

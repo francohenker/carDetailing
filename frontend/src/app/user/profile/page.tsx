@@ -157,7 +157,8 @@ export default function UserProfile() {
         })
             .then((response) => {
                 if (!response.ok) {
-                    throw new Error("Error al agregar el vehículo")
+                    console.log(response.status);
+                    throw new Error("Error al agregar el vehículo");
                 }
                 return
             })
@@ -584,8 +585,8 @@ export default function UserProfile() {
                                                                     <SelectValue placeholder="Seleccionar tipo" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    <SelectItem value="auto">Auto</SelectItem>
-                                                                    <SelectItem value="camioneta">Camioneta</SelectItem>
+                                                                    <SelectItem value="AUTO">Auto</SelectItem>
+                                                                    <SelectItem value="CAMIONETA">Camioneta</SelectItem>
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
@@ -722,8 +723,8 @@ export default function UserProfile() {
                                                                     <SelectValue placeholder="Seleccionar tipo" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    <SelectItem value="camioneta">Camioneta</SelectItem>
-                                                                    <SelectItem value="auto">Auto</SelectItem>
+                                                                    <SelectItem value="CAMIONETA">Camioneta</SelectItem>
+                                                                    <SelectItem value="AUTO">Auto</SelectItem>
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>

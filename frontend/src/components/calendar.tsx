@@ -1,11 +1,18 @@
 'use client'
 import React, { useState } from 'react'
-import { Calendar, momentLocalizer, Event, Views } from 'react-big-calendar'
-import moment from 'moment'
+import { Calendar, dateFnsLocalizer, Event, Views } from 'react-big-calendar'
+import { format, parse, startOfWeek, getDay } from 'date-fns'
+import { es } from 'date-fns/locale'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
-// Configurar el localizador
-const localizer = momentLocalizer(moment)
+// Configurar el localizador con date-fns
+const localizer = dateFnsLocalizer({
+    format,
+    parse,
+    startOfWeek,
+    getDay,
+    locales: { es }
+})
 
 // Definir el tipo de evento
 interface CalendarEvent extends Event {
@@ -36,7 +43,7 @@ const MyCalendar: React.FC = () => {
     //     }
     ])
 
-    const handleSelectSlot = ({ start, end }: { start: Date; end: Date }) => {
+    const handleSelectSlot = ({ start, end }: { start: Date; end: Date }): void => {
         const title = window.prompt('Nuevo evento:')
         if (title) {
             const newEvent: CalendarEvent = {
@@ -49,8 +56,9 @@ const MyCalendar: React.FC = () => {
         }
     }
 
-    const handleSelectEvent = (event: CalendarEvent) => {
-        console.log('Evento seleccionado:', event)
+    const handleSelectEvent = (event: CalendarEvent): void => {
+        // Evento seleccionado
+        alert(`Evento: ${event.title}`)
     }
 
     return (

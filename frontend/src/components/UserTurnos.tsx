@@ -6,8 +6,29 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CreditCard, DollarSign, Calendar, Car } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
-import moment from "moment"
 import { toast } from "sonner"
+
+// Utilidades de fecha nativas
+const formatDateTime = (dateString: string): string => {
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date)
+}
+
+const formatShortDate = (dateString: string): string => {
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }).format(date)
+}
 
 // Tipos de datos (puedes moverlos a un archivo de tipos si lo prefieres)
 interface Turno {
@@ -176,7 +197,7 @@ export default function UserTurnos() {
 
                                         </div>
                                         <div className="text-sm text-muted-foreground space-y-1">
-                                            <div className="flex items-center gap-2"><Calendar size={16} /> {moment(turno.fechaHora).format('dddd, DD [de] MMMM [de] YYYY, HH:mm')} hs</div>
+                                            <div className="flex items-center gap-2"><Calendar size={16} /> {formatDateTime(turno.fechaHora)} hs</div>
                                             <div className="flex items-center gap-2"><Car size={16} /> {turno.car.marca} {turno.car.model}</div>
                                         </div>
                                     </div>
@@ -235,7 +256,7 @@ export default function UserTurnos() {
                                             </Badge>
                                         </div>
                                         <div className="text-sm text-muted-foreground space-y-1">
-                                            <div className="flex items-center gap-2"><Calendar size={16} /> {moment(turno.fechaHora).format('DD/MM/YYYY')}</div>
+                                            <div className="flex items-center gap-2"><Calendar size={16} /> {formatShortDate(turno.fechaHora)}</div>
                                             <div className="flex items-center gap-2"><Car size={16} /> {turno.car.marca} {turno.car.model}</div>
                                         </div>
                                     </div>

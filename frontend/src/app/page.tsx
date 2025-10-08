@@ -1,13 +1,18 @@
+'use client'
 import HeaderDefault from "./header"
 import { CalendarDays, Car, Shield, Sparkles } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import FooterDefault from "./footer"
 import { WeatherWidget } from "@/components/weatherDisplay"
-// import MyCalendar from "@/components/calendar"
-import { CalendarDemo } from "@/components/Calendar2"
+import MyCalendar from "@/components/calendar"
+// import { CalendarDemo } from "@/components/Calendar2"
+import { useRouter } from "next/navigation"
+
+
 
 
 export default function Home() {
+  const router = useRouter();
   return (
 
     <div className="flex min-h-screen flex-col bg-base-300"  >
@@ -33,10 +38,10 @@ export default function Home() {
               Reserva tu turno en línea y disfruta del mejor servicio de lavado y detailing para tu auto.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <button className="btn btn-soft">
+              <button className="btn btn-soft" onClick={() => router.push('/turno')}>
                 Reservar Ahora
               </button>
-              <button className="btn btn-soft">
+              <button className="btn btn-soft" onClick={() => router.push('/servicios')}>
                 Ver Servicios
               </button>
             </div>
@@ -66,8 +71,8 @@ export default function Home() {
                     Elige el día que prefieras para tu servicio de detailing.
                   </p>
                   
-                  <CalendarDemo />
-                  {/* <MyCalendar/> */}
+                  {/* <CalendarDemo /> */}
+                  <MyCalendar/>
                 </CardContent>
               </Card>
 
