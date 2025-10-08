@@ -2,17 +2,30 @@
 import HeaderDefault from "./header"
 import { CalendarDays, Car, Shield, Sparkles } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Calendar as ShadCalendar } from "@/components/ui/calendar"
 import FooterDefault from "./footer"
 import { WeatherWidget } from "@/components/weatherDisplay"
-import MyCalendar from "@/components/calendar"
+// import MyCalendar from "@/components/calendar"
 // import { CalendarDemo } from "@/components/Calendar2"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 
 
 
 export default function Home() {
   const router = useRouter();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  
+  // Función para manejar la selección de fecha
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date)
+    if (date) {
+      // Redirigir a la página de turnos con la fecha seleccionada
+      router.push(`/turno?date=${date.toISOString().split('T')[0]}`)
+    }
+  }
+
   return (
 
     <div className="flex min-h-screen flex-col bg-base-300"  >
@@ -71,8 +84,23 @@ export default function Home() {
                     Elige el día que prefieras para tu servicio de detailing.
                   </p>
                   
-                  {/* <CalendarDemo /> */}
-                  <MyCalendar/>
+                  <ShadCalendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={handleDateSelect}
+                    fromDate={new Date()}
+                    toDate={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)} // 60 días desde hoy
+                    captionLayout="dropdown"
+                    showOutsideDays={false}
+                    className="rounded-md border shadow"
+                    formatters={{
+                      formatWeekdayName: (date: Date) =>
+                        date.toLocaleString("es-AR", { weekday: "short" }),
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Haz clic en una fecha para ir directamente a reservar tu turno
+                  </p>
                 </CardContent>
               </Card>
 
