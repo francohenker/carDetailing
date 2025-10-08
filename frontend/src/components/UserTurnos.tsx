@@ -82,14 +82,12 @@ const getMontoFaltante = (turno: Turno): number => {
         .filter(p => p.estado === 'COMPLETADO')
         .reduce((sum, p) => sum + p.monto, 0);
 
-        // console.log("monto: ", turno.pago.monto);
     return Math.max(0, turno.totalPrice - totalPagado);
 };
 
 export default function UserTurnos() {
     const [turnos, setTurnos] = useState<Turno[]>([])
     const [loading, setLoading] = useState(true)
-    // const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchTurnos = async () => {
@@ -100,7 +98,6 @@ export default function UserTurnos() {
                     }
                 });
                 if (!response.ok) throw new Error("No se pudieron cargar los turnos.");
-                console.log("Response status:", response.status);
                 const data = await response.json();
                 setTurnos(data);
 
@@ -119,17 +116,6 @@ export default function UserTurnos() {
 
         fetchTurnos()
     }, [])
-
-    const handlePagarEfectivo = async (turnoId: string) => {
-        alert(`Simulación: Marcar turno ${turnoId} para pagar en efectivo.`);
-        // Lógica real:
-        // await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/efectivo`, {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem("jwt")}` },
-        //     body: JSON.stringify({ turnoId })
-        // });
-        // Actualizar la UI o recargar los turnos
-    };
 
     const handlePagarMercadoPago = async (turnoId: string) => {
         alert(`Simulación: Redirigiendo a Mercado Pago para el turno ${turnoId}.`);
@@ -164,13 +150,6 @@ export default function UserTurnos() {
         )
     }
 
-    // if (error) {
-    //     return (
-    //         <div className="text-center py-6 text-destructive">
-    //             <p>{error}</p>
-    //         </div>
-    //     )
-    // }
 
     return (
         <div className="space-y-8">
@@ -210,11 +189,8 @@ export default function UserTurnos() {
                                         )}
                                         {!isTurnoPagado(turno) && (
                                             <div className="flex gap-2">
-                                                <Button variant="outline" size="sm" onClick={() => handlePagarEfectivo(turno.id)}>
-                                                    <DollarSign className="mr-2 h-4 w-4" /> Pagar en local
-                                                </Button>
                                                 <Button size="sm" onClick={() => handlePagarMercadoPago(turno.id)}>
-                                                    <CreditCard className="mr-2 h-4 w-4" /> Pagar online
+                                                    <CreditCard className="mr-2 h-4 w-4" /> Pagar
                                                 </Button>
                                             </div>
                                         )}

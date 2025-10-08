@@ -1,12 +1,13 @@
 "use client"
 import HeaderDefault from "../header"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 // Reemplazado moment.js con Intl API nativa
 import { Calendar as ShadCalendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { DateWeatherWidget } from "@/components/DateWeatherWidget"
 import {
     Car,
     ChevronLeft,
@@ -100,9 +101,22 @@ interface BookingData {
     totalDuration: number
 }
 
-export default function TurnoPage() {
+function TurnoPageContent() {
 
     const router = useRouter()
+    const searchParams = useSearchParams()
+
+    // Función para obtener fecha inicial desde query params
+    const getInitialDate = (): Date => {
+        const dateParam = searchParams.get('date')
+        if (dateParam) {
+            const paramDate = new Date(dateParam)
+            if (!isNaN(paramDate.getTime())) {
+                return paramDate
+            }
+        }
+        return new Date()
+    }
 
     // Estados principales
     const [currentStep, setCurrentStep] = useState(1)
@@ -113,18 +127,19 @@ export default function TurnoPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    // Estado del booking
+    // Estados para el calendario
+    const [selectedDate, setSelectedDate] = useState<Date>(getInitialDate())
+    
+    // Estado del booking (inicializado con fecha del query param si existe)
     const [bookingData, setBookingData] = useState<BookingData>({
         services: [],
         car: null,
-        date: null,
+        date: getInitialDate(),
         timeSlot: null,
         totalPrice: 0,
         totalDuration: 0,
     })
 
-    // Estados para el calendario
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     // Shadcn Calendar maneja su propia vista
 
     // Rango de fechas seleccionables: hoy hasta dentro de 2 meses (incluye fines de semana)
@@ -199,6 +214,18 @@ export default function TurnoPage() {
 
         fetchcars()
     }, [error])
+
+    // Efecto para manejar fecha inicial desde query params
+    useEffect(() => {
+        const dateParam = searchParams.get('date')
+        if (dateParam) {
+            const paramDate = new Date(dateParam)
+            if (!isNaN(paramDate.getTime())) {
+                // Si la fecha es válida, saltar al paso 3
+                setCurrentStep(3)
+            }
+        }
+    }, [searchParams])
 
     // Genera slots de 09:00 a 18:00 cada 30 minutos y marca ocupados
     const generateSlotsWithBooked = (date: Date, bookedTimes: Set<string>): TimeSlot[] => {
@@ -670,6 +697,13 @@ export default function TurnoPage() {
                                                 </div>
                                             </div>
                                         )}
+                                        
+                                        {/* Widget del clima para la fecha seleccionada */}
+                                        {bookingData.date && (
+                                            <div className="mt-6">
+                                                <DateWeatherWidget date={bookingData.date} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -866,5 +900,20 @@ export default function TurnoPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function TurnoPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-base-100 flex items-center justify-center">
+                <div className="text-center">
+                    <span className="loading loading-spinner loading-lg"></span>
+                    <p className="mt-4 text-muted-foreground">Cargando...</p>
+                </div>
+            </div>
+        }>
+            <TurnoPageContent />
+        </Suspense>
     )
 }
