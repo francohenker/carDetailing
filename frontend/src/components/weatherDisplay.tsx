@@ -29,63 +29,67 @@ export function WeatherWidget() {
 
     const clearWeather = useWeatherStore((state) => state.clearWeather)
 
-    const a = new Intl.DateTimeFormat()
-    const fetchWeather = async () => {
-        useWeatherStore.setState({ loading: true })
-        try {
-            const params = {
-                latitude: [-27.0005],
-                longitude: [-54.4816],
-                hourly: ["temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation"],
-                current: ["temperature_2m", "precipitation", "weather_code", "cloud_cover", "apparent_temperature", "wind_speed_10m", "relative_humidity_2m"],
-                timezone: "America/Sao_Paulo",
-                start_date: new Date().toISOString().split("T")[0],
-                end_date: new Date().setMonth(new Date().getMonth() + 2),
-                // end_date: "2025-10-10",
-            }
-
-            const url = "https://api.open-meteo.com/v1/forecast"
-            const responses = await fetchWeatherApi(url, params)
-            const response = responses[0]
-            // const utcOffsetSeconds = response.utcOffsetSeconds()
-            const current = response.current()!
-
-            const weatherData = {
-                location: "San Vicente, Misiones",
-                temperature: current.variables(0)!.value(),
-                precipitation: current.variables(1)!.value(),
-                condition: current.variables(2)!.value(),
-                cloudCover: current.variables(3)!.value(),
-                apparentTemperature: current.variables(4)!.value(),
-                windSpeed: current.variables(5)!.value(),
-                humidity: current.variables(6)!.value(),
-            }
-
-            setWeather({
-                location: weatherData.location,
-                temperature: weatherData.temperature,
-                condition: weatherData.condition,
-                windSpeed: weatherData.windSpeed,
-                humidity: weatherData.humidity,
-                description: getWeatherDescription(weatherData.condition),
-                icon: getWeatherIconn(weatherData.condition),
-            })
-
-            useWeatherStore.setState({ lastUpdated: Date.now() })
-            useWeatherStore.setState({ error: null })
-        } catch {
-            useWeatherStore.setState({ error: "Error al obtener el clima" })
-        } finally {
-            useWeatherStore.setState({ loading: false })
-        }
-    }
+    const formato = new Intl.DateTimeFormat('en-CA', { // en-CA da yyyy-mm-dd
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
 
 
     const [isHydrated, setIsHydrated] = useState(false)
 
     useEffect(() => {
+        const fetchWeather = async () => {
+            useWeatherStore.setState({ loading: true })
+            try {
+                const params = {
+                    latitude: [-27.0005],
+                    longitude: [-54.4816],
+                    hourly: ["temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation"],
+                    current: ["temperature_2m", "precipitation", "weather_code", "cloud_cover", "apparent_temperature", "wind_speed_10m", "relative_humidity_2m"],
+                    timezone: "America/Sao_Paulo",
+                    start_date: new Date().toISOString().split("T")[0],
+                    end_date: formato.format(new Date().setDate(new Date().getDate() + 15)).replace(/\//g, "-"), // dentro de 15 días
+                }
+                const url = "https://api.open-meteo.com/v1/forecast"
+                const responses = await fetchWeatherApi(url, params)
+                const response = responses[0]
+                // const utcOffsetSeconds = response.utcOffsetSeconds()
+                const current = response.current()!
+
+                const weatherData = {
+                    location: "San Vicente, Misiones",
+                    temperature: current.variables(0)!.value(),
+                    precipitation: current.variables(1)!.value(),
+                    condition: current.variables(2)!.value(),
+                    cloudCover: current.variables(3)!.value(),
+                    apparentTemperature: current.variables(4)!.value(),
+                    windSpeed: current.variables(5)!.value(),
+                    humidity: current.variables(6)!.value(),
+                }
+
+                setWeather({
+                    location: weatherData.location,
+                    temperature: weatherData.temperature,
+                    condition: weatherData.condition,
+                    windSpeed: weatherData.windSpeed,
+                    humidity: weatherData.humidity,
+                    description: getWeatherDescription(weatherData.condition),
+                    icon: getWeatherIconn(weatherData.condition),
+                })
+
+                useWeatherStore.setState({ lastUpdated: Date.now() })
+                useWeatherStore.setState({ error: null })
+            } catch {
+                useWeatherStore.setState({ error: "Error al obtener el clima" })
+            } finally {
+                useWeatherStore.setState({ loading: false })
+            }
+        }
+
+
+
         const unsub = useWeatherStore.persist.onFinishHydration(() => {
-            console.log("Hydration finished")
             setIsHydrated(true)
         })
         if (useWeatherStore.persist.hasHydrated()) setIsHydrated(true)
@@ -94,10 +98,8 @@ export function WeatherWidget() {
 
             fetchWeather()
         }
-        console.log(weather)
-        console.log(isHydrated)
         return () => unsub();
-    }, [fetchWeather, weather, isHydrated])
+    }, [setWeather, weather, isHydrated])
 
     if (!isHydrated) {
         return (
@@ -179,7 +181,7 @@ export function WeatherWidget() {
     }
 
     if (!weather) {
-                return (
+        return (
             <Card>
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base">Condiciones climáticas</CardTitle>
