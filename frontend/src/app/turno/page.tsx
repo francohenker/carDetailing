@@ -327,28 +327,36 @@ export default function TurnoPage() {
     const handleTimeSlotSelect = (slot: TimeSlot) => {
         if (!slot.available) return
 
+        // Combinar la fecha seleccionada con la hora del slot
+        let combinedDateTime: Date | null = null
+        if (bookingData.date) {
+            combinedDateTime = new Date(bookingData.date)
+            const [hours, minutes] = slot.time.split(':').map(Number)
+            combinedDateTime.setHours(hours, minutes, 0, 0)
+        }
+
         setBookingData({
             ...bookingData,
             timeSlot: slot,
+            date: combinedDateTime, // Actualizar la fecha con la hora incluida
         })
     }
 
     // Confirmar reserva
-    const handleConfirmBooking = async () => {
+    const handleConfirmBooking = async () : Promise<void> => {
         setLoading(true)
         try {
             await new Promise((resolve) => setTimeout(resolve, 2000))
             const bookingPayload = {
                 services: bookingData.services.map((s) => s.id),
                 carId: bookingData.car?.id,
-                date: bookingData.date?.toISOString(),
-                time: bookingData.timeSlot?.time,
+                date: bookingData.date, // Enviar el Date completo con fecha y hora
                 totalPrice: bookingData.totalPrice,
                 duration: bookingData.totalDuration,
                 observacion: '',
             }
             //creacion del turno
-            const a = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/create`, {
+            await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -356,8 +364,6 @@ export default function TurnoPage() {
                 },
                 body: JSON.stringify(bookingPayload),
             })
-            const b = a.json();
-            console.log(b);
 
                 // Mostrar mensaje de éxito y redirigir
             toast.success("¡Turno reservado exitosamente!")
@@ -735,7 +741,7 @@ export default function TurnoPage() {
                                                             })}
                                                         </span>
                                                         <div className="text-sm text-base-content/70">
-                                                            Hora: {bookingData.timeSlot?.time} • Duración:{" "}
+                                                            Hora: {bookingData.date ? formatTime(bookingData.date) : ''} • Duración:{" "}
                                                             {Math.floor(bookingData.totalDuration / 60)}h {bookingData.totalDuration % 60}min
                                                         </div>
                                                     </div>
@@ -805,7 +811,7 @@ export default function TurnoPage() {
                                             month: '2-digit', 
                                             year: 'numeric' 
                                         })}</p>
-                                        <p className="text-sm">{bookingData.timeSlot.time}</p>
+                                        <p className="text-sm">{bookingData.date ? formatTime(bookingData.date) : ''}</p>
                                     </div>
                                 )}
 

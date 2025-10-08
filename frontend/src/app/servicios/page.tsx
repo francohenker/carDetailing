@@ -16,7 +16,7 @@ interface Service {
     id: number;
     name: string;
     description: string;
-    precios?: Precio[];
+    precio?: Precio[];
     duration: string;
 }
 
@@ -153,7 +153,7 @@ export default function Servicios() {
                                             { tipo: 'AUTO', label: '🚗 Auto' },
                                             { tipo: 'CAMIONETA', label: '🚙 Camioneta' },
                                         ].map(({ tipo, label }) => {
-                                            const precio = service.precios?.find(p => p.tipoVehiculo === tipo)
+                                            const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
                                             return (
                                                 <div key={tipo} className="flex justify-between p-2 bg-base-200 rounded">
                                                     <span>{label}:</span>
