@@ -6,7 +6,7 @@ import { In, Repository } from 'typeorm';
 import { CreateServicioDto } from './dto/create.servicio.dto';
 import { UpdateServicioDto } from './dto/update.servicio.dto';
 import { Producto } from '../producto/entities/producto.entity';
-import { MailService } from 'src/mail.services';
+import { MailService } from '../mail.services';
 
 @Injectable()
 export class ServicioService {

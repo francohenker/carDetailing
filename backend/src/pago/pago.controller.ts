@@ -10,8 +10,8 @@ import { PagoService } from './pago.service';
 import { Pago } from './entities/pago.entity';
 import { Roles } from '../roles/role.decorator';
 import { Role } from '../roles/role.enum';
-import { RolesGuard } from 'src/roles/role.guard';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { RolesGuard } from '../roles/role.guard';
+import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('pago')
 export class PagoController {
