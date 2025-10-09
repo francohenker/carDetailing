@@ -7,6 +7,7 @@ import { Precio } from '../precio/entities/precio.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthModule } from '../auth/auth.module';
 import { Producto } from '../producto/entities/producto.entity';
+import { MailService } from 'src/mail.services';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { Producto } from '../producto/entities/producto.entity';
     TypeOrmModule.forFeature([Servicio, Precio, Producto]),
     JwtModule,
   ],
-  providers: [ServicioService],
+  providers: [ServicioService, MailService],
   controllers: [ServicioController],
   exports: [ServicioService],
 })
