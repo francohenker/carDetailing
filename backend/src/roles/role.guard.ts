@@ -39,7 +39,7 @@ export class RolesGuard implements CanActivate {
       request.user = decoded; // para usarlo luego en controllers
       if (!requiredRoles) return true;
       return requiredRoles.some((role) => decoded.role?.includes(role));
-    } catch (err) {
+    } catch {
       throw new HttpException(
         'Invalid or expired token',
         HttpStatus.UNAUTHORIZED,

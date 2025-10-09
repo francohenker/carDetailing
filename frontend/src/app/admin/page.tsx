@@ -16,7 +16,11 @@ import {
     Shield,
     ShieldCheck,
     AlertTriangle,
-    CheckCircle
+    CheckCircle,
+    Calendar,
+    CreditCard,
+    Clock,
+    Car
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -88,6 +92,38 @@ interface User {
     role: 'admin' | 'user'
 }
 
+interface Turno {
+    id: number
+    fechaHora: string
+    estado: 'PENDIENTE' | 'CONFIRMADO' | 'FINALIZADO' | 'CANCELADO'
+    observacion: string
+    duration: number
+    totalPrice: number
+    car: {
+        id: number
+        brand: string
+        model: string
+        year: number
+        user: {
+            id: number
+            firstname: string
+            lastname: string
+            email: string
+            phone: string
+        }
+    }
+    servicio: Service[]
+    pago: Pago[]
+}
+
+interface Pago {
+    id: number
+    monto: number
+    fecha_pago: string
+    metodo: 'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA'
+    estado: 'PENDIENTE' | 'PAGADO' | 'CANCELADO'
+}
+
 export default function AdminPage() {
     // const router = useRouter()
 
@@ -135,6 +171,11 @@ export default function AdminPage() {
         role: 'user' as 'admin' | 'user'
     })
 
+    // Estados para turnos
+    const [turnos, setTurnos] = useState<Turno[]>([])
+    const [filteredTurnos, setFilteredTurnos] = useState<Turno[]>([])
+    const [turnoFilter, setTurnoFilter] = useState<'all' | 'pending-payment' | 'paid'>('all')
+
     // Estados generales
     const [loading, setLoading] = useState(true)
     const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
@@ -160,7 +201,8 @@ export default function AdminPage() {
             await Promise.all([
                 fetchServices(),
                 fetchProducts(),
-                fetchUsers()
+                fetchUsers(),
+                fetchTurnos()
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
@@ -482,6 +524,78 @@ const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') =
     }
 }
 
+// ============ TURNOS ============
+const fetchTurnos = async () => {
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/admin/getAll`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+            }
+        })
+        if (!response.ok) throw new Error('Error fetching turnos')
+        const data = await response.json()
+        setTurnos(data)
+        filterTurnos(data, turnoFilter)
+    } catch (error) {
+        console.error('Error fetching turnos:', error)
+    }
+}
+
+const filterTurnos = (turnosData: Turno[], filter: 'all' | 'pending-payment' | 'paid') => {
+    let filtered = turnosData
+    
+    switch (filter) {
+        case 'pending-payment':
+            filtered = turnosData.filter(turno => 
+                turno.pago.length === 0 || turno.pago.every(pago => pago.estado === 'PENDIENTE')
+            )
+            break
+        case 'paid':
+            filtered = turnosData.filter(turno => 
+                turno.pago.some(pago => pago.estado === 'PAGADO')
+            )
+            break
+        default:
+            filtered = turnosData
+    }
+    
+    setFilteredTurnos(filtered)
+}
+
+const handleFilterChange = (newFilter: 'all' | 'pending-payment' | 'paid') => {
+    setTurnoFilter(newFilter)
+    filterTurnos(turnos, newFilter)
+}
+
+const handleMarkAsPaid = async (turnoId: number) => {
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/mark-paid/${turnoId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+            },
+            body: JSON.stringify({
+                monto: turnos.find(t => t.id === turnoId)?.totalPrice || 0,
+                metodo: 'EFECTIVO'
+            })
+        })
+
+        if (!response.ok) throw new Error('Error marking turno as paid')
+
+        toast.success("Éxito", {
+            description: "Turno marcado como pagado correctamente.",
+        })
+
+        fetchTurnos()
+    } catch (error) {
+        console.error('Error marking turno as paid:', error)
+        toast.error("Error", {
+            description: "No se pudo marcar el turno como pagado.",
+        })
+    }
+}
+
 // ============ CONFIRMACIÓN DE ELIMINACIÓN ============
 const openDeleteConfirm = (type: 'service' | 'product' | 'user', id: number, name: string) => {
     setDeleteConfirmDialog({
@@ -532,7 +646,7 @@ return (
                 </div>
 
                 <Tabs defaultValue="services" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="services" className="flex items-center gap-2">
                             <Wrench className="h-4 w-4" />
                             Servicios
@@ -544,6 +658,10 @@ return (
                         <TabsTrigger value="users" className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
                             Usuarios
+                        </TabsTrigger>
+                        <TabsTrigger value="turnos" className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            Turnos
                         </TabsTrigger>
                     </TabsList>
 
@@ -772,6 +890,136 @@ return (
                                         ))}
                                     </TableBody>
                                 </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* PESTAÑA DE TURNOS */}
+                    <TabsContent value="turnos" className="space-y-6">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Gestión de Turnos</CardTitle>
+                                    <CardDescription>
+                                        Administra los turnos y sus estados de pago.
+                                    </CardDescription>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Select value={turnoFilter} onValueChange={handleFilterChange}>
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Filtrar turnos" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos los turnos</SelectItem>
+                                            <SelectItem value="pending-payment">Pago pendiente</SelectItem>
+                                            <SelectItem value="paid">Pagados</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Cliente</TableHead>
+                                            <TableHead>Vehículo</TableHead>
+                                            <TableHead>Fecha y Hora</TableHead>
+                                            <TableHead>Servicios</TableHead>
+                                            <TableHead>Total</TableHead>
+                                            <TableHead>Estado Turno</TableHead>
+                                            <TableHead>Estado Pago</TableHead>
+                                            <TableHead>Acciones</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredTurnos.map((turno) => {
+                                            const isPaid = turno.pago.some(pago => pago.estado === 'PAGADO')
+                                            const hasPendingPayment = turno.pago.length === 0 || turno.pago.every(pago => pago.estado === 'PENDIENTE')
+                                            
+                                            return (
+                                                <TableRow key={turno.id}>
+                                                    <TableCell className="font-medium">
+                                                        <div className="space-y-1">
+                                                            <div>{turno.car.user.firstname} {turno.car.user.lastname}</div>
+                                                            <div className="text-sm text-muted-foreground">{turno.car.user.email}</div>
+                                                            <div className="text-sm text-muted-foreground">{turno.car.user.phone}</div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <Car className="h-4 w-4 text-muted-foreground" />
+                                                            <div>
+                                                                <div className="font-medium">{turno.car.brand} {turno.car.model}</div>
+                                                                <div className="text-sm text-muted-foreground">Año {turno.car.year}</div>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <Clock className="h-4 w-4 text-muted-foreground" />
+                                                            <div>
+                                                                <div>{new Date(turno.fechaHora).toLocaleDateString()}</div>
+                                                                <div className="text-sm text-muted-foreground">
+                                                                    {new Date(turno.fechaHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="space-y-1">
+                                                            {turno.servicio.map((servicio) => (
+                                                                <div key={servicio.id} className="text-xs bg-base-200 px-2 py-1 rounded">
+                                                                    {servicio.name}
+                                                                </div>
+                                                            ))}
+                                                            <div className="text-xs text-muted-foreground">
+                                                                Duración: {turno.duration} min
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="font-medium">
+                                                        ${turno.totalPrice.toLocaleString()}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={
+                                                            turno.estado === 'CONFIRMADO' ? 'default' :
+                                                            turno.estado === 'FINALIZADO' ? 'secondary' :
+                                                            turno.estado === 'CANCELADO' ? 'destructive' :
+                                                            'outline'
+                                                        }>
+                                                            {turno.estado}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                                            <Badge variant={isPaid ? 'default' : 'destructive'}>
+                                                                {isPaid ? 'PAGADO' : 'PENDIENTE'}
+                                                            </Badge>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {hasPendingPayment && (
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => handleMarkAsPaid(turno.id)}
+                                                                className="bg-green-600 hover:bg-green-700"
+                                                            >
+                                                                <CreditCard className="h-4 w-4 mr-2" />
+                                                                Marcar como Pagado
+                                                            </Button>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                                {filteredTurnos.length === 0 && (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        No se encontraron turnos para el filtro seleccionado.
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>

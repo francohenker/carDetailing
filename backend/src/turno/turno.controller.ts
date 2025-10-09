@@ -14,6 +14,9 @@ import { CarService } from '../car/car.service';
 import { ModifyTurnoDto } from './dto/modify.turno.dto';
 import { TurnoOwnerGuard } from '../auth/turno.owner.guard';
 import { AuthService } from '../auth/auth.service';
+import { RolesGuard } from '../roles/role.guard';
+import { Roles } from '../roles/role.decorator';
+import { Role } from '../roles/role.enum';
 
 @Controller('turno')
 export class TurnoController {
@@ -83,6 +86,13 @@ export class TurnoController {
     //   throw new HttpException('Date query parameter is required', 400);
     // }
     return this.turnoService.findDate();
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/getAll')
+  async getAllTurnos(): Promise<Turno[]> {
+    return this.turnoService.findAll();
   }
 
   // @Post('delete')

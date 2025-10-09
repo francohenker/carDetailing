@@ -168,4 +168,13 @@ export class TurnoService {
 
     return turnos;
   }
+
+  async findAll(): Promise<Turno[]> {
+    return await this.turnoRepository.find({
+      relations: ['car', 'car.user', 'servicio', 'pago'],
+      order: {
+        fechaHora: 'DESC',
+      },
+    });
+  }
 }
