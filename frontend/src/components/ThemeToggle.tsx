@@ -45,6 +45,7 @@ export default function ThemeToggleButton() {
                     onClick={toggleTheme} 
                     type="checkbox" 
                     checked={theme === 'black'}
+                    onChange={toggleTheme}
                 />
 
                 {/* sun icon */}
