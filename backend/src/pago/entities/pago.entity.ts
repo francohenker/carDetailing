@@ -9,7 +9,7 @@ export class Pago {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal')
   monto: number;
 
   @Column({ type: 'timestamp' })

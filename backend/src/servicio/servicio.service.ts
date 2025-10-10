@@ -6,7 +6,6 @@ import { In, Repository } from 'typeorm';
 import { CreateServicioDto } from './dto/create.servicio.dto';
 import { UpdateServicioDto } from './dto/update.servicio.dto';
 import { Producto } from '../producto/entities/producto.entity';
-import { MailService } from '../mail.services';
 
 @Injectable()
 export class ServicioService {
@@ -17,7 +16,6 @@ export class ServicioService {
     private precioRepository: Repository<Precio>,
     @InjectRepository(Producto)
     private productoRepository: Repository<Producto>,
-    private readonly mailService: MailService,
   ) {}
 
   async create(servicio: CreateServicioDto): Promise<Servicio> {
@@ -138,12 +136,6 @@ export class ServicioService {
   }
 
   async getAll(): Promise<Servicio[]> {
-    await this.mailService.sendMail(
-      'francohenker@gmail.com',
-      'Servicios',
-      'Prueba de verificacion de servicios',
-    );
-
     return this.servicioRepository.find({
       where: {
         isDeleted: false,

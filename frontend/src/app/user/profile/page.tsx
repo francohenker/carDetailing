@@ -157,7 +157,6 @@ export default function UserProfile() {
         })
             .then((response) => {
                 if (!response.ok) {
-                    console.log(response.status);
                     throw new Error("Error al agregar el vehículo");
                 }
                 return
@@ -287,7 +286,6 @@ export default function UserProfile() {
                     throw new Error("Error fetching profile");
                 }
                 const data = await response.json();
-                console.log("Profile data:", data);
 
                 setProfile(data);
                 setEditedProfile(data);
@@ -317,7 +315,6 @@ export default function UserProfile() {
                     throw new Error("Error fetching profile cars");
                 }
                 const data = await response.json();
-                console.log("Profile data:", data);
 
                 setcars(data);
             } catch {
@@ -327,7 +324,7 @@ export default function UserProfile() {
 
         fetchDataUser();
         fetchDataCars();
-    }, [router])
+    }, [router, error]);
 
     return (
         // <ProtectedRoute allowedRoles={['user']}>

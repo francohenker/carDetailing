@@ -24,7 +24,7 @@ export class TurnoOwnerGuard implements CanActivate {
 
     request.user = decoded; // para usarlo luego en controllers
     const user = request.user; // viene desde el JWT
-    const turnoId = request.body.turnoId; // ID del turno desde el cuerpo de la solicitud
+    const turnoId = request.body.turnoId || request.params.id; // ID del turno desde el cuerpo de la solicitud
 
     const turno = await this.turnoService.findById(turnoId);
     if (!turno) {
@@ -34,8 +34,9 @@ export class TurnoOwnerGuard implements CanActivate {
     const userTurno = turno.car.user; // el usuario asociado al turno
 
     // Verifica si el usuario del token es el mismo que el usuario del turno
-    //VER SI ES NECESARIO AGREGAR EL ADMIN COMO POSIBLE MODIFICADOR DEL TURNO !!!!!!
-    if (!user || userTurno.id !== user.id) {
+    //EL ADMIN PUEDE MODIFICAR CUALQUIER TURNO
+    if (user.role === 'admin') return true; // si es admin puede modificar cualquier turno
+    if (!user || userTurno.id !== user.userId) {
       throw new HttpException(
         'You do not have permission to delete this turno',
         403,

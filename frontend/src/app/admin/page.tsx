@@ -62,7 +62,7 @@ import ProtectedRoute from "@/components/ProtectedRoutes"
 // Tipos de datos
 interface Precio {
     id?: number
-    tipoVehiculo: 'AUTO' | 'CAMIONETA' 
+    tipoVehiculo: 'AUTO' | 'CAMIONETA'
     precio: number
 }
 
@@ -95,7 +95,7 @@ interface User {
 interface Turno {
     id: number
     fechaHora: string
-    estado: 'PENDIENTE' | 'CONFIRMADO' | 'FINALIZADO' | 'CANCELADO'
+    estado: 'pendiente' | 'finalizado' | 'cancelado'
     observacion: string
     duration: number
     totalPrice: number
@@ -152,7 +152,7 @@ export default function AdminPage() {
         stock_actual: 0,
         stock_minimo: 0
     })
-    
+
     // Estados para confirmación de cambio de stock
     const [isStockConfirmDialogOpen, setIsStockConfirmDialogOpen] = useState(false)
     const [pendingStockValue, setPendingStockValue] = useState<number>(0)
@@ -174,7 +174,7 @@ export default function AdminPage() {
     // Estados para turnos
     const [turnos, setTurnos] = useState<Turno[]>([])
     const [filteredTurnos, setFilteredTurnos] = useState<Turno[]>([])
-    const [turnoFilter, setTurnoFilter] = useState<'all' | 'pending-payment' | 'paid'>('all')
+    const [turnoFilter, setTurnoFilter] = useState<'all' | 'pending-payment' | 'paid' | 'pending-service'>('all')
 
     // Estados generales
     const [loading, setLoading] = useState(true)
@@ -253,942 +253,1022 @@ export default function AdminPage() {
 
             })
 
-        setIsServiceDialogOpen(false)
-        resetServiceForm()
-        fetchServices()
-    } catch (error) {
-        console.error('Error saving service:', error)
-        toast.error("Error", {
-            description: "No se pudo guardar el servicio.",
-        })
-    }
-}
-
-const handleEditService = (service: Service) => {
-    setEditingService(service)
-    
-    // Extraer precios del servicio o usar valores por defecto
-    const getPrecioByTipo = (tipo: string) => {
-        const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
-        return precio ? precio.precio : 0
-    }
-    
-    setServiceForm({
-        name: service.name,
-        description: service.description,
-        precio: [
-            { tipoVehiculo: 'AUTO' as const, precio: getPrecioByTipo('AUTO') },
-            { tipoVehiculo: 'CAMIONETA' as const, precio: getPrecioByTipo('CAMIONETA') },
-        ],
-        duration: service.duration,
-        productId: service.Producto?.map(p => p.id) || []
-    })
-    setIsServiceDialogOpen(true)
-}
-
-const handleDeleteService = async (id: number) => {
-    try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/delete/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-            }
-        })
-
-        if (!response.ok) throw new Error('Error deleting service')
-
-        toast.success("Éxito", {
-            description: "Servicio eliminado correctamente.",
-        })
-
-        fetchServices()
-    } catch (error) {
-        console.error('Error deleting service:', error)
-        toast.error("Error", {
-            description: "No se pudo eliminar el servicio.",
-        })
-    }
-}
-
-const resetServiceForm = () => {
-    setServiceForm({
-        name: '',
-        description: '',
-        precio: [
-            { tipoVehiculo: 'AUTO' as const, precio: 0 },
-            { tipoVehiculo: 'CAMIONETA' as const, precio: 0 },
-        ],
-        duration: 30,
-        productId: []
-    })
-    setEditingService(null)
-}
-
-// ============ PRODUCTOS ============
-const fetchProducts = async () => {
-    try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/getAll`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-            }
-        })
-        if (!response.ok) throw new Error('Error fetching products')
-        const data = await response.json()
-        setProducts(data)
-    } catch (error) {
-        console.error('Error fetching products:', error)
-    }
-}
-
-const handleProductSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Si estamos editando y el stock cambió, mostrar confirmación
-    if (editingProduct && productForm.stock_actual !== originalStockValue) {
-        setPendingStockValue(productForm.stock_actual)
-        setIsStockConfirmDialogOpen(true)
-        return // No continuar con el submit hasta confirmar
-    }
-    
-    // Si no cambió el stock o es un producto nuevo, continuar normalmente
-    await submitProduct()
-}
-
-const submitProduct = async () => {
-    try {
-        const url = editingProduct
-            ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/update/${editingProduct.id}`
-            : `${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/create`
-
-        const response = await fetch(url, {
-            method: editingProduct ? 'PUT' : 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-            },
-            body: JSON.stringify(productForm)
-        })
-
-        if (!response.ok) throw new Error('Error saving product')
-
-        toast.success("Éxito", {
-            description: `Producto ${editingProduct ? 'actualizado' : 'creado'} correctamente.`,
-        })
-
-        setIsProductDialogOpen(false)
-        resetProductForm()
-        fetchProducts()
-    } catch (error) {
-        console.error('Error saving product:', error)
-        toast.error("Error", {
-            description: "No se pudo guardar el producto.",
-        })
-    }
-}
-
-const handleEditProduct = (product: Product) => {
-    setEditingProduct(product)
-    setProductForm({
-        name: product.name,
-        price: product.price,
-        stock_actual: product.stock_actual,
-        stock_minimo: product.stock_minimo
-    })
-    setOriginalStockValue(product.stock_actual)
-    setIsProductDialogOpen(true)
-}
-
-const handleConfirmStockChange = async () => {
-    setIsStockConfirmDialogOpen(false)
-    // Después de confirmar, proceder con el submit
-    await submitProduct()
-}
-
-const handleCancelStockChange = () => {
-    setIsStockConfirmDialogOpen(false)
-    // Restaurar el valor original en el formulario
-    setProductForm({ ...productForm, stock_actual: originalStockValue })
-}
-
-const handleDeleteProduct = async (id: number) => {
-    try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/delete/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-            }
-        })
-
-        if (!response.ok) throw new Error('Error deleting product')
-
-        toast.success("Éxito", {
-            description: "Producto eliminado correctamente.",
-        })
-
-        fetchProducts()
-    } catch (error) {
-        console.error('Error deleting product:', error)
-        toast.error("Error", {
-            description: "No se pudo eliminar el producto.",
-        })
-    }
-}
-
-const resetProductForm = () => {
-    setProductForm({
-        name: '',
-        price: 0,
-        stock_actual: 0,
-        stock_minimo: 0
-    })
-    setEditingProduct(null)
-}
-
-// ============ USUARIOS ============
-const fetchUsers = async () => {
-    try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/getAll`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-            }
-        })
-        if (!response.ok) throw new Error('Error fetching users')
-        const data = await response.json()
-        setUsers(data)
-    } catch (error) {
-        console.error('Error fetching users:', error)
-    }
-}
-
-const handleUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-            },
-            body: JSON.stringify(userForm)
-        })
-
-        if (!response.ok) throw new Error('Error creating user')
-
-        toast.success( "Usuario creado correctamente")
-        setIsUserDialogOpen(false)
-        resetUserForm()
-        fetchUsers()
-    } catch (error) {
-        console.error('Error creating user:', error)
-        toast.error("Error", {
-            description: "No se pudo crear el usuario."
-        })
-    }
-}
-
-const resetUserForm = () => {
-    setUserForm({
-        firstname: '',
-        lastname: '',
-        email: '',
-        phone: '',
-        password: '',
-        role: 'user'
-    })
-    // setEditingUser(null)
-}
-
-const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') => {
-    try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/change-role/${userId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-            },
-            body: JSON.stringify({ role: newRole })
-        })
-
-        if (!response.ok) throw new Error('Error updating user role')
-
-        toast.success("Éxito", {
-            description: "Rol de usuario actualizado correctamente.",
-        })
-
-        fetchUsers()
-    } catch (error) {
-        console.error('Error updating user role:', error)
-        toast.error("Error", {
-            description: "No se pudo actualizar el rol del usuario.",
-        })
-    }
-}
-
-// ============ TURNOS ============
-const fetchTurnos = async () => {
-    try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/admin/getAll`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-            }
-        })
-        if (!response.ok) throw new Error('Error fetching turnos')
-        const data = await response.json()
-        setTurnos(data)
-        filterTurnos(data, turnoFilter)
-    } catch (error) {
-        console.error('Error fetching turnos:', error)
-    }
-}
-
-const filterTurnos = (turnosData: Turno[], filter: 'all' | 'pending-payment' | 'paid') => {
-    let filtered = turnosData
-    
-    switch (filter) {
-        case 'pending-payment':
-            filtered = turnosData.filter(turno => 
-                turno.pago.length === 0 || turno.pago.every(pago => pago.estado === 'PENDIENTE')
-            )
-            break
-        case 'paid':
-            filtered = turnosData.filter(turno => 
-                turno.pago.some(pago => pago.estado === 'PAGADO')
-            )
-            break
-        default:
-            filtered = turnosData
-    }
-    
-    setFilteredTurnos(filtered)
-}
-
-const handleFilterChange = (newFilter: 'all' | 'pending-payment' | 'paid') => {
-    setTurnoFilter(newFilter)
-    filterTurnos(turnos, newFilter)
-}
-
-const handleMarkAsPaid = async (turnoId: number) => {
-    try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/mark-paid/${turnoId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-            },
-            body: JSON.stringify({
-                monto: turnos.find(t => t.id === turnoId)?.totalPrice || 0,
-                metodo: 'EFECTIVO'
+            setIsServiceDialogOpen(false)
+            resetServiceForm()
+            fetchServices()
+        } catch (error) {
+            console.error('Error saving service:', error)
+            toast.error("Error", {
+                description: "No se pudo guardar el servicio.",
             })
-        })
-
-        if (!response.ok) throw new Error('Error marking turno as paid')
-
-        toast.success("Éxito", {
-            description: "Turno marcado como pagado correctamente.",
-        })
-
-        fetchTurnos()
-    } catch (error) {
-        console.error('Error marking turno as paid:', error)
-        toast.error("Error", {
-            description: "No se pudo marcar el turno como pagado.",
-        })
-    }
-}
-
-// ============ CONFIRMACIÓN DE ELIMINACIÓN ============
-const openDeleteConfirm = (type: 'service' | 'product' | 'user', id: number, name: string) => {
-    setDeleteConfirmDialog({
-        isOpen: true,
-        type,
-        id,
-        name
-    })
-}
-
-const handleConfirmDelete = async () => {
-    const { type, id } = deleteConfirmDialog
-
-    switch (type) {
-        case 'service':
-            await handleDeleteService(id)
-            break
-        case 'product':
-            await handleDeleteProduct(id)
-            break
+        }
     }
 
-    setDeleteConfirmDialog({ isOpen: false, type: 'service', id: 0, name: '' })
-}
+    const handleEditService = (service: Service) => {
+        setEditingService(service)
 
-if (loading) {
+        // Extraer precios del servicio o usar valores por defecto
+        const getPrecioByTipo = (tipo: string) => {
+            const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
+            return precio ? precio.precio : 0
+        }
+
+        setServiceForm({
+            name: service.name,
+            description: service.description,
+            precio: [
+                { tipoVehiculo: 'AUTO' as const, precio: getPrecioByTipo('AUTO') },
+                { tipoVehiculo: 'CAMIONETA' as const, precio: getPrecioByTipo('CAMIONETA') },
+            ],
+            duration: service.duration,
+            productId: service.Producto?.map(p => p.id) || []
+        })
+        setIsServiceDialogOpen(true)
+    }
+
+    const handleDeleteService = async (id: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/delete/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (!response.ok) throw new Error('Error deleting service')
+
+            toast.success("Éxito", {
+                description: "Servicio eliminado correctamente.",
+            })
+
+            fetchServices()
+        } catch (error) {
+            console.error('Error deleting service:', error)
+            toast.error("Error", {
+                description: "No se pudo eliminar el servicio.",
+            })
+        }
+    }
+
+    const resetServiceForm = () => {
+        setServiceForm({
+            name: '',
+            description: '',
+            precio: [
+                { tipoVehiculo: 'AUTO' as const, precio: 0 },
+                { tipoVehiculo: 'CAMIONETA' as const, precio: 0 },
+            ],
+            duration: 30,
+            productId: []
+        })
+        setEditingService(null)
+    }
+
+    // ============ PRODUCTOS ============
+    const fetchProducts = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/getAll`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching products')
+            const data = await response.json()
+            setProducts(data)
+        } catch (error) {
+            console.error('Error fetching products:', error)
+        }
+    }
+
+    const handleProductSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        // Si estamos editando y el stock cambió, mostrar confirmación
+        if (editingProduct && productForm.stock_actual !== originalStockValue) {
+            setPendingStockValue(productForm.stock_actual)
+            setIsStockConfirmDialogOpen(true)
+            return // No continuar con el submit hasta confirmar
+        }
+
+        // Si no cambió el stock o es un producto nuevo, continuar normalmente
+        await submitProduct()
+    }
+
+    const submitProduct = async () => {
+        try {
+            const url = editingProduct
+                ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/update/${editingProduct.id}`
+                : `${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/create`
+
+            const response = await fetch(url, {
+                method: editingProduct ? 'PUT' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify(productForm)
+            })
+
+            if (!response.ok) throw new Error('Error saving product')
+
+            toast.success("Éxito", {
+                description: `Producto ${editingProduct ? 'actualizado' : 'creado'} correctamente.`,
+            })
+
+            setIsProductDialogOpen(false)
+            resetProductForm()
+            fetchProducts()
+        } catch (error) {
+            console.error('Error saving product:', error)
+            toast.error("Error", {
+                description: "No se pudo guardar el producto.",
+            })
+        }
+    }
+
+    const handleEditProduct = (product: Product) => {
+        setEditingProduct(product)
+        setProductForm({
+            name: product.name,
+            price: product.price,
+            stock_actual: product.stock_actual,
+            stock_minimo: product.stock_minimo
+        })
+        setOriginalStockValue(product.stock_actual)
+        setIsProductDialogOpen(true)
+    }
+
+    const handleConfirmStockChange = async () => {
+        setIsStockConfirmDialogOpen(false)
+        // Después de confirmar, proceder con el submit
+        await submitProduct()
+    }
+
+    const handleCancelStockChange = () => {
+        setIsStockConfirmDialogOpen(false)
+        // Restaurar el valor original en el formulario
+        setProductForm({ ...productForm, stock_actual: originalStockValue })
+    }
+
+    const handleDeleteProduct = async (id: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/delete/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (!response.ok) throw new Error('Error deleting product')
+
+            toast.success("Éxito", {
+                description: "Producto eliminado correctamente.",
+            })
+
+            fetchProducts()
+        } catch (error) {
+            console.error('Error deleting product:', error)
+            toast.error("Error", {
+                description: "No se pudo eliminar el producto.",
+            })
+        }
+    }
+
+    const resetProductForm = () => {
+        setProductForm({
+            name: '',
+            price: 0,
+            stock_actual: 0,
+            stock_minimo: 0
+        })
+        setEditingProduct(null)
+    }
+
+    // ============ USUARIOS ============
+    const fetchUsers = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/getAll`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching users')
+            const data = await response.json()
+            setUsers(data)
+        } catch (error) {
+            console.error('Error fetching users:', error)
+        }
+    }
+
+    const handleUserSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify(userForm)
+            })
+
+            if (!response.ok) throw new Error('Error creating user')
+
+            toast.success("Usuario creado correctamente")
+            setIsUserDialogOpen(false)
+            resetUserForm()
+            fetchUsers()
+        } catch (error) {
+            console.error('Error creating user:', error)
+            toast.error("Error", {
+                description: "No se pudo crear el usuario."
+            })
+        }
+    }
+
+    const resetUserForm = () => {
+        setUserForm({
+            firstname: '',
+            lastname: '',
+            email: '',
+            phone: '',
+            password: '',
+            role: 'user'
+        })
+        // setEditingUser(null)
+    }
+
+    const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/change-role/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify({ role: newRole })
+            })
+
+            if (!response.ok) throw new Error('Error updating user role')
+
+            toast.success("Éxito", {
+                description: "Rol de usuario actualizado correctamente.",
+            })
+
+            fetchUsers()
+        } catch (error) {
+            console.error('Error updating user role:', error)
+            toast.error("Error", {
+                description: "No se pudo actualizar el rol del usuario.",
+            })
+        }
+    }
+
+    // ============ TURNOS ============
+    const fetchTurnos = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/admin/getAll`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching turnos')
+            const data = await response.json()
+            setTurnos(data)
+            filterTurnos(data, turnoFilter)
+        } catch (error) {
+            console.error('Error fetching turnos:', error)
+        }
+    }
+
+    const filterTurnos = (turnosData: Turno[], filter: 'all' | 'pending-payment' | 'paid' | 'pending-service') => {
+        let filtered = turnosData
+
+        switch (filter) {
+            case 'pending-payment':
+                filtered = turnosData.filter(turno =>
+                    turno.pago.length === 0 || turno.pago.every(pago => pago.estado === 'PENDIENTE')
+                )
+                break
+            case 'paid':
+                filtered = turnosData.filter(turno =>
+                    turno.pago.some(pago => pago.estado === 'PAGADO')
+                )
+                break
+            case 'pending-service':
+                filtered = turnosData.filter(turno =>
+                    turno.estado !== 'finalizado'
+                )
+                break
+            default:
+                filtered = turnosData
+        }
+
+        // Ordenar por fecha de forma ascendente (más próximos primero)
+        filtered = filtered.sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime())
+
+        setFilteredTurnos(filtered)
+    }
+
+    const handleFilterChange = (newFilter: 'all' | 'pending-payment' | 'paid' | 'pending-service') => {
+        setTurnoFilter(newFilter)
+        filterTurnos(turnos, newFilter)
+    }
+
+    // Función para determinar si un turno puede ser marcado como finalizado
+    const canMarkAsCompleted = (turno: Turno): boolean => {
+        // Solo se puede marcar como finalizado si no está ya finalizado o cancelado
+        if (turno.estado === 'finalizado' || turno.estado === 'cancelado') {
+            return false
+        }
+
+        // Obtener fecha actual
+        const today = new Date()
+        const turnoDate = new Date(turno.fechaHora)
+
+        // Comparar solo las fechas (sin hora)
+        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+        const turnoDateOnly = new Date(turnoDate.getFullYear(), turnoDate.getMonth(), turnoDate.getDate())
+
+        // Se puede marcar como finalizado si es el mismo día o una fecha pasada
+        return turnoDateOnly <= todayDateOnly
+    }
+
+    const handleMarkAsPaid = async (turnoId: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/mark-paid/${turnoId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify({
+                    monto: turnos.find(t => t.id === turnoId)?.totalPrice || 0,
+                    metodo: 'EFECTIVO'
+                })
+            })
+
+            if (!response.ok) throw new Error('Error marking turno as paid')
+
+            toast.success("Éxito", {
+                description: "Turno marcado como pagado correctamente.",
+            })
+
+            fetchTurnos()
+        } catch (error) {
+            console.error('Error marking turno as paid:', error)
+            toast.error("Error", {
+                description: "No se pudo marcar el turno como pagado.",
+            })
+        }
+    }
+
+    const handleMarkAsCompleted = async (turnoId: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/admin/mark-completed/${turnoId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (!response.ok) throw new Error('Error marking turno as completed')
+
+            toast.success("Éxito", {
+                description: "Turno marcado como finalizado correctamente.",
+            })
+
+            setTurnos(prevTurnos =>
+                prevTurnos.map(t =>
+                    t.id === turnoId ? { ...t, estado: 'finalizado' as const } : t
+                )
+            );
+
+            setFilteredTurnos(prevTurnos => {
+                const updatedTurnos = prevTurnos.map(t =>
+                    t.id === turnoId ? { ...t, estado: 'finalizado' as const } : t
+                );
+                // Si el filtro es 'pending-service', elimina el turno recién finalizado de la vista
+                if (turnoFilter === 'pending-service') {
+                    return updatedTurnos.filter(t => t.estado !== 'finalizado');
+                }
+                return updatedTurnos;
+            });
+
+
+        } catch (error) {
+            console.error('Error marking turno as completed:', error)
+            toast.error("Error", {
+                description: "No se pudo marcar el turno como finalizado.",
+            })
+        }
+    }// ============ CONFIRMACIÓN DE ELIMINACIÓN ============
+    const openDeleteConfirm = (type: 'service' | 'product' | 'user', id: number, name: string) => {
+        setDeleteConfirmDialog({
+            isOpen: true,
+            type,
+            id,
+            name
+        })
+    }
+
+    const handleConfirmDelete = async () => {
+        const { type, id } = deleteConfirmDialog
+
+        switch (type) {
+            case 'service':
+                await handleDeleteService(id)
+                break
+            case 'product':
+                await handleDeleteProduct(id)
+                break
+        }
+
+        setDeleteConfirmDialog({ isOpen: false, type: 'service', id: 0, name: '' })
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-base-100 flex items-center justify-center">
+                <span className="loading loading-spinner loading-lg"></span>
+            </div>
+        )
+    }
+
     return (
-        <div className="min-h-screen bg-base-100 flex items-center justify-center">
-            <span className="loading loading-spinner loading-lg"></span>
-        </div>
-    )
-}
+        <ProtectedRoute allowedRoles={['admin']}>
+            <div className="min-h-screen bg-base-100">
+                <HeaderDefault />
+                <main className="container mx-auto p-6">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Link href="/" className="text-muted-foreground hover:text-foreground">
+                            <ChevronLeft className="h-4 w-4" />
+                            <span className="sr-only">Volver</span>
+                        </Link>
+                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <Settings className="h-8 w-8 text-primary" />
+                            Panel de Administración
+                        </h1>
+                    </div>
 
-return (
-    <ProtectedRoute allowedRoles={['admin']}>
-        <div className="min-h-screen bg-base-100">
-            <HeaderDefault />
-            <main className="container mx-auto p-6">
-                <div className="flex items-center gap-2 mb-6">
-                    <Link href="/" className="text-muted-foreground hover:text-foreground">
-                        <ChevronLeft className="h-4 w-4" />
-                        <span className="sr-only">Volver</span>
-                    </Link>
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <Settings className="h-8 w-8 text-primary" />
-                        Panel de Administración
-                    </h1>
-                </div>
+                    <Tabs defaultValue="services" className="space-y-6">
+                        <TabsList className="grid w-full grid-cols-4">
+                            <TabsTrigger value="services" className="flex items-center gap-2">
+                                <Wrench className="h-4 w-4" />
+                                Servicios
+                            </TabsTrigger>
+                            <TabsTrigger value="products" className="flex items-center gap-2">
+                                <Package className="h-4 w-4" />
+                                Productos
+                            </TabsTrigger>
+                            <TabsTrigger value="users" className="flex items-center gap-2">
+                                <Users className="h-4 w-4" />
+                                Usuarios
+                            </TabsTrigger>
+                            <TabsTrigger value="turnos" className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                Turnos
+                            </TabsTrigger>
+                        </TabsList>
 
-                <Tabs defaultValue="services" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-4">
-                        <TabsTrigger value="services" className="flex items-center gap-2">
-                            <Wrench className="h-4 w-4" />
-                            Servicios
-                        </TabsTrigger>
-                        <TabsTrigger value="products" className="flex items-center gap-2">
-                            <Package className="h-4 w-4" />
-                            Productos
-                        </TabsTrigger>
-                        <TabsTrigger value="users" className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Usuarios
-                        </TabsTrigger>
-                        <TabsTrigger value="turnos" className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            Turnos
-                        </TabsTrigger>
-                    </TabsList>
+                        {/* PESTAÑA DE SERVICIOS */}
+                        <TabsContent value="services" className="space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Gestión de Servicios</CardTitle>
+                                        <CardDescription>
+                                            Administra los servicios disponibles para los clientes.
+                                        </CardDescription>
+                                    </div>
+                                    <Button onClick={() => setIsServiceDialogOpen(true)}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Nuevo Servicio
+                                    </Button>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Nombre</TableHead>
+                                                <TableHead>Descripción</TableHead>
+                                                <TableHead>Precios por Tipo</TableHead>
+                                                <TableHead>Productos Asociados</TableHead>
+                                                <TableHead>Duración</TableHead>
+                                                <TableHead>Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {services.map((service) => {
+                                                const getPrecio = (tipo: string): number => {
+                                                    const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
+                                                    return precio ? precio.precio : 0
+                                                }
 
-                    {/* PESTAÑA DE SERVICIOS */}
-                    <TabsContent value="services" className="space-y-6">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle>Gestión de Servicios</CardTitle>
-                                    <CardDescription>
-                                        Administra los servicios disponibles para los clientes.
-                                    </CardDescription>
-                                </div>
-                                <Button onClick={() => setIsServiceDialogOpen(true)}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Nuevo Servicio
-                                </Button>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Nombre</TableHead>
-                                            <TableHead>Descripción</TableHead>
-                                            <TableHead>Precios por Tipo</TableHead>
-                                            <TableHead>Productos Asociados</TableHead>
-                                            <TableHead>Duración</TableHead>
-                                            <TableHead>Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {services.map((service) => {
-                                            const getPrecio = (tipo: string): number => {
-                                                const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
-                                                return precio ? precio.precio : 0
-                                            }
-                                            
-                                            return (
-                                                <TableRow key={service.id}>
-                                                    <TableCell className="font-medium">{service.name}</TableCell>
-                                                    <TableCell>{service.description}</TableCell>
-                                                    <TableCell>
-                                                        <div className="text-xs space-y-1">
-                                                            <div>🚗 Auto: ${getPrecio('AUTO').toLocaleString()}</div>
-                                                            <div>🚙 Camioneta: ${getPrecio('CAMIONETA').toLocaleString()}</div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {service.Producto && service.Producto.length > 0 ? (
-                                                            <div className="space-y-1">
-                                                                {service.Producto.map((product) => (
-                                                                    <div key={product.id} className="text-xs bg-base-200 px-2 py-1 rounded flex items-center justify-between">
-                                                                        <span className="font-medium">{product.name}</span>
-                                                                        <span className="text-muted-foreground">${product.price.toLocaleString()}</span>
+                                                return (
+                                                    <TableRow key={service.id}>
+                                                        <TableCell className="font-medium">{service.name}</TableCell>
+                                                        <TableCell>{service.description}</TableCell>
+                                                        <TableCell>
+                                                            <div className="text-xs space-y-1">
+                                                                <div>🚗 Auto: ${getPrecio('AUTO').toLocaleString()}</div>
+                                                                <div>🚙 Camioneta: ${getPrecio('CAMIONETA').toLocaleString()}</div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {service.Producto && service.Producto.length > 0 ? (
+                                                                <div className="space-y-1">
+                                                                    {service.Producto.map((product) => (
+                                                                        <div key={product.id} className="text-xs bg-base-200 px-2 py-1 rounded flex items-center justify-between">
+                                                                            <span className="font-medium">{product.name}</span>
+                                                                            <span className="text-muted-foreground">${product.price.toLocaleString()}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                    <div className="text-xs text-muted-foreground mt-1">
+                                                                        Total: {service.Producto.length} producto{service.Producto.length !== 1 ? 's' : ''}
                                                                     </div>
-                                                                ))}
-                                                                <div className="text-xs text-muted-foreground mt-1">
-                                                                    Total: {service.Producto.length} producto{service.Producto.length !== 1 ? 's' : ''}
                                                                 </div>
+                                                            ) : (
+                                                                <div className="text-xs text-muted-foreground italic">
+                                                                    Sin productos asociados
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>{service.duration} min</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex gap-2">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleEditService(service)}
+                                                                >
+                                                                    <Edit2 className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="destructive"
+                                                                    size="sm"
+                                                                    onClick={() => openDeleteConfirm('service', service.id, service.name)}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
                                                             </div>
-                                                        ) : (
-                                                            <div className="text-xs text-muted-foreground italic">
-                                                                Sin productos asociados
-                                                            </div>
-                                                        )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        {/* PESTAÑA DE PRODUCTOS */}
+                        <TabsContent value="products" className="space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Gestión de Productos</CardTitle>
+                                        <CardDescription>
+                                            Administra el inventario de productos disponibles.
+                                        </CardDescription>
+                                    </div>
+                                    <Button onClick={() => setIsProductDialogOpen(true)}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Nuevo Producto
+                                    </Button>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Nombre</TableHead>
+                                                {/* <TableHead>Descripción</TableHead> */}
+                                                <TableHead>Precio</TableHead>
+                                                <TableHead>Stock</TableHead>
+                                                <TableHead>Stock Mínimo</TableHead>
+                                                <TableHead>Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {products.map((product) => (
+                                                <TableRow key={product.id}>
+                                                    <TableCell className="font-medium">{product.name}</TableCell>
+                                                    {/* <TableCell>{product.description}</TableCell> */}
+                                                    <TableCell>${product.price.toLocaleString()}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={product.stock_actual > 0 ? "default" : "destructive"}>
+                                                            {product.stock_actual}
+                                                        </Badge>
                                                     </TableCell>
-                                                    <TableCell>{service.duration} min</TableCell>
+                                                    <TableCell>{product.stock_minimo}</TableCell>
                                                     <TableCell>
                                                         <div className="flex gap-2">
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => handleEditService(service)}
+                                                                onClick={() => handleEditProduct(product)}
                                                             >
                                                                 <Edit2 className="h-4 w-4" />
                                                             </Button>
                                                             <Button
                                                                 variant="destructive"
                                                                 size="sm"
-                                                                onClick={() => openDeleteConfirm('service', service.id, service.name)}
+                                                                onClick={() => openDeleteConfirm('product', product.id, product.name)}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
-                                            )
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
-                    {/* PESTAÑA DE PRODUCTOS */}
-                    <TabsContent value="products" className="space-y-6">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle>Gestión de Productos</CardTitle>
-                                    <CardDescription>
-                                        Administra el inventario de productos disponibles.
-                                    </CardDescription>
-                                </div>
-                                <Button onClick={() => setIsProductDialogOpen(true)}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Nuevo Producto
-                                </Button>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Nombre</TableHead>
-                                            {/* <TableHead>Descripción</TableHead> */}
-                                            <TableHead>Precio</TableHead>
-                                            <TableHead>Stock</TableHead>
-                                            <TableHead>Stock Mínimo</TableHead>
-                                            <TableHead>Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {products.map((product) => (
-                                            <TableRow key={product.id}>
-                                                <TableCell className="font-medium">{product.name}</TableCell>
-                                                {/* <TableCell>{product.description}</TableCell> */}
-                                                <TableCell>${product.price.toLocaleString()}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={product.stock_actual > 0 ? "default" : "destructive"}>
-                                                        {product.stock_actual}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>{product.stock_minimo}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleEditProduct(product)}
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={() => openDeleteConfirm('product', product.id, product.name)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
+                        {/* PESTAÑA DE USUARIOS */}
+                        <TabsContent value="users" className="space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Gestión de Usuarios</CardTitle>
+                                        <CardDescription>
+                                            Administra los permisos y roles de los usuarios del sistema.
+                                        </CardDescription>
+                                    </div>
+                                    <Button onClick={() => setIsUserDialogOpen(true)}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Nuevo Usuario
+                                    </Button>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Nombre</TableHead>
+                                                <TableHead>Email</TableHead>
+                                                <TableHead>Telefono</TableHead>
+                                                <TableHead>Rol Actual</TableHead>
+                                                <TableHead>Cambiar Rol</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* PESTAÑA DE USUARIOS */}
-                    <TabsContent value="users" className="space-y-6">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle>Gestión de Usuarios</CardTitle>
-                                    <CardDescription>
-                                        Administra los permisos y roles de los usuarios del sistema.
-                                    </CardDescription>
-                                </div>
-                                <Button onClick={() => setIsUserDialogOpen(true)}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Nuevo Usuario
-                                </Button>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Nombre</TableHead>
-                                            <TableHead>Email</TableHead>
-                                            <TableHead>Telefono</TableHead>
-                                            <TableHead>Rol Actual</TableHead>
-                                            <TableHead>Cambiar Rol</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {users.map((user) => (
-                                            <TableRow key={user.id}>
-                                                <TableCell className="font-medium">
-                                                    {user.firstname} {user.lastname}
-                                                </TableCell>
-                                                <TableCell>{user.email}</TableCell>
-                                                <TableCell>{user.phone}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={user.role === 'admin' ? "default" : "secondary"}>
-                                                        {user.role === 'admin' ? (
-                                                            <>
-                                                                <ShieldCheck className="h-3 w-3 mr-1" />
-                                                                Administrador
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Shield className="h-3 w-3 mr-1" />
-                                                                Usuario
-                                                            </>
-                                                        )}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Select
-                                                        value={user.role}
-                                                        onValueChange={(newRole: 'admin' | 'user') =>
-                                                            handleChangeUserRole(user.id, newRole)
-                                                        }
-                                                    >
-                                                        <SelectTrigger className="w-32">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="user">Usuario</SelectItem>
-                                                            <SelectItem value="admin">Admin</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* PESTAÑA DE TURNOS */}
-                    <TabsContent value="turnos" className="space-y-6">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle>Gestión de Turnos</CardTitle>
-                                    <CardDescription>
-                                        Administra los turnos y sus estados de pago.
-                                    </CardDescription>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Select value={turnoFilter} onValueChange={handleFilterChange}>
-                                        <SelectTrigger className="w-[200px]">
-                                            <SelectValue placeholder="Filtrar turnos" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos los turnos</SelectItem>
-                                            <SelectItem value="pending-payment">Pago pendiente</SelectItem>
-                                            <SelectItem value="paid">Pagados</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Cliente</TableHead>
-                                            <TableHead>Vehículo</TableHead>
-                                            <TableHead>Fecha y Hora</TableHead>
-                                            <TableHead>Servicios</TableHead>
-                                            <TableHead>Total</TableHead>
-                                            <TableHead>Estado Turno</TableHead>
-                                            <TableHead>Estado Pago</TableHead>
-                                            <TableHead>Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredTurnos.map((turno) => {
-                                            const isPaid = turno.pago.some(pago => pago.estado === 'PAGADO')
-                                            const hasPendingPayment = turno.pago.length === 0 || turno.pago.every(pago => pago.estado === 'PENDIENTE')
-                                            
-                                            return (
-                                                <TableRow key={turno.id}>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {users.map((user) => (
+                                                <TableRow key={user.id}>
                                                     <TableCell className="font-medium">
-                                                        <div className="space-y-1">
-                                                            <div>{turno.car.user.firstname} {turno.car.user.lastname}</div>
-                                                            <div className="text-sm text-muted-foreground">{turno.car.user.email}</div>
-                                                            <div className="text-sm text-muted-foreground">{turno.car.user.phone}</div>
-                                                        </div>
+                                                        {user.firstname} {user.lastname}
                                                     </TableCell>
+                                                    <TableCell>{user.email}</TableCell>
+                                                    <TableCell>{user.phone}</TableCell>
                                                     <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <Car className="h-4 w-4 text-muted-foreground" />
-                                                            <div>
-                                                                <div className="font-medium">{turno.car.brand} {turno.car.model}</div>
-                                                                <div className="text-sm text-muted-foreground">Año {turno.car.year}</div>
-                                                            </div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <Clock className="h-4 w-4 text-muted-foreground" />
-                                                            <div>
-                                                                <div>{new Date(turno.fechaHora).toLocaleDateString()}</div>
-                                                                <div className="text-sm text-muted-foreground">
-                                                                    {new Date(turno.fechaHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="space-y-1">
-                                                            {turno.servicio.map((servicio) => (
-                                                                <div key={servicio.id} className="text-xs bg-base-200 px-2 py-1 rounded">
-                                                                    {servicio.name}
-                                                                </div>
-                                                            ))}
-                                                            <div className="text-xs text-muted-foreground">
-                                                                Duración: {turno.duration} min
-                                                            </div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="font-medium">
-                                                        ${turno.totalPrice.toLocaleString()}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={
-                                                            turno.estado === 'CONFIRMADO' ? 'default' :
-                                                            turno.estado === 'FINALIZADO' ? 'secondary' :
-                                                            turno.estado === 'CANCELADO' ? 'destructive' :
-                                                            'outline'
-                                                        }>
-                                                            {turno.estado}
+                                                        <Badge variant={user.role === 'admin' ? "default" : "secondary"}>
+                                                            {user.role === 'admin' ? (
+                                                                <>
+                                                                    <ShieldCheck className="h-3 w-3 mr-1" />
+                                                                    Administrador
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Shield className="h-3 w-3 mr-1" />
+                                                                    Usuario
+                                                                </>
+                                                            )}
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <CreditCard className="h-4 w-4 text-muted-foreground" />
-                                                            <Badge variant={isPaid ? 'default' : 'destructive'}>
-                                                                {isPaid ? 'PAGADO' : 'PENDIENTE'}
-                                                            </Badge>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {hasPendingPayment && (
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => handleMarkAsPaid(turno.id)}
-                                                                className="bg-green-600 hover:bg-green-700"
-                                                            >
-                                                                <CreditCard className="h-4 w-4 mr-2" />
-                                                                Marcar como Pagado
-                                                            </Button>
-                                                        )}
+                                                        <Select
+                                                            value={user.role}
+                                                            onValueChange={(newRole: 'admin' | 'user') =>
+                                                                handleChangeUserRole(user.id, newRole)
+                                                            }
+                                                        >
+                                                            <SelectTrigger className="w-32">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="user">Usuario</SelectItem>
+                                                                <SelectItem value="admin">Admin</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     </TableCell>
                                                 </TableRow>
-                                            )
-                                        })}
-                                    </TableBody>
-                                </Table>
-                                {filteredTurnos.length === 0 && (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                        No se encontraron turnos para el filtro seleccionado.
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
-            </main>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
-            {/* DIALOG PARA SERVICIOS */}
-            <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>
-                            {editingService ? 'Editar Servicio' : 'Nuevo Servicio'}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {editingService
-                                ? 'Modifica la información del servicio.'
-                                : 'Completa la información para crear un nuevo servicio.'
-                            }
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleServiceSubmit} className="space-y-4">
-                        <div className="grid gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="service-name">Nombre del servicio</Label>
-                                <Input
-                                    id="service-name"
-                                    value={serviceForm.name}
-                                    onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="service-description">Descripción</Label>
-                                <Textarea
-                                    id="service-description"
-                                    value={serviceForm.description}
-                                    onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
-                                    rows={3}
-                                />
-                            </div>
-                            <div className="space-y-4">
-                                <div className="border rounded-lg p-4 space-y-3 bg-base-200">
-                                    <Label className="text-sm font-semibold">Precios por Tipo de Vehículo</Label>
-                                    <p className="text-xs text-muted-foreground">Define el precio para cada tipo de vehículo</p>
-                                    
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {serviceForm.precio.map((precio, index) => (
-                                            <div key={precio.tipoVehiculo} className="space-y-1">
-                                                <Label htmlFor={`service-price-${precio.tipoVehiculo}`} className="text-xs">
-                                                    {precio.tipoVehiculo === 'AUTO' && '🚗 Auto ($)'}
-                                                    {precio.tipoVehiculo === 'CAMIONETA' && '🚙 Camioneta ($)'}
-                                                </Label>
-                                                <Input
-                                                    id={`service-price-${precio.tipoVehiculo}`}
-                                                    type="number"
-                                                    value={precio.precio}
-                                                    onChange={(e) => {
-                                                        const newPrecio = [...serviceForm.precio]
-                                                        newPrecio[index] = {
-                                                            ...newPrecio[index],
-                                                            precio: Number(e.target.value)
-                                                        }
-                                                        setServiceForm({ ...serviceForm, precio: newPrecio })
-                                                    }}
-                                                    placeholder="0"
-                                                    required
-                                                />
-                                            </div>
-                                        ))}
+                        {/* PESTAÑA DE TURNOS */}
+                        <TabsContent value="turnos" className="space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Gestión de Turnos</CardTitle>
+                                        <CardDescription>
+                                            Administra los turnos y sus estados de pago.
+                                        </CardDescription>
                                     </div>
-                                </div>
-                                
+                                    <div className="flex gap-2">
+                                        <Select value={turnoFilter} onValueChange={handleFilterChange}>
+                                            <SelectTrigger className="w-[200px]">
+                                                <SelectValue placeholder="Filtrar turnos" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todos los turnos</SelectItem>
+                                                <SelectItem value="pending-service">Servicios pendientes</SelectItem>
+                                                <SelectItem value="pending-payment">Pago pendiente</SelectItem>
+                                                <SelectItem value="paid">Pagados</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Cliente</TableHead>
+                                                <TableHead>Vehículo</TableHead>
+                                                <TableHead>Fecha y Hora</TableHead>
+                                                <TableHead>Servicios</TableHead>
+                                                <TableHead>Total</TableHead>
+                                                <TableHead>Estado Turno</TableHead>
+                                                <TableHead>Estado Pago</TableHead>
+                                                <TableHead>Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredTurnos.map((turno) => {
+                                                const isPaid = turno.pago.some(pago => pago.estado === 'PAGADO')
+                                                const hasPendingPayment = (turno.pago.length === 0 || turno.pago.every(pago => pago.estado === 'PENDIENTE')) && turno.estado !== 'cancelado';
+
+                                                return (
+                                                    <TableRow key={turno.id}>
+                                                        <TableCell className="font-medium">
+                                                            <div className="space-y-1">
+                                                                <div>{turno.car.user.firstname} {turno.car.user.lastname}</div>
+                                                                <div className="text-sm text-muted-foreground">{turno.car.user.email}</div>
+                                                                <div className="text-sm text-muted-foreground">{turno.car.user.phone}</div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Car className="h-4 w-4 text-muted-foreground" />
+                                                                <div>
+                                                                    <div className="font-medium">{turno.car.brand} {turno.car.model}</div>
+                                                                    <div className="text-sm text-muted-foreground">Año {turno.car.year}</div>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                                                <div>
+                                                                    <div>{new Date(turno.fechaHora).toLocaleDateString()}</div>
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        {new Date(turno.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="space-y-1">
+                                                                {turno.servicio.map((servicio) => (
+                                                                    <div key={servicio.id} className="text-xs bg-base-200 px-2 py-1 rounded">
+                                                                        {servicio.name}
+                                                                    </div>
+                                                                ))}
+                                                                <div className="text-xs text-muted-foreground">
+                                                                    Duración: {turno.duration} min
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="font-medium">
+                                                            ${turno.totalPrice.toLocaleString()}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={
+                                                                // turno.estado === 'confirmado' ? 'default' :
+                                                                    turno.estado === 'finalizado' ? 'secondary' :
+                                                                        turno.estado === 'cancelado' ? 'destructive' :
+                                                                            'outline'
+                                                            }>
+                                                                {turno.estado}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                                                <Badge variant={isPaid ? 'default' : 'destructive'}>
+                                                                    {isPaid ? 'PAGADO' : 'PENDIENTE'}
+                                                                </Badge>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex gap-2">
+                                                                {hasPendingPayment && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => handleMarkAsPaid(turno.id)}
+                                                                        className="bg-green-600 hover:bg-green-700"
+                                                                    >
+                                                                        <CreditCard className="h-4 w-4 mr-2" />
+                                                                        Marcar como Pagado
+                                                                    </Button>
+                                                                )}
+                                                                {canMarkAsCompleted(turno) && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => handleMarkAsCompleted(turno.id)}
+                                                                        className="bg-blue-600 hover:bg-blue-700"
+                                                                    >
+                                                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                                                        Marcar como Finalizado
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                    {filteredTurnos.length === 0 && (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            No se encontraron turnos para el filtro seleccionado.
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    </Tabs>
+                </main>
+
+                {/* DIALOG PARA SERVICIOS */}
+                <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>
+                                {editingService ? 'Editar Servicio' : 'Nuevo Servicio'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {editingService
+                                    ? 'Modifica la información del servicio.'
+                                    : 'Completa la información para crear un nuevo servicio.'
+                                }
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleServiceSubmit} className="space-y-4">
+                            <div className="grid gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="service-duration">Duración (min)</Label>
+                                    <Label htmlFor="service-name">Nombre del servicio</Label>
                                     <Input
-                                        id="service-duration"
-                                        type="number"
-                                        value={serviceForm.duration}
-                                        onChange={(e) => setServiceForm({ ...serviceForm, duration: Number(e.target.value) })}
+                                        id="service-name"
+                                        value={serviceForm.name}
+                                        onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
                                         required
                                     />
                                 </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Productos utilizados (opcional)</Label>
-                                <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
-                                    {products.length === 0 ? (
-                                        <p className="text-sm text-muted-foreground">No hay productos disponibles</p>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {products.map((product) => (
-                                                <div key={product.id} className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`product-${product.id}`}
-                                                        checked={serviceForm.productId.includes(product.id)}
-                                                        onCheckedChange={(checked) => {
-                                                            if (checked) {
-                                                                setServiceForm({
-                                                                    ...serviceForm,
-                                                                    productId: [...serviceForm.productId, product.id]
-                                                                })
-                                                            } else {
-                                                                setServiceForm({
-                                                                    ...serviceForm,
-                                                                    productId: serviceForm.productId.filter(id => id !== product.id)
-                                                                })
-                                                            }
-                                                        }}
-                                                    />
-                                                    <Label
-                                                        htmlFor={`product-${product.id}`}
-                                                        className="text-sm font-normal"
-                                                    >
-                                                        {product.name} - ${product.price.toLocaleString()}
+                                <div className="space-y-2">
+                                    <Label htmlFor="service-description">Descripción</Label>
+                                    <Textarea
+                                        id="service-description"
+                                        value={serviceForm.description}
+                                        onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
+                                        rows={3}
+                                    />
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="border rounded-lg p-4 space-y-3 bg-base-200">
+                                        <Label className="text-sm font-semibold">Precios por Tipo de Vehículo</Label>
+                                        <p className="text-xs text-muted-foreground">Define el precio para cada tipo de vehículo</p>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {serviceForm.precio.map((precio, index) => (
+                                                <div key={precio.tipoVehiculo} className="space-y-1">
+                                                    <Label htmlFor={`service-price-${precio.tipoVehiculo}`} className="text-xs">
+                                                        {precio.tipoVehiculo === 'AUTO' && '🚗 Auto ($)'}
+                                                        {precio.tipoVehiculo === 'CAMIONETA' && '🚙 Camioneta ($)'}
                                                     </Label>
+                                                    <Input
+                                                        id={`service-price-${precio.tipoVehiculo}`}
+                                                        type="number"
+                                                        value={precio.precio}
+                                                        onChange={(e) => {
+                                                            const newPrecio = [...serviceForm.precio]
+                                                            newPrecio[index] = {
+                                                                ...newPrecio[index],
+                                                                precio: Number(e.target.value)
+                                                            }
+                                                            setServiceForm({ ...serviceForm, precio: newPrecio })
+                                                        }}
+                                                        placeholder="0"
+                                                        required
+                                                    />
                                                 </div>
                                             ))}
                                         </div>
-                                    )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="service-duration">Duración (min)</Label>
+                                        <Input
+                                            id="service-duration"
+                                            type="number"
+                                            value={serviceForm.duration}
+                                            onChange={(e) => setServiceForm({ ...serviceForm, duration: Number(e.target.value) })}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Productos utilizados (opcional)</Label>
+                                    <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
+                                        {products.length === 0 ? (
+                                            <p className="text-sm text-muted-foreground">No hay productos disponibles</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {products.map((product) => (
+                                                    <div key={product.id} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`product-${product.id}`}
+                                                            checked={serviceForm.productId.includes(product.id)}
+                                                            onCheckedChange={(checked) => {
+                                                                if (checked) {
+                                                                    setServiceForm({
+                                                                        ...serviceForm,
+                                                                        productId: [...serviceForm.productId, product.id]
+                                                                    })
+                                                                } else {
+                                                                    setServiceForm({
+                                                                        ...serviceForm,
+                                                                        productId: serviceForm.productId.filter(id => id !== product.id)
+                                                                    })
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Label
+                                                            htmlFor={`product-${product.id}`}
+                                                            className="text-sm font-normal"
+                                                        >
+                                                            {product.name} - ${product.price.toLocaleString()}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => {
-                                    setIsServiceDialogOpen(false)
-                                    resetServiceForm()
-                                }}
-                            >
-                                <X className="h-4 w-4 mr-2" />
-                                Cancelar
-                            </Button>
-                            <Button type="submit">
-                                <Save className="h-4 w-4 mr-2" />
-                                {editingService ? 'Actualizar' : 'Crear'}
-                            </Button>
-                        </div>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* DIALOG PARA PRODUCTOS */}
-            <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>
-                            {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {editingProduct
-                                ? 'Modifica la información del producto.'
-                                : 'Completa la información para crear un nuevo producto.'
-                            }
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleProductSubmit} className="space-y-4">
-                        <div className="grid gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="product-name">Nombre del producto</Label>
-                                <Input
-                                    id="product-name"
-                                    value={productForm.name}
-                                    onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                                    required
-                                />
+                            <div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsServiceDialogOpen(false)
+                                        resetServiceForm()
+                                    }}
+                                >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancelar
+                                </Button>
+                                <Button type="submit">
+                                    <Save className="h-4 w-4 mr-2" />
+                                    {editingService ? 'Actualizar' : 'Crear'}
+                                </Button>
                             </div>
-                            {/* <div className="space-y-2">
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* DIALOG PARA PRODUCTOS */}
+                <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>
+                                {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {editingProduct
+                                    ? 'Modifica la información del producto.'
+                                    : 'Completa la información para crear un nuevo producto.'
+                                }
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleProductSubmit} className="space-y-4">
+                            <div className="grid gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="product-name">Nombre del producto</Label>
+                                    <Input
+                                        id="product-name"
+                                        value={productForm.name}
+                                        onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                {/* <div className="space-y-2">
                                     <Label htmlFor="product-description">Descripción</Label>
                                     <Textarea
                                         id="product-description"
@@ -1197,50 +1277,50 @@ return (
                                         rows={3}
                                     />
                                 </div> */}
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="product-price">Precio ($)</Label>
-                                    <Input
-                                        id="product-price"
-                                        type="number"
-                                        value={productForm.price}
-                                        onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="product-stock" className="flex items-center gap-2">
-                                        Stock Actual
-                                        {editingProduct && (
-                                            <span className="badge badge-warning badge-sm"></span>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="product-price">Precio ($)</Label>
+                                        <Input
+                                            id="product-price"
+                                            type="number"
+                                            value={productForm.price}
+                                            onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="product-stock" className="flex items-center gap-2">
+                                            Stock Actual
+                                            {editingProduct && (
+                                                <span className="badge badge-warning badge-sm"></span>
+                                            )}
+                                        </Label>
+                                        <Input
+                                            id="product-stock"
+                                            type="number"
+                                            value={productForm.stock_actual}
+                                            onChange={(e) => setProductForm({ ...productForm, stock_actual: Number(e.target.value) })}
+                                            required
+                                            className={editingProduct ? "border-warning" : ""}
+                                        />
+                                        {editingProduct && productForm.stock_actual !== originalStockValue && (
+                                            <p className="text-xs text-warning">
+                                                ⚠️ Este cambio requerirá confirmación al actualizar
+                                            </p>
                                         )}
-                                    </Label>
-                                    <Input
-                                        id="product-stock"
-                                        type="number"
-                                        value={productForm.stock_actual}
-                                        onChange={(e) => setProductForm({ ...productForm, stock_actual: Number(e.target.value) })}
-                                        required
-                                        className={editingProduct ? "border-warning" : ""}
-                                    />
-                                    {editingProduct && productForm.stock_actual !== originalStockValue && (
-                                        <p className="text-xs text-warning">
-                                            ⚠️ Este cambio requerirá confirmación al actualizar
-                                        </p>
-                                    )}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="product-stock-min">Stock Mínimo</Label>
+                                        <Input
+                                            id="product-stock-min"
+                                            type="number"
+                                            value={productForm.stock_minimo}
+                                            onChange={(e) => setProductForm({ ...productForm, stock_minimo: Number(e.target.value) })}
+                                            required
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="product-stock-min">Stock Mínimo</Label>
-                                    <Input
-                                        id="product-stock-min"
-                                        type="number"
-                                        value={productForm.stock_minimo}
-                                        onChange={(e) => setProductForm({ ...productForm, stock_minimo: Number(e.target.value) })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            {/* <div className="space-y-2">
+                                {/* <div className="space-y-2">
                                     <Label htmlFor="product-category">Categoría</Label>
                                     <Input
                                         id="product-category"
@@ -1249,222 +1329,222 @@ return (
                                         placeholder="Ej: Ceras, Shampoos, Herramientas"
                                     />
                                 </div> */}
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsProductDialogOpen(false)
+                                        resetProductForm()
+                                    }}
+                                >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancelar
+                                </Button>
+                                <Button type="submit">
+                                    <Save className="h-4 w-4 mr-2" />
+                                    {editingProduct ? 'Actualizar' : 'Crear'}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* DIALOG PARA USUARIOS */}
+                <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+                            <DialogDescription>
+                                Completa la información para crear un nuevo usuario del sistema.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleUserSubmit} className="space-y-4">
+                            <div className="grid gap-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="user-firstname">Nombre</Label>
+                                        <Input
+                                            id="user-firstname"
+                                            value={userForm.firstname}
+                                            onChange={(e) => setUserForm({ ...userForm, firstname: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="user-lastname">Apellido</Label>
+                                        <Input
+                                            id="user-lastname"
+                                            value={userForm.lastname}
+                                            onChange={(e) => setUserForm({ ...userForm, lastname: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="user-email">Email</Label>
+                                    <Input
+                                        id="user-email"
+                                        type="email"
+                                        value={userForm.email}
+                                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="user-phone">Teléfono</Label>
+                                        <Input
+                                            id="user-phone"
+                                            value={userForm.phone}
+                                            onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="user-role">Rol</Label>
+                                        <Select
+                                            value={userForm.role}
+                                            onValueChange={(value: 'admin' | 'user') =>
+                                                setUserForm({ ...userForm, role: value })
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="user">Usuario</SelectItem>
+                                                <SelectItem value="admin">Administrador</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="user-password">Contraseña</Label>
+                                    <Input
+                                        id="user-password"
+                                        type="password"
+                                        value={userForm.password}
+                                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsUserDialogOpen(false)
+                                        resetUserForm()
+                                    }}
+                                >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancelar
+                                </Button>
+                                <Button type="submit">
+                                    <Save className="h-4 w-4 mr-2" />
+                                    Crear Usuario
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* DIALOG DE CONFIRMACIÓN DE ELIMINACIÓN */}
+                <Dialog open={deleteConfirmDialog.isOpen} onOpenChange={(open) =>
+                    setDeleteConfirmDialog({ ...deleteConfirmDialog, isOpen: open })
+                }>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Confirmar eliminación</DialogTitle>
+                            <DialogDescription>
+                                ¿Estás seguro que deseas eliminar &quote;{deleteConfirmDialog.name}&quote;?
+                                Esta acción no se puede deshacer.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => setDeleteConfirmDialog({ ...deleteConfirmDialog, isOpen: false })}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleConfirmDelete}
+                            >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Eliminar
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modal de Confirmación de Cambio de Stock */}
+                <Dialog open={isStockConfirmDialogOpen} onOpenChange={setIsStockConfirmDialogOpen}>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-warning">
+                                <AlertTriangle className="h-5 w-5" />
+                                ⚠️ Confirmar Actualización de Stock
+                            </DialogTitle>
+                            <DialogDescription>
+                                Estás a punto de modificar el stock de un producto. Esta es una operación crítica.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="bg-base-200 p-4 rounded-lg space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium">Producto:</span>
+                                    <span className="font-bold">{productForm.name}</span>
+                                </div>
+                                <div className="divider my-2"></div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium">Stock Actual:</span>
+                                    <span className="text-lg font-bold text-error">{originalStockValue}</span>
+                                </div>
+                                <div className="flex justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                    </svg>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium">Nuevo Stock:</span>
+                                    <span className="text-lg font-bold text-success">{pendingStockValue}</span>
+                                </div>
+                            </div>
+                            <div className="alert alert-warning">
+                                <AlertTriangle className="h-5 w-5" />
+                                <div className="text-sm">
+                                    <p className="font-semibold">¿Estás seguro de este cambio?</p>
+                                    <p>Verifica que el nuevo valor sea correcto antes de confirmar.</p>
+                                </div>
+                            </div>
                         </div>
                         <DialogFooter>
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => {
-                                    setIsProductDialogOpen(false)
-                                    resetProductForm()
-                                }}
+                                onClick={handleCancelStockChange}
                             >
                                 <X className="h-4 w-4 mr-2" />
                                 Cancelar
                             </Button>
-                            <Button type="submit">
-                                <Save className="h-4 w-4 mr-2" />
-                                {editingProduct ? 'Actualizar' : 'Crear'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* DIALOG PARA USUARIOS */}
-            <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-                        <DialogDescription>
-                            Completa la información para crear un nuevo usuario del sistema.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleUserSubmit} className="space-y-4">
-                        <div className="grid gap-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="user-firstname">Nombre</Label>
-                                    <Input
-                                        id="user-firstname"
-                                        value={userForm.firstname}
-                                        onChange={(e) => setUserForm({ ...userForm, firstname: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="user-lastname">Apellido</Label>
-                                    <Input
-                                        id="user-lastname"
-                                        value={userForm.lastname}
-                                        onChange={(e) => setUserForm({ ...userForm, lastname: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="user-email">Email</Label>
-                                <Input
-                                    id="user-email"
-                                    type="email"
-                                    value={userForm.email}
-                                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="user-phone">Teléfono</Label>
-                                    <Input
-                                        id="user-phone"
-                                        value={userForm.phone}
-                                        onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="user-role">Rol</Label>
-                                    <Select
-                                        value={userForm.role}
-                                        onValueChange={(value: 'admin' | 'user') =>
-                                            setUserForm({ ...userForm, role: value })
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="user">Usuario</SelectItem>
-                                            <SelectItem value="admin">Administrador</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="user-password">Contraseña</Label>
-                                <Input
-                                    id="user-password"
-                                    type="password"
-                                    value={userForm.password}
-                                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <DialogFooter>
                             <Button
                                 type="button"
-                                variant="outline"
-                                onClick={() => {
-                                    setIsUserDialogOpen(false)
-                                    resetUserForm()
-                                }}
+                                variant="default"
+                                onClick={handleConfirmStockChange}
+                                className="bg-warning hover:bg-warning/90 text-warning-content"
                             >
-                                <X className="h-4 w-4 mr-2" />
-                                Cancelar
-                            </Button>
-                            <Button type="submit">
-                                <Save className="h-4 w-4 mr-2" />
-                                Crear Usuario
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Confirmar Cambio
                             </Button>
                         </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* DIALOG DE CONFIRMACIÓN DE ELIMINACIÓN */}
-            <Dialog open={deleteConfirmDialog.isOpen} onOpenChange={(open) =>
-                setDeleteConfirmDialog({ ...deleteConfirmDialog, isOpen: open })
-            }>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Confirmar eliminación</DialogTitle>
-                        <DialogDescription>
-                            ¿Estás seguro que deseas eliminar &quote;{deleteConfirmDialog.name}&quote;?
-                            Esta acción no se puede deshacer.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setDeleteConfirmDialog({ ...deleteConfirmDialog, isOpen: false })}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={handleConfirmDelete}
-                        >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Eliminar
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Modal de Confirmación de Cambio de Stock */}
-            <Dialog open={isStockConfirmDialogOpen} onOpenChange={setIsStockConfirmDialogOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-warning">
-                            <AlertTriangle className="h-5 w-5" />
-                            ⚠️ Confirmar Actualización de Stock
-                        </DialogTitle>
-                        <DialogDescription>
-                            Estás a punto de modificar el stock de un producto. Esta es una operación crítica.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="bg-base-200 p-4 rounded-lg space-y-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium">Producto:</span>
-                                <span className="font-bold">{productForm.name}</span>
-                            </div>
-                            <div className="divider my-2"></div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium">Stock Actual:</span>
-                                <span className="text-lg font-bold text-error">{originalStockValue}</span>
-                            </div>
-                            <div className="flex justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                                </svg>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium">Nuevo Stock:</span>
-                                <span className="text-lg font-bold text-success">{pendingStockValue}</span>
-                            </div>
-                        </div>
-                        <div className="alert alert-warning">
-                            <AlertTriangle className="h-5 w-5" />
-                            <div className="text-sm">
-                                <p className="font-semibold">¿Estás seguro de este cambio?</p>
-                                <p>Verifica que el nuevo valor sea correcto antes de confirmar.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleCancelStockChange}
-                        >
-                            <X className="h-4 w-4 mr-2" />
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="default"
-                            onClick={handleConfirmStockChange}
-                            className="bg-warning hover:bg-warning/90 text-warning-content"
-                        >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Confirmar Cambio
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
-    </ProtectedRoute>
-)
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </ProtectedRoute>
+    )
 }

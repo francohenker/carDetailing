@@ -177,4 +177,56 @@ export class TurnoService {
       },
     });
   }
+
+  async markAsCompleted(turnoId: number): Promise<Turno> {
+    const turno = await this.turnoRepository.findOne({
+      where: { id: turnoId },
+      relations: ['car', 'car.user', 'servicio', 'pago'],
+    });
+
+    if (!turno) {
+      throw new Error('Turno not found');
+    }
+
+    turno.estado = estado_turno.FINALIZADO;
+    return await this.turnoRepository.save(turno);
+  }
+
+  async cancelTurno(turnoId: number): Promise<Turno> {
+    const turno = await this.turnoRepository.findOne({
+      where: { id: turnoId },
+      relations: ['car', 'car.user', 'servicio', 'pago'],
+    });
+
+    if (!turno) {
+      throw new Error('Turno not found');
+    }
+
+    // Validación: no se puede cancelar si el turno ya está pagado
+    const pagosCompletados =
+      turno.pago?.filter((p) => p.estado === 'PAGADO') || [];
+    const totalPagado = pagosCompletados.reduce((sum, p) => sum + p.monto, 0);
+    if (totalPagado >= turno.totalPrice) {
+      throw new HttpException(
+        'No se puede cancelar un turno que ya está pagado',
+        400,
+      );
+    }
+
+    // Verificar que el turno se puede cancelar (más de 24 horas antes)
+    const turnoDate = new Date(turno.fechaHora);
+    const now = new Date();
+    const timeDiff = turnoDate.getTime() - now.getTime();
+    const hoursDiff = timeDiff / (1000 * 3600);
+
+    if (hoursDiff <= 24) {
+      throw new HttpException(
+        'No se puede cancelar un turno con menos de 24 horas de anticipación',
+        400,
+      );
+    }
+
+    turno.estado = estado_turno.CANCELADO;
+    return await this.turnoRepository.save(turno);
+  }
 }

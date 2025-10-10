@@ -29,7 +29,9 @@ export class PagoService {
     if (!turno) {
       throw new HttpException('Turno not found', 404);
     }
-
+    if (turno.estado === 'cancelado') {
+      throw new HttpException('Cannot mark a canceled turno as paid', 400);
+    }
     // Verificar si ya existe un pago PAGADO para este turno
     const existingPaidPayment = turno.pago.find(
       (pago) => pago.estado === estado_pago.PAGADO,

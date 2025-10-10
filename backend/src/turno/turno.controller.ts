@@ -95,6 +95,27 @@ export class TurnoController {
     return this.turnoService.findAll();
   }
 
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @Post('admin/mark-completed/:id')
+  async markTurnoAsCompleted(@Req() request): Promise<Turno> {
+    const turnoId = parseInt(request.params.id, 10);
+    if (isNaN(turnoId)) {
+      throw new HttpException('Invalid turno ID', 400);
+    }
+    return this.turnoService.markAsCompleted(turnoId);
+  }
+
+  @UseGuards(TurnoOwnerGuard)
+  @Post('cancel/:id')
+  async cancelTurno(@Req() request): Promise<Turno> {
+    const turnoId = parseInt(request.params.id, 10);
+    if (isNaN(turnoId)) {
+      throw new HttpException('Invalid turno ID', 400);
+    }
+    return this.turnoService.cancelTurno(turnoId);
+  }
+
   // @Post('delete')
   // async deleteTurno(@Req() request): Promise<void> {
   //     return this.turnoService.deleteTurno(user);
