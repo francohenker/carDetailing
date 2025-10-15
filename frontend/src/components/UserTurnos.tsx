@@ -165,9 +165,9 @@ export default function UserTurnos() {
 
     const handlePagarMercadoPago = async (turno: Turno) => {
         try {
-            const response = await fetch(`${process.env.MP_API}/checkout/preferences`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MP_API}/checkout/preferences`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.NEXT_PUBLIC_MP_ACCESS_TOKEN}` },
                 body: JSON.stringify({
                     "items": [
                         {
