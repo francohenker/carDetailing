@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Car, ChevronLeft, Edit2, History, LogOut, Plus, Save, Settings, Trash2, User } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -49,7 +49,6 @@ interface car {
 export default function UserProfile() {
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
-    const params = useSearchParams();
 
     const [profile, setProfile] = useState<UserProfile>({
         id: "",
@@ -276,6 +275,27 @@ export default function UserProfile() {
 
     };
 
+    const fetchVerifyPayment = async () => {
+        try {
+            const url = new URL(window.location.href);
+            const paymentId = url.searchParams.get('payment_id');
+            const status = url.searchParams.get('status');
+            if (paymentId && status === 'approved') {
+                await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/verify`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                    },
+                    body: JSON.stringify({ paymentId })
+                });
+
+            }
+        } catch {
+            console.log("Error verifying payment");
+        }
+    };
+
     useEffect(() => {
         const token = localStorage.getItem("jwt");
         if (!useUserStore.getState().isAuthenticated) {
@@ -337,45 +357,23 @@ export default function UserProfile() {
             }
         };
 
-        const fetchVerifyPayment = async () => {
-            try {
-                const paymentId = params.get('payment_id');
-                const status = params.get('status');
-                if (paymentId && status === 'approved') {
-                    await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/verify`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-                        },
-                        body: JSON.stringify({ paymentId })
-                    });
 
-                }
-            } catch {
-                console.log("Error verifying payment");
-            }
-        };
 
         fetchVerifyPayment();
         fetchDataUser();
         fetchDataCars();
-    }, [router, error, params]);
+
+    }, [router, error]);
 
     return (
         // <ProtectedRoute allowedRoles={['user']}>
 
         <Suspense fallback={<div>Cargando perfil...</div>}>
 
-            <div className="flex min-h-screen w-full flex-col bg-base-300">
+            <div  className="flex min-h-screen w-full flex-col bg-base-300">
 
                 <HeaderDefault />
 
-                {/* <div>
-                {
-                    error && <router.push('/login') />
-                }
-            </div> */}
                 <main className="flex-1 py-8">
                     <div className="container">
                         <div className="flex items-center gap-2 mb-6">
@@ -514,15 +512,6 @@ export default function UserProfile() {
                                                             <Label htmlFor="phone">Teléfono</Label>
                                                             <Input id="phone" name="phone" value={editedProfile.phone} onChange={handleProfileChange} />
                                                         </div>
-                                                        {/* <div className="space-y-2 md:col-span-2">
-                                                        <Label htmlFor="address">Dirección</Label>
-                                                        <Input
-                                                            id="address"
-                                                            name="address"
-                                                            value={editedProfile.address}
-                                                            onChange={handleProfileChange}
-                                                        />
-                                                    </div> */}
                                                     </div>
                                                     <button type="submit" className="btn btn-neutral">
                                                         <Save className="mr-2 h-4 w-4" />
