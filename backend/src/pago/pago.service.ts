@@ -88,7 +88,7 @@ export class PagoService {
         },
       ],
       back_urls: {
-        success: `${process.env.URL_FRONTEND}/servicios`,
+        success: `${process.env.URL_FRONTEND}/user/profile`,
         failure: `${process.env.URL_FRONTEND}/pago-fallido`,
         pending: `${process.env.URL_FRONTEND}/pago-pendiente`,
       },
