@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Car, ChevronLeft, Edit2, History, LogOut, Plus, Save, Settings, Trash2, User } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -50,7 +50,7 @@ interface car {
 export default function UserProfile() {
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
-
+    const params = useSearchParams();
 
     const [profile, setProfile] = useState<UserProfile>({
         id: "",
@@ -338,9 +338,30 @@ export default function UserProfile() {
             }
         };
 
+        const fetchVerifyPayment = async () => {
+            try {
+                const paymentId = params.get('payment_id');
+                const status = params.get('status');
+                if (paymentId && status === 'approved') {
+                    await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/verify`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                        },
+                        body: JSON.stringify({ paymentId })
+                    });
+
+                }
+            } catch {
+                console.log("Error verifying payment");
+            }
+        };
+
+        fetchVerifyPayment();
         fetchDataUser();
         fetchDataCars();
-    }, [router, error]);
+    }, [router, error, params]);
 
     return (
         // <ProtectedRoute allowedRoles={['user']}>

@@ -4,10 +4,9 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, DollarSign, Calendar, Car, X } from "lucide-react"
+import { CreditCard, Calendar, Car, X } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { useSearchParams } from "next/navigation"
 
 // Utilidades de fecha nativas
 const formatDateTime = (dateString: string): string => {
@@ -89,7 +88,6 @@ const getMontoFaltante = (turno: Turno): number => {
 export default function UserTurnos() {
     const [turnos, setTurnos] = useState<Turno[]>([])
     const [loading, setLoading] = useState(true)
-    const params = useSearchParams();
 
     // Función para determinar si un turno se puede cancelar
     const canCancelTurno = (turno: Turno): boolean => {
@@ -162,29 +160,8 @@ export default function UserTurnos() {
             }
         }
 
-        const fetchVerifyPayment = async () => {
-            try{
-                const paymentId = params.get('payment_id');
-                const status = params.get('status');
-                if (paymentId && status === 'approved') {
-                    await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/verify`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-                        },
-                        body: JSON.stringify({ paymentId })
-                    });
-    
-                }
-            }catch{
-                console.log("a");
-            }
-        };
-
-        fetchVerifyPayment();
         fetchTurnos();
-    }, [params])
+    }, [])
 
     const handlePagarMercadoPago = async (turno: Turno) => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/mercadopago`, {
