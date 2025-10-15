@@ -28,6 +28,7 @@ import { MercadopagoService } from './mercadopago/mercadopago.service';
 import { MercadopagoModule } from './mercadopago/mercadopago.module';
 import { AuditoriaModule } from './auditoria/auditoria.module';
 import { PrecioModule } from './precio/precio.module';
+import { MailService } from './mail.services';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { PrecioModule } from './precio/precio.module';
     ProductoService,
     AuditoriaService,
     MercadopagoService,
+    MailService,
     // {
     //   provide: APP_GUARD,
     //   useClass: RolesGuard,

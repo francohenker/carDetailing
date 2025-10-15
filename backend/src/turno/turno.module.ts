@@ -8,6 +8,7 @@ import { CarService } from '../car/car.service';
 import { ServicioModule } from '../servicio/servicio.module';
 import { JwtService } from '@nestjs/jwt';
 import { AuthModule } from '../auth/auth.module';
+import { MailService } from '../mail.services';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
     TypeOrmModule.forFeature([Turno]),
   ],
-  providers: [TurnoService, CarService, JwtService],
+  providers: [TurnoService, CarService, JwtService, MailService],
   controllers: [TurnoController],
   exports: [TypeOrmModule],
 })

@@ -22,7 +22,7 @@ export default function Home() {
     setSelectedDate(date)
     if (date) {
       // Redirigir a la página de turnos con la fecha seleccionada
-      router.push(`/turno?date=${date.toISOString().split('T')[0]}`)
+      // router.push(`/turno?date=${date.toISOString().split('T')[0]}`)
     }
   }
 
@@ -98,43 +98,8 @@ export default function Home() {
                         date.toLocaleString("es-AR", { weekday: "short" }),
                     }}
                   />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Haz clic en una fecha para ir directamente a reservar tu turno
-                  </p>
                 </CardContent>
               </Card>
-
-              {/* <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center">
-                    <Wrench className="mr-2 h-5 w-5 text-red-600" />
-                    Elige Servicio
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Selecciona el tipo de servicio que necesita tu vehículo.
-                  </p>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between border-b pb-2">
-                      <span>Lavado Básico</span>
-                      <span className="font-medium">$2,500</span>
-                    </div>
-                    <div className="flex items-center justify-between border-b pb-2">
-                      <span>Lavado Premium</span>
-                      <span className="font-medium">$3,800</span>
-                    </div>
-                    <div className="flex items-center justify-between border-b pb-2">
-                      <span>Detailing Completo</span>
-                      <span className="font-medium">$7,500</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Pulido y Encerado</span>
-                      <span className="font-medium">$5,200</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card> */}
 
               <Card>
                   <WeatherWidget />

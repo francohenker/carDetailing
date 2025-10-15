@@ -259,7 +259,23 @@ export default function UserProfile() {
 
 
 
+    const fetchVehicles = async () => {
+        const response = await fetch('https://api.autazo.app/car-brands', {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+            },
+        });
 
+        if (!response.ok) {
+            throw new Error("Error fetching vehicles");
+        }
+
+        const data = await response.json();
+        setcars(data);
+
+    };
 
     useEffect(() => {
         const token = localStorage.getItem("jwt");

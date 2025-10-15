@@ -9,6 +9,7 @@ import { ModifyTurnoDto } from './dto/modify.turno.dto';
 import { fetchWeatherApi } from 'openmeteo';
 import { estado_turno } from '../enums/estado_turno.enum';
 import { Users } from '../users/entities/users.entity';
+import { MailService } from '../mail.services';
 
 @Injectable()
 export class TurnoService {
@@ -16,6 +17,7 @@ export class TurnoService {
     @InjectRepository(Turno)
     private readonly turnoRepository: Repository<Turno>,
     private servicioService: ServicioService,
+    private mailService: MailService,
   ) {}
 
   async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
@@ -31,6 +33,11 @@ export class TurnoService {
     );
     const turno = this.turnoRepository.create(newTurno);
     this.turnoRepository.save(turno);
+    this.mailService.sendMail(
+      newTurno.car.user.email,
+      'Turno agendado',
+      `Turno agendado para el  ${this.mailService.formateDate(newTurno.fechaHora)} en el auto ${newTurno.car.marca} ${newTurno.car.model} ${newTurno.car.patente}`,
+    );
     return turno;
   }
 
@@ -53,7 +60,11 @@ export class TurnoService {
     } catch (error) {
       throw new HttpException('Error modifying Turno: ' + error.message, 500);
     }
-
+    this.mailService.sendMail(
+      existingTurno.car.user.email,
+      'Turno modificado',
+      `Turno reagendado para el  ${this.mailService.formateDate(existingTurno.fechaHora)} en el auto ${existingTurno.car.marca} ${existingTurno.car.model} ${existingTurno.car.patente}`,
+    );
     return existingTurno;
   }
 
@@ -64,6 +75,11 @@ export class TurnoService {
     } else {
       throw new HttpException('Turno not found', 404);
     }
+    this.mailService.sendMail(
+      turno.car.user.email,
+      'Turno cancelado',
+      `Turno cancelado que estaba agendado para el  ${this.mailService.formateDate(turno.fechaHora)} en el auto ${turno.car.marca} ${turno.car.model} ${turno.car.patente}`,
+    );
   }
 
   async findById(turnoId: number): Promise<Turno> {
@@ -227,6 +243,11 @@ export class TurnoService {
     }
 
     turno.estado = estado_turno.CANCELADO;
+    this.mailService.sendMail(
+      turno.car.user.email,
+      'Turno cancelado',
+      `Turno cancelado que estaba agendado para el  ${this.mailService.formateDate(turno.fechaHora)} en el auto ${turno.car.marca} ${turno.car.model} ${turno.car.patente}`,
+    );
     return await this.turnoRepository.save(turno);
   }
 }

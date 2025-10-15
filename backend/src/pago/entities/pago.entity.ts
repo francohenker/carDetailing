@@ -18,6 +18,9 @@ export class Pago {
   @Column()
   metodo: metodo_pago;
 
+  @Column({ nullable: true })
+  payment_id: string;
+
   @Column({ default: estado_pago.PENDIENTE })
   estado: estado_pago;
 

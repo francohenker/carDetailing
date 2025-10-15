@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpException,
   Param,
   Post,
@@ -12,6 +13,7 @@ import { Roles } from '../roles/role.decorator';
 import { Role } from '../roles/role.enum';
 import { RolesGuard } from '../roles/role.guard';
 import { AuthGuard } from '../auth/auth.guard';
+import { CreatePagoDto } from './dto/create-pago.dto';
 
 @Controller('pago')
 export class PagoController {
@@ -36,6 +38,31 @@ export class PagoController {
       );
     } catch (error) {
       throw new HttpException(error.message || 'Error creating payment', 500);
+    }
+  }
+
+  @Post('mercadopago')
+  async createMercadoPagoPreference(
+    @Body() turnoId: CreatePagoDto,
+  ): Promise<{ init_point: string }> {
+    try {
+      return await this.pagoService.createMercadoPagoPreference(
+        turnoId.turnoId,
+      );
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Error creating MercadoPago preference',
+        500,
+      );
+    }
+  }
+
+  @Get('/verify')
+  async verifyPayment(@Body() paymentId?: string): Promise<any> {
+    try {
+      return await this.pagoService.verifyPayment(paymentId);
+    } catch (error) {
+      throw new HttpException(error.message || 'Error verifying payment', 500);
     }
   }
 }

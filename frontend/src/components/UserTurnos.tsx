@@ -45,7 +45,7 @@ interface Pago {
     id: number;
     monto: number;
     fecha_pago: string;
-    metodo: 'EFECTIVO' | 'MERCADO_PAGO' ;  // Valores del enum
+    metodo: 'EFECTIVO' | 'MERCADO_PAGO';  // Valores del enum
     estado: 'PENDIENTE' | 'PAGADO' | 'CANCELADO';  // Valores del enum
 }
 
@@ -151,11 +151,6 @@ export default function UserTurnos() {
                 if (!response.ok) throw new Error("No se pudieron cargar los turnos.");
                 const data = await response.json();
                 setTurnos(data);
-
-                // Usamos los datos mock por ahora
-                // await new Promise(resolve => setTimeout(resolve, 1000)); // Simular delay de red
-                // setTurnos(mockTurnos);
-
             } catch {
                 toast.error("Error", {
                     description: "No se pudieron cargar los turnos. Intenta nuevamente más tarde.",
@@ -168,20 +163,36 @@ export default function UserTurnos() {
         fetchTurnos()
     }, [])
 
-    const handlePagarMercadoPago = async (turnoId: number) => {
-        alert(`Simulación: Redirigiendo a Mercado Pago para el turno ${turnoId}.`);
-        // Lógica real:
-        // const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/mercadopago`, {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem("jwt")}` },
-        //     body: JSON.stringify({ turnoId })
-        // });
-        // const data = await response.json();
-        // window.location.href = data.redirectUrl;
+    const handlePagarMercadoPago = async (turno: Turno) => {
+        try {
+            const response = await fetch(`${process.env.MP_API}/checkout/preferences`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+                body: JSON.stringify({
+                    "items": [
+                        {
+                            "title": turno.servicio.map(s => s.name).join(', '),
+                            "quantity": 1,
+                            "currency_id": "ARS",
+                            "unit_price": turno.totalPrice
+                        }
+                    ],
+                    "back_urls": {
+                        "success": `${process.env.URL_FRONTEND}servicios`,
+                        "failure": `${process.env.URL_FRONTEND}pago-fallido`,
+                        "pending": `${process.env.URL_FRONTEND}pago-pendiente`
+                    },
+                    "auto_return": "approved"
+                })
+            });
+            const data = await response.json();
+            window.location.href = data.init_point;
+        } catch {
+            toast.error("Error", {
+                description: "No se pudo iniciar el pago. Intenta nuevamente más tarde.",
+            });
+        }
     };
-
-    // const proximosTurnos = turnos.filter(t => t.estadoPago === 'pendiente').sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime());
-    // const historialTurnos = turnos.filter(t => t.estadoPago !== 'pendiente').sort((a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime());
 
 
     const proximosTurnos = turnos
@@ -240,30 +251,20 @@ export default function UserTurnos() {
                                         )}
                                         <div className="flex gap-2">
                                             {!isTurnoPagado(turno) && (
-                                                <Button size="sm" onClick={() => handlePagarMercadoPago(turno.id)}>
+                                                <Button size="sm" onClick={() => handlePagarMercadoPago(turno)}>
                                                     <CreditCard className="mr-2 h-4 w-4" /> Pagar
                                                 </Button>
                                             )}
                                             {canCancelTurno(turno) && (
-                                                <Button 
-                                                    variant="destructive" 
-                                                    size="sm" 
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
                                                     onClick={() => handleCancelTurno(turno.id)}
                                                 >
                                                     <X className="mr-2 h-4 w-4" /> Cancelar
                                                 </Button>
                                             )}
                                         </div>
-                                        {/* {turno.estadoPago === 'pendiente' && (
-                                            <div className="flex gap-2">
-                                                <Button variant="outline" size="sm" onClick={() => handlePagarEfectivo(turno.id)}>
-                                                    <DollarSign className="mr-2 h-4 w-4" /> Pagar en local
-                                                </Button>
-                                                <Button size="sm" onClick={() => handlePagarMercadoPago(turno.id)}>
-                                                    <CreditCard className="mr-2 h-4 w-4" /> Pagar online
-                                                </Button>
-                                            </div>
-                                        )} */}
                                     </div>
                                 </CardContent>
                             </Card>
