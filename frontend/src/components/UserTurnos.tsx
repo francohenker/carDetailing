@@ -89,7 +89,7 @@ const getMontoFaltante = (turno: Turno): number => {
 export default function UserTurnos() {
     const [turnos, setTurnos] = useState<Turno[]>([])
     const [loading, setLoading] = useState(true)
-    const [params] = useSearchParams();
+    const params = useSearchParams();
 
     // Función para determinar si un turno se puede cancelar
     const canCancelTurno = (turno: Turno): boolean => {
