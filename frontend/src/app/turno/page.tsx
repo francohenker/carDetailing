@@ -400,9 +400,6 @@ function TurnoPageContent() {
 
         } catch {
             toast.error("Error al reservar el turno. Por favor, intenta nuevamente.")
-        } finally {
-            setLoading(false)
-            toast.success("¡Turno reservado exitosamente!")
         }
 
 }

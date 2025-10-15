@@ -187,7 +187,8 @@ export default function UserTurnos() {
             });
             const data = await response.json();
             window.location.href = data.init_point;
-        } catch {
+        } catch (error ) {
+            console.log("error: ",error);
             toast.error("Error", {
                 description: "No se pudo iniciar el pago. Intenta nuevamente más tarde.",
             });
