@@ -80,16 +80,17 @@ export class PagoService {
     const preference = {
       items: [
         {
-          title: turno.servicio[0].name,
+          title: turno.servicio.map((s) => s.name).join(', '),
           quantity: 1,
           currency_id: 'ARS',
-          unit_price: 15000,
+          // unit_price: turno.totalPrice,
+          unit_price: 108,
         },
       ],
       back_urls: {
-        success: 'http://localhost:3000/pago-exitoso',
-        failure: 'http://localhost:3000/pago-fallido',
-        pending: 'http://localhost:3000/pago-pendiente',
+        success: `${process.env.URL_FRONTEND}/servicios`,
+        failure: `${process.env.URL_FRONTEND}/pago-fallido`,
+        pending: `${process.env.URL_FRONTEND}/pago-pendiente`,
       },
       auto_return: 'approved', // Redirige automáticamente cuando el pago se aprueba
     };
@@ -100,7 +101,7 @@ export class PagoService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+          Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
         },
         body: JSON.stringify(preference),
       },

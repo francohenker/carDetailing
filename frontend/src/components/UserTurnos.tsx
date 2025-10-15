@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { CreditCard, DollarSign, Calendar, Car, X } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
+import { useSearchParams } from "next/navigation"
 
 // Utilidades de fecha nativas
 const formatDateTime = (dateString: string): string => {
@@ -88,6 +89,7 @@ const getMontoFaltante = (turno: Turno): number => {
 export default function UserTurnos() {
     const [turnos, setTurnos] = useState<Turno[]>([])
     const [loading, setLoading] = useState(true)
+    const [params] = useSearchParams();
 
     // Función para determinar si un turno se puede cancelar
     const canCancelTurno = (turno: Turno): boolean => {
@@ -160,35 +162,46 @@ export default function UserTurnos() {
             }
         }
 
-        fetchTurnos()
-    }, [])
+        const fetchVerifyPayment = async () => {
+            try{
+                const paymentId = params.get('payment_id');
+                const status = params.get('status');
+                if (paymentId && status === 'approved') {
+                    await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/verify`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                        },
+                        body: JSON.stringify({ paymentId })
+                    });
+    
+                }
+            }catch{
+                console.log("a");
+            }
+        };
+
+        fetchVerifyPayment();
+        fetchTurnos();
+    }, [params])
 
     const handlePagarMercadoPago = async (turno: Turno) => {
-        try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MP_API}/checkout/preferences`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.NEXT_PUBLIC_MP_ACCESS_TOKEN}` },
-                body: JSON.stringify({
-                    "items": [
-                        {
-                            "title": turno.servicio.map(s => s.name).join(', '),
-                            "quantity": 1,
-                            "currency_id": "ARS",
-                            "unit_price": turno.totalPrice
-                        }
-                    ],
-                    "back_urls": {
-                        "success": `${process.env.URL_FRONTEND}servicios`,
-                        "failure": `${process.env.URL_FRONTEND}pago-fallido`,
-                        "pending": `${process.env.URL_FRONTEND}pago-pendiente`
-                    },
-                    "auto_return": "approved"
-                })
-            });
-            const data = await response.json();
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/mercadopago`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem("jwt")}`
+            },
+            body: JSON.stringify({
+                turnoId: turno.id
+            })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
             window.location.href = data.init_point;
-        } catch (error ) {
-            console.log("error: ",error);
+        } else {
             toast.error("Error", {
                 description: "No se pudo iniciar el pago. Intenta nuevamente más tarde.",
             });
