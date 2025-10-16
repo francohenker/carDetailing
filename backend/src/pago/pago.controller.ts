@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Get,
   HttpException,
   Param,
   Post,
@@ -57,10 +56,10 @@ export class PagoController {
     }
   }
 
-  @Get('/verify')
-  async verifyPayment(@Body() paymentId?: string): Promise<any> {
+  @Post('/verify')
+  async verifyPayment(@Body() paymentId: { paymentId: string }): Promise<any> {
     try {
-      return await this.pagoService.verifyPayment(paymentId);
+      return await this.pagoService.verifyPayment(paymentId.paymentId);
     } catch (error) {
       throw new HttpException(error.message || 'Error verifying payment', 500);
     }

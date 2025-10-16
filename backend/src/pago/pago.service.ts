@@ -48,6 +48,7 @@ export class PagoService {
       metodo as metodo_pago,
       estado_pago.PAGADO,
       turno,
+      null, // No payment_id for manual payments
     );
 
     return await this.pagoRepository.save(newPago);
@@ -93,6 +94,7 @@ export class PagoService {
         pending: `${process.env.URL_FRONTEND}/pago-pendiente`,
       },
       auto_return: 'approved', // Redirige automáticamente cuando el pago se aprueba
+      external_reference: turno.id.toString(), // Usar el ID del turno como referencia externa
     };
     //create a preference in mercado pago
     const response = await fetch(
@@ -110,7 +112,7 @@ export class PagoService {
     return { init_point: data.init_point }; // Esta es la URL de redirección
   }
 
-  async verifyPayment(payment_id?: string): Promise<any> {
+  async verifyPayment(payment_id: string): Promise<any> {
     const response = await fetch(
       `${process.env.MP_API}/v1/payments/${payment_id}`,
       {
@@ -134,21 +136,40 @@ export class PagoService {
       }
 
       // Buscar el pago pendiente de MercadoPago
-      const pagoPendiente = turno.pago.find(
-        (p) =>
-          p.metodo === metodo_pago.MERCADO_PAGO &&
-          p.estado === estado_pago.PENDIENTE,
-      );
+      // const pagoPendiente = turno.pago.find(
+      //   (p) =>
+      //     p.metodo === metodo_pago.MERCADO_PAGO &&
+      //     p.estado === estado_pago.PENDIENTE,
+      // );
 
-      if (!pagoPendiente) {
-        throw new HttpException('No pending MercadoPago payment found', 404);
-      }
+      // if (!pagoPendiente) {
+      //   throw new HttpException('No pending MercadoPago payment found', 404);
+      // }
 
       // Actualizar el pago con el payment_id y estado PAGADO
-      await this.pagoRepository.update(pagoPendiente.id, {
-        payment_id: payment_id,
-        estado: estado_pago.PAGADO,
-      });
+      // await this.pagoRepository.update(pagoPendiente.id, {
+      //   payment_id: payment_id,
+      //   estado: estado_pago.PAGADO,
+      // });
+
+      // unicamente se acepta un pago por turno (hasta ahora)
+      if (turno.pago.length === 0) {
+        const newPago = new Pago(
+          pagoMP.transaction_amount,
+          new Date(),
+          metodo_pago.MERCADO_PAGO,
+          estado_pago.PAGADO,
+          turno,
+          payment_id,
+        );
+        await this.pagoRepository.save(newPago);
+      }
+      // else {
+      //   await this.pagoRepository.update(turno.pago[0].id, {
+      //     payment_id: payment_id,
+      //     estado: estado_pago.PAGADO,
+      //   });
+      // }
 
       return { message: 'Payment verified and turno marked as paid' };
     } else {

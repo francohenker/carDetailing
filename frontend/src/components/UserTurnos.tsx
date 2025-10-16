@@ -65,7 +65,6 @@ const isTurnoPagado = (turno: Turno): boolean => {
 
 // Función para obtener el método de pago dominante
 const getMetodoPago = (turno: Turno): string => {
-    console.log(turno.pago);
     if (!turno.pago || turno.pago.length === 0) return 'Sin pagos';
 
     // Obtener el método del pago más reciente que esté pagado
@@ -157,6 +156,7 @@ export default function UserTurnos() {
                 });
             } finally {
                 setLoading(false)
+                console.log("turnos: ", turnos);
             }
         }
 
@@ -219,12 +219,9 @@ export default function UserTurnos() {
                                     <div>
                                         <div className="flex items-center gap-4 mb-2">
                                             <h4 className="font-semibold">{turno.servicio.map(s => s.name).join(', ')}</h4>
-                                            {/* <Badge variant={turno.estadoPago === 'pagado' ? 'default' : 'secondary'}>
-                                                {turno.estadoPago === 'pagado' ? `Pagado (${turno.metodoPago})` : 'Pendiente de pago'}
-                                            </Badge> */}
 
-                                            <Badge variant={isTurnoPagado(turno) ? 'default' : 'secondary'}>
-                                                {isTurnoPagado(turno) ? `Pagado (${getMetodoPago(turno)})` : 'Pendiente de pago'}
+                                            <Badge variant={isTurnoPagado(turno) ? 'default' : turno.estado === "cancelado" ? 'destructive' : 'secondary'}>
+                                                {isTurnoPagado(turno) ? `Pagado (${getMetodoPago(turno)})` : turno.estado === "pendiente" ? 'Pendiente de pago' : 'Cancelado'}
                                             </Badge>
 
                                         </div>
@@ -235,13 +232,13 @@ export default function UserTurnos() {
                                     </div>
                                     <div className="flex flex-col items-end justify-between">
                                         <div className="text-lg font-bold mb-2">${turno.totalPrice.toLocaleString('es-AR')}</div>
-                                        {!isTurnoPagado(turno) && (
-                                            <div className="text-sm text-muted-foreground">
-                                                Falta pagar: <span className="font-medium text-destructive">${getMontoFaltante(turno).toLocaleString('es-AR')}</span>
+                                        {(turno.estado !== "cancelado" && !isTurnoPagado(turno)) && (
+                                            <div className="text-sm text-muted-foreground font-bold">
+                                                Falta pagar: <span className="text-destructive font-bold">${getMontoFaltante(turno).toLocaleString('es-AR')}</span>
                                             </div>
                                         )}
                                         <div className="flex gap-2">
-                                            {!isTurnoPagado(turno) && (
+                                            {(turno.estado === 'pendiente' && !isTurnoPagado(turno)) && (
                                                 <Button size="sm" onClick={() => handlePagarMercadoPago(turno)}>
                                                     <CreditCard className="mr-2 h-4 w-4" /> Pagar
                                                 </Button>

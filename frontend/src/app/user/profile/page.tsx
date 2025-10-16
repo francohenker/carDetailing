@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Car, ChevronLeft, Edit2, History, LogOut, Plus, Save, Settings, Trash2, User } from "lucide-react"
+import { Car, ChevronLeft, Edit2, History, LogOut, Plus, Save, Trash2, User } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,7 +22,6 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import HeaderDefault from "@/app/header"
 import { useUserStore } from "@/app/store/useUserStore"
@@ -90,7 +89,6 @@ export default function UserProfile() {
 
     const handleProfileSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        setProfile(editedProfile)
         fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/update-profile`, {
             method: "PUT",
             headers: {
@@ -105,9 +103,13 @@ export default function UserProfile() {
                 })
                 return
             }
-            toast.success("Perfil actualizado", {
-                description: "Tus datos personales han sido actualizados correctamente.",
-            })
+            res.json().then((data) => {
+                setProfile(data);
+                setEditedProfile(data);
+                toast.success("Perfil actualizado", {
+                    description: "Tus datos personales han sido actualizados correctamente.",
+                })
+            });
         })
     }
 
@@ -282,7 +284,7 @@ export default function UserProfile() {
             const status = url.searchParams.get('status');
             if (paymentId && status === 'approved') {
                 await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/verify`, {
-                    method: 'GET',
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${localStorage.getItem('jwt')}`
@@ -363,14 +365,14 @@ export default function UserProfile() {
         fetchDataUser();
         fetchDataCars();
 
-    }, [router, error]);
+    }, []);
 
     return (
         // <ProtectedRoute allowedRoles={['user']}>
 
         <Suspense fallback={<div>Cargando perfil...</div>}>
 
-            <div  className="flex min-h-screen w-full flex-col bg-base-300">
+            <div className="flex min-h-screen w-full flex-col bg-base-300">
 
                 <HeaderDefault />
 
@@ -412,12 +414,12 @@ export default function UserProfile() {
                                                         <span className="font-medium">{cars.length}</span>
                                                     </div>
                                                     <div className="flex justify-between text-sm">
-                                                        <span className="text-muted-foreground">Servicios:</span>
-                                                        <span className="font-medium">3</span>
+                                                        <span className="text-muted-foreground">Servicios totales:</span>
+                                                        <span className="font-medium">{/* Aquí deberías obtener el total de servicios del usuario */}</span>
                                                     </div>
                                                     <div className="flex justify-between text-sm">
-                                                        <span className="text-muted-foreground">Próximos:</span>
-                                                        <span className="font-medium">2</span>
+                                                        <span className="text-muted-foreground">Próximos servicios:</span>
+                                                        <span className="font-medium">{/* Aquí deberías obtener la cantidad de próximos servicios a realizar */}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -469,10 +471,10 @@ export default function UserProfile() {
                                             <History className="h-4 w-4 mr-2" />
                                             Historial de servicios
                                         </TabsTrigger>
-                                        <TabsTrigger value="settings">
+                                        {/* <TabsTrigger value="settings">
                                             <Settings className="h-4 w-4 mr-2" />
                                             Configuración
-                                        </TabsTrigger>
+                                        </TabsTrigger> */}
                                     </TabsList>
 
                                     {/* Pestaña de datos personales */}
@@ -510,7 +512,10 @@ export default function UserProfile() {
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label htmlFor="phone">Teléfono</Label>
-                                                            <Input id="phone" name="phone" value={editedProfile.phone} onChange={handleProfileChange} />
+                                                            <Input id="phone" name="phone" value={editedProfile.phone} onChange={(e) => {
+                                                                const onlyNums = e.target.value.replace(/\D/g, "");
+                                                                setEditedProfile((prev) => ({ ...prev, phone: onlyNums }));
+                                                            }} />
                                                         </div>
                                                     </div>
                                                     <button type="submit" className="btn btn-neutral">
@@ -783,7 +788,7 @@ export default function UserProfile() {
                                     </TabsContent>
 
                                     {/* Pestaña de configuración */}
-                                    <TabsContent value="settings">
+                                    {/* <TabsContent value="settings">
                                         <Card>
                                             <CardHeader>
                                                 <CardTitle>Preferencias de notificaciones</CardTitle>
@@ -847,7 +852,7 @@ export default function UserProfile() {
                                                 </div>
                                             </CardContent>
                                         </Card>
-                                    </TabsContent>
+                                    </TabsContent> */}
                                 </Tabs>
                             </div>
 

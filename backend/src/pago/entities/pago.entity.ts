@@ -33,6 +33,7 @@ export class Pago {
     metodo: metodo_pago,
     estado: estado_pago,
     turno: Turno,
+    payment_id: string,
   ) {
     //config use decimal.js to avoid floating point issues (maybe sometimes)
     // this.monto = new Decimal(monto).toNumber();
@@ -41,5 +42,6 @@ export class Pago {
     this.metodo = metodo;
     this.estado = estado;
     this.turno = turno;
+    this.payment_id = payment_id;
   }
 }
