@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpException,
+  Param,
   Post,
   Req,
 } from '@nestjs/common';
@@ -24,8 +26,7 @@ export class CarController {
     const user = await this.authService.findUserByToken(
       request.headers.authorization,
     );
-    await this.carService.create(carData, user);
-    return 'Car created successfully';
+    return await this.carService.create(carData, user);
   }
 
   //return car's user
@@ -52,11 +53,11 @@ export class CarController {
     return { message: 'Car modified successfully' };
   }
 
-  @Post('delete')
-  async deleteCar(@Req() request, @Body() body): Promise<any> {
+  @Delete('delete/:id')
+  async deleteCar(@Req() request, @Param('id') id: number): Promise<any> {
     const user = await this.authService.findUserByToken(
       request.headers.authorization,
     );
-    return await this.carService.deleteCar(user, body.id);
+    return await this.carService.deleteCar(user, id);
   }
 }

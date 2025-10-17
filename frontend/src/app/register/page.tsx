@@ -16,13 +16,42 @@ export default function Register() {
         email: "",
         phone: "",
     })
-    
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.id]: e.target.value })
     }
 
     const registerUser = async () => {
         try {
+            // Verificar que los campos obligatorios no estén vacíos
+            if (!formData.firstname.trim()) {
+                toast.error('El nombre es obligatorio');
+                return;
+            }
+            
+            if (!formData.lastname.trim()) {
+                toast.error('El apellido es obligatorio');
+                return;
+            }
+            
+            if (!formData.password.trim()) {
+                toast.error('La contraseña es obligatoria');
+                return;
+            }
+            
+            // Verificar formato del email
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(formData.email)) {
+                toast.error('Por favor ingresa un email válido (ejemplo: usuario@dominio.com)');
+                return;
+            }
+            
+            // Verificar que el teléfono tenga exactamente 10 dígitos
+            if (formData.phone.length !== 10) {
+                toast.error('El teléfono debe tener exactamente 10 dígitos');
+                return;
+            }
+
             const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/register`, {
                 method: 'POST',
                 headers: {
@@ -33,7 +62,7 @@ export default function Register() {
             if (res.status === 201) {
                 toast.success('Usuario creado con éxito')
                 window.location.href = '/login'
-            }else{
+            } else {
                 toast.error('Error al crear el usuario')
             }
         } catch (error) {
@@ -71,7 +100,10 @@ export default function Register() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phone">Telefono</Label>
-                            <Input id="phone" placeholder="3758-123456" required onChange={handleChange} />
+                            <Input id="phone" placeholder="3758-123456" required onChange={(e) => {
+                                const onlyNums = e.target.value.replace(/\D/g, "");
+                                setFormData((prev) => ({ ...prev, phone: onlyNums }));
+                            }} />
                         </div>
                     </CardContent>
                     <CardFooter>

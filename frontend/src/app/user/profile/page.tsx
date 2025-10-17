@@ -47,7 +47,6 @@ interface car {
 
 export default function UserProfile() {
     const router = useRouter();
-    const [error, setError] = useState<string | null>(null);
 
     const [profile, setProfile] = useState<UserProfile>({
         id: "",
@@ -80,6 +79,30 @@ export default function UserProfile() {
     // Estado para los diálogos
     const [isAddcarOpen, setIsAddcarOpen] = useState(false)
     const [isEditcarOpen, setIsEditcarOpen] = useState(false)
+
+    // Estado para manejar la marca personalizada
+    const [isCustomBrand, setIsCustomBrand] = useState(false)
+
+    // Estados de loading para prevenir doble click
+    const [isAddingCar, setIsAddingCar] = useState(false)
+    const [isUpdatingCar, setIsUpdatingCar] = useState(false)
+    const [isDeletingCar, setIsDeletingCar] = useState(false)
+
+    // Agregar estado para controlar la tab activa
+    const [activeTab, setActiveTab] = useState("personal")
+
+    // Función para cambiar a la pestaña de historial
+    const handleView = () => {
+        setActiveTab("history")
+    }
+
+
+    // Lista de marcas predefinidas
+    const predefinedBrands = [
+        "TOYOTA", "FORD", "CHEVROLET", "VOLKSWAGEN", "FIAT", "RENAULT",
+        "PEUGEOT", "HONDA", "DODGE", "NISSAN", "HYUNDAI", "KIA", "MERCEDES-BENZ",
+        "BMW", "AUDI", "MAZDA", "SUBARU", "CITROËN", "JEEP", "SUZUKI", "OTRO"
+    ]
 
     // Manejadores de eventos para el perfil
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,13 +143,25 @@ export default function UserProfile() {
     }
 
     const handleNewcarSelect = (name: string, value: string) => {
-        setNewcar((prev) => ({ ...prev, [name]: value }))
+        if (name === "marca") {
+            if (value === "OTRO") {
+                setIsCustomBrand(true)
+                setNewcar((prev) => ({ ...prev, [name]: "" }))
+            } else {
+                setIsCustomBrand(false)
+                setNewcar((prev) => ({ ...prev, [name]: value }))
+            }
+        } else {
+            setNewcar((prev) => ({ ...prev, [name]: value }))
+        }
     }
 
 
     const patenteRegex = /^([a-zA-Z]{3}\d{3}|[a-zA-Z]{2}\d{3}[a-zA-Z]{2})$/
 
     const handleAddcar = () => {
+        if (isAddingCar) return; // Evitar múltiples clicks
+
         if (!patenteRegex.test(newcar.patente)) {
             toast.error("Patente inválida", {
                 description: "El formato de la patente debe ser ABC123 o AB123CD",
@@ -134,18 +169,12 @@ export default function UserProfile() {
             return
         }
 
+        setIsAddingCar(true); // Deshabilitar el botón
+
         const car = {
-            id: Date.now().toString(),
+            // id: Date.now().toString(),
             ...newcar,
         }
-        setcars((prev) => [...prev, car])
-        setNewcar({
-            model: "",
-            marca: "",
-            color: "",
-            patente: "",
-            type: "",
-        })
 
         fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/car/create`, {
             method: "POST",
@@ -159,9 +188,20 @@ export default function UserProfile() {
                 if (!response.ok) {
                     throw new Error("Error al agregar el vehículo");
                 }
-                return
+                return response.json()
             })
-            .then(() => {
+            .then((data) => {
+                // Solo actualizar el estado local después de la confirmación del backend
+                setcars((prev) => [...prev, data])
+                setNewcar({
+                    model: "",
+                    marca: "",
+                    color: "",
+                    patente: "",
+                    type: "",
+                })
+                setIsCustomBrand(false)
+                setIsAddcarOpen(false)
                 toast.success("Vehículo agregado", {
                     description: "Tu vehículo ha sido agregado correctamente.",
                 })
@@ -170,9 +210,11 @@ export default function UserProfile() {
                 toast.error("Error", {
                     description: error.message,
                 })
+                console.log("error: ", error);
             })
-
-        setIsAddcarOpen(false)
+            .finally(() => {
+                setIsAddingCar(false); // Rehabilitar el botón
+            })
     }
 
     const handleEditcar = (car: car) => {
@@ -194,49 +236,77 @@ export default function UserProfile() {
     }
 
     const handleUpdatecar = () => {
-        if (editingcar) {
-            setcars((prev) =>
-                prev.map((v) => (v.id === editingcar.id ? { ...editingcar } : v)),
-            )
-            fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/car/modify`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("jwt")}`,
-                },
-                body: JSON.stringify({
-                    "id": editingcar.id,
-                    "color": editingcar.color
-                }),
+        if (isUpdatingCar || !editingcar) return; // Evitar múltiples clicks
+
+        setIsUpdatingCar(true); // Deshabilitar el botón
+
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/car/modify`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+            },
+            body: JSON.stringify({
+                "id": editingcar.id,
+                "color": editingcar.color
+            }),
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Error al actualizar el vehículo")
+                }
+                return response.json()
             })
-                .then((response) => {
-
-                    if (!response.ok) {
-                        throw new Error("Error al actualizar el vehículo")
-                    }
-
-                    return response.json()
+            .then((data) => {
+                // Solo actualizar el estado local después de la confirmación del backend
+                setcars((prev) =>
+                    prev.map((v) => (v.id === editingcar.id ? { ...data } : v)),
+                )
+                setIsEditcarOpen(false)
+                toast.success("Vehículo actualizado", {
+                    description: "La información de tu vehículo ha sido actualizada correctamente.",
                 })
-                .then(() => {
-                    toast.success("Vehículo actualizado", {
-                        description: "La información de tu vehículo ha sido actualizada correctamente.",
-                    })
+            })
+            .catch((error) => {
+                toast.error("Error", {
+                    description: error.message,
                 })
-                .catch((error) => {
-                    toast.error("Error", {
-                        description: error.message,
-                    })
-                })
-            setIsEditcarOpen(false)
-
-        }
+            })
+            .finally(() => {
+                setIsUpdatingCar(false); // Rehabilitar el botón
+            })
     }
 
     const handleDeletecar = (id: string) => {
-        setcars((prev) => prev.filter((v) => v.id !== id))
-        toast.success("Vehículo eliminado", {
-            description: "Tu vehículo ha sido eliminado correctamente.",
+        if (isDeletingCar) return; // Evitar múltiples clicks
+
+        setIsDeletingCar(true); // Deshabilitar el botón
+
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/car/delete/${id}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+            },
         })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Error al eliminar el vehículo")
+                }
+                // Solo eliminar del estado local después de la confirmación del backend
+                setcars((prev) => prev.filter((v) => v.id !== id))
+                toast.success("Vehículo eliminado", {
+                    description: "Tu vehículo ha sido eliminado correctamente.",
+                })
+            })
+            .catch((error) => {
+                toast.error("Error", {
+                    description: error.message,
+                })
+            })
+            .finally(() => {
+                setIsDeletingCar(false); // Rehabilitar el botón
+            })
     }
 
     // Función para obtener el vehículo por ID
@@ -259,43 +329,23 @@ export default function UserProfile() {
 
 
 
-    const fetchVehicles = async () => {
-        const response = await fetch('https://api.autazo.app/car-brands', {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("jwt")}`,
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error("Error fetching vehicles");
-        }
-
-        const data = await response.json();
-        setcars(data);
-
-    };
-
     const fetchVerifyPayment = async () => {
-        try {
-            const url = new URL(window.location.href);
-            const paymentId = url.searchParams.get('payment_id');
-            const status = url.searchParams.get('status');
-            if (paymentId && status === 'approved') {
-                await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/verify`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-                    },
-                    body: JSON.stringify({ paymentId })
-                });
+        const url = new URL(window.location.href);
+        const paymentId = url.searchParams.get('payment_id');
+        const status = url.searchParams.get('status');
+        if (paymentId && status === 'approved') {
+            await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/verify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify({ paymentId })
+            });
 
-            }
-        } catch {
-            console.log("Error verifying payment");
         }
+
+
     };
 
     useEffect(() => {
@@ -319,7 +369,6 @@ export default function UserProfile() {
                     return;
                 }
                 if (!response.ok) {
-                    setError("no se puede obtener los datos del perfil");
                     throw new Error("Error fetching profile");
                 }
                 const data = await response.json();
@@ -348,14 +397,13 @@ export default function UserProfile() {
                     return;
                 }
                 if (!response.ok) {
-                    setError("no se puede obtener los datos del perfil");
                     throw new Error("Error fetching profile cars");
                 }
                 const data = await response.json();
 
                 setcars(data);
-            } catch {
-                console.error("Error fetching profile:", error);
+            } catch (err) {
+                console.error("Error fetching profile cars:", err);
             }
         };
 
@@ -365,7 +413,7 @@ export default function UserProfile() {
         fetchDataUser();
         fetchDataCars();
 
-    }, []);
+    }, [router]);
 
     return (
         // <ProtectedRoute allowedRoles={['user']}>
@@ -433,13 +481,13 @@ export default function UserProfile() {
                                     </CardHeader>
                                     <CardContent className="space-y-2">
                                         <button className="btn btn-neutral w-full justify-start">
-                                            <Link href="/" className="flex items-center">
+                                            <Link href="/turno" className="flex items-center">
                                                 <Car className="mr-2 h-4 w-4" />
                                                 Reservar turno
                                             </Link>
                                         </button>
                                         <button className="btn btn-neutral w-full justify-start">
-                                            <Link href="/" className="flex items-center">
+                                            <Link href="#" className="flex items-center" onClick={handleView}>
                                                 <History className="mr-2 h-4 w-4" />
                                                 Ver historial completo
                                             </Link>
@@ -457,7 +505,7 @@ export default function UserProfile() {
 
                             {/* Contenido principal */}
                             <div>
-                                <Tabs defaultValue="personal ">
+                                <Tabs value={activeTab} onValueChange={setActiveTab}>
                                     <TabsList className="mb-6 ">
                                         <TabsTrigger value="personal">
                                             <User className="h-4 w-4 mr-2" />
@@ -553,12 +601,43 @@ export default function UserProfile() {
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <div className="space-y-2">
                                                                     <Label htmlFor="marca">Marca</Label>
-                                                                    <Input
-                                                                        id="marca"
-                                                                        name="marca"
-                                                                        value={newcar.marca}
-                                                                        onChange={handleNewcarChange}
-                                                                    />
+                                                                    {isCustomBrand ? (
+                                                                        <div className="space-y-2">
+                                                                            <Input
+                                                                                id="marca"
+                                                                                name="marca"
+                                                                                placeholder="Ingresa la marca"
+                                                                                value={newcar.marca}
+                                                                                onChange={handleNewcarChange}
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    setIsCustomBrand(false)
+                                                                                    setNewcar(prev => ({ ...prev, marca: "" }))
+                                                                                }}
+                                                                                className="btn btn-ghost btn-sm"
+                                                                            >
+                                                                                Volver a lista
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <Select
+                                                                            value={newcar.marca}
+                                                                            onValueChange={(value) => handleNewcarSelect("marca", value)}
+                                                                        >
+                                                                            <SelectTrigger id="marca">
+                                                                                <SelectValue placeholder="Seleccionar marca" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                {predefinedBrands.map((brand) => (
+                                                                                    <SelectItem key={brand} value={brand}>
+                                                                                        {brand}
+                                                                                    </SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    )}
                                                                 </div>
                                                                 <div className="space-y-2">
                                                                     <Label htmlFor="model">Modelo</Label>
@@ -620,10 +699,26 @@ export default function UserProfile() {
                                                             </div>
                                                         </div>
                                                         <DialogFooter>
-                                                            <button className="btn btn-error" onClick={() => setIsAddcarOpen(false)}>
+                                                            <button className="btn btn-error" onClick={() => {
+                                                                setIsAddcarOpen(false)
+                                                                setIsCustomBrand(false)
+                                                                setNewcar({
+                                                                    model: "",
+                                                                    marca: "",
+                                                                    color: "",
+                                                                    patente: "",
+                                                                    type: "",
+                                                                })
+                                                            }}>
                                                                 Cancelar
                                                             </button>
-                                                            <button className="btn btn-success" onClick={handleAddcar}>Agregar vehículo</button>
+                                                            <button
+                                                                className={`btn btn-success ${isAddingCar ? 'loading' : ''}`}
+                                                                onClick={handleAddcar}
+                                                                disabled={isAddingCar}
+                                                            >
+                                                                {isAddingCar ? 'Agregando...' : 'Agregar vehículo'}
+                                                            </button>
                                                         </DialogFooter>
                                                     </DialogContent>
                                                 </Dialog>
@@ -664,8 +759,9 @@ export default function UserProfile() {
                                                                                 <span className="sr-only">Editar</span>
                                                                             </button>
                                                                             <button
-                                                                                className="btn btn-ghosttext-destructive hover:text-destructive sm"
+                                                                                className={`btn btn-ghosttext-destructive hover:text-destructive sm ${isDeletingCar ? 'loading' : ''}`}
                                                                                 onClick={() => handleDeletecar(car.id)}
+                                                                                disabled={isDeletingCar}
                                                                             >
                                                                                 <Trash2 className="h-4 w-4" />
                                                                                 <span className="sr-only">Eliminar</span>
@@ -763,7 +859,13 @@ export default function UserProfile() {
                                                     <button className="btn btn-error" onClick={() => setIsEditcarOpen(false)}>
                                                         Cancelar
                                                     </button>
-                                                    <button onClick={handleUpdatecar} className="btn btn-success">Guardar cambios</button>
+                                                    <button
+                                                        onClick={handleUpdatecar}
+                                                        className={`btn btn-success ${isUpdatingCar ? 'loading' : ''}`}
+                                                        disabled={isUpdatingCar}
+                                                    >
+                                                        {isUpdatingCar ? 'Guardando...' : 'Guardar cambios'}
+                                                    </button>
                                                 </DialogFooter>
                                             </DialogContent>
                                         </Dialog>
