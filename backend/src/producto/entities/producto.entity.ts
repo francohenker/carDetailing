@@ -1,5 +1,12 @@
 import { Servicio } from '../../servicio/entities/servicio.entity';
-import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Supplier } from '../../supplier/entities/supplier.entity';
+import {
+  Column,
+  Entity,
+  ManyToMany,
+  PrimaryGeneratedColumn,
+  JoinTable,
+} from 'typeorm';
 
 @Entity()
 export class Producto {
@@ -20,6 +27,14 @@ export class Producto {
 
   @ManyToMany(() => Servicio, (servicio) => servicio.Producto)
   servicio: Servicio[];
+
+  @ManyToMany(() => Supplier)
+  @JoinTable({
+    name: 'producto_suppliers',
+    joinColumn: { name: 'productoId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'supplierId', referencedColumnName: 'id' },
+  })
+  suppliers: Supplier[];
 
   @Column({ default: false })
   isDeleted: boolean;

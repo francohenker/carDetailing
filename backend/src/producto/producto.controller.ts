@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ProductoService } from './producto.service';
 import { CreateProductoDto } from './dto/create-producto.dto';
+import { UpdateProductoDto } from './dto/update-producto.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../roles/role.guard';
 import { Role } from '../roles/role.enum';
@@ -42,12 +43,23 @@ export class ProductoController {
   @Put('update/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
+  async updateProducto(
+    @Param('id') id: number,
+    @Body() updateProductoDto: UpdateProductoDto,
+  ) {
+    return this.productoService.update(id, updateProductoDto);
+  }
+
+  // Método legacy para actualizar solo stock - mantener compatibilidad
+  @Put('update-stock/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   async updateStock(
     @Param('id') id: number,
     @Body('stock_actual') stock_actual: number,
     @Body('stock_minimo') stock_minimo: number,
   ) {
-    return this.productoService.updateStock(id, stock_actual, stock_minimo);
+    return this.productoService.update(id, { stock_actual, stock_minimo });
   }
 
   //use for change stock_minimo alert

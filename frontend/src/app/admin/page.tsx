@@ -20,7 +20,8 @@ import {
     Calendar,
     CreditCard,
     Clock,
-    Car
+    Car,
+    Building2
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -81,6 +82,7 @@ interface Product {
     price: number
     stock_actual: number
     stock_minimo: number
+    suppliers?: Supplier[]
 }
 
 interface User {
@@ -124,6 +126,20 @@ interface Pago {
     estado: 'PENDIENTE' | 'PAGADO' | 'CANCELADO'
 }
 
+interface Supplier {
+    id: number
+    name: string
+    address: string
+    email: string
+    phone: string
+    contactPerson?: string
+    website?: string
+    notes?: string
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+}
+
 export default function AdminPage() {
     // const router = useRouter()
 
@@ -150,7 +166,8 @@ export default function AdminPage() {
         name: '',
         price: 0,
         stock_actual: 0,
-        stock_minimo: 0
+        stock_minimo: 0,
+        supplierIds: [] as number[]
     })
 
     // Estados para confirmación de cambio de stock
@@ -176,11 +193,26 @@ export default function AdminPage() {
     const [filteredTurnos, setFilteredTurnos] = useState<Turno[]>([])
     const [turnoFilter, setTurnoFilter] = useState<'all' | 'pending-payment' | 'paid' | 'pending-service'>('all')
 
+    // Estados para proveedores
+    const [suppliers, setSuppliers] = useState<Supplier[]>([])
+    const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false)
+    const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
+    const [supplierForm, setSupplierForm] = useState({
+        name: '',
+        address: '',
+        email: '',
+        phone: '',
+        contactPerson: '',
+        website: '',
+        notes: '',
+        isActive: true
+    })
+
     // Estados generales
     const [loading, setLoading] = useState(true)
     const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
         isOpen: boolean
-        type: 'service' | 'product' | 'user'
+        type: 'service' | 'product' | 'user' | 'supplier'
         id: number
         name: string
     }>({
@@ -202,7 +234,8 @@ export default function AdminPage() {
                 fetchServices(),
                 fetchProducts(),
                 fetchUsers(),
-                fetchTurnos()
+                fetchTurnos(),
+                fetchSuppliers()
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
@@ -392,7 +425,8 @@ export default function AdminPage() {
             name: product.name,
             price: product.price,
             stock_actual: product.stock_actual,
-            stock_minimo: product.stock_minimo
+            stock_minimo: product.stock_minimo,
+            supplierIds: product.suppliers ? product.suppliers.map(s => s.id) : []
         })
         setOriginalStockValue(product.stock_actual)
         setIsProductDialogOpen(true)
@@ -439,7 +473,8 @@ export default function AdminPage() {
             name: '',
             price: 0,
             stock_actual: 0,
-            stock_minimo: 0
+            stock_minimo: 0,
+            supplierIds: []
         })
         setEditingProduct(null)
     }
@@ -522,6 +557,132 @@ export default function AdminPage() {
                 description: "No se pudo actualizar el rol del usuario.",
             })
         }
+    }
+
+    // ============ PROVEEDORES ============
+    const fetchSuppliers = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/supplier/getAll`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching suppliers')
+            const data = await response.json()
+            setSuppliers(data)
+        } catch (error) {
+            console.error('Error fetching suppliers:', error)
+        }
+    }
+
+    const handleSupplierSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            const url = editingSupplier
+                ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/supplier/update/${editingSupplier.id}`
+                : `${process.env.NEXT_PUBLIC_BACKEND_URL}/supplier/create`
+
+            const response = await fetch(url, {
+                method: editingSupplier ? 'PUT' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify(supplierForm)
+            })
+
+            if (!response.ok) throw new Error('Error saving supplier')
+
+            toast.success("Éxito", {
+                description: `Proveedor ${editingSupplier ? 'actualizado' : 'creado'} correctamente.`,
+            })
+
+            setIsSupplierDialogOpen(false)
+            resetSupplierForm()
+            fetchSuppliers()
+        } catch (error) {
+            console.error('Error saving supplier:', error)
+            toast.error("Error", {
+                description: "No se pudo guardar el proveedor.",
+            })
+        }
+    }
+
+    const handleEditSupplier = (supplier: Supplier) => {
+        setEditingSupplier(supplier)
+        setSupplierForm({
+            name: supplier.name,
+            address: supplier.address,
+            email: supplier.email,
+            phone: supplier.phone,
+            contactPerson: supplier.contactPerson || '',
+            website: supplier.website || '',
+            notes: supplier.notes || '',
+            isActive: supplier.isActive
+        })
+        setIsSupplierDialogOpen(true)
+    }
+
+    const handleDeleteSupplier = async (id: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/supplier/delete/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (!response.ok) throw new Error('Error deleting supplier')
+
+            toast.success("Éxito", {
+                description: "Proveedor eliminado correctamente.",
+            })
+
+            fetchSuppliers()
+        } catch (error) {
+            console.error('Error deleting supplier:', error)
+            toast.error("Error", {
+                description: "No se pudo eliminar el proveedor.",
+            })
+        }
+    }
+
+    const handleToggleSupplierActive = async (id: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/supplier/toggle-active/${id}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (!response.ok) throw new Error('Error toggling supplier status')
+
+            toast.success("Éxito", {
+                description: "Estado del proveedor actualizado correctamente.",
+            })
+
+            fetchSuppliers()
+        } catch (error) {
+            console.error('Error toggling supplier status:', error)
+            toast.error("Error", {
+                description: "No se pudo actualizar el estado del proveedor.",
+            })
+        }
+    }
+
+    const resetSupplierForm = () => {
+        setSupplierForm({
+            name: '',
+            address: '',
+            email: '',
+            phone: '',
+            contactPerson: '',
+            website: '',
+            notes: '',
+            isActive: true
+        })
+        setEditingSupplier(null)
     }
 
     // ============ TURNOS ============
@@ -664,7 +825,7 @@ export default function AdminPage() {
             })
         }
     }// ============ CONFIRMACIÓN DE ELIMINACIÓN ============
-    const openDeleteConfirm = (type: 'service' | 'product' | 'user', id: number, name: string) => {
+    const openDeleteConfirm = (type: 'service' | 'product' | 'user' | 'supplier', id: number, name: string) => {
         setDeleteConfirmDialog({
             isOpen: true,
             type,
@@ -682,6 +843,9 @@ export default function AdminPage() {
                 break
             case 'product':
                 await handleDeleteProduct(id)
+                break
+            case 'supplier':
+                await handleDeleteSupplier(id)
                 break
         }
 
@@ -713,7 +877,7 @@ export default function AdminPage() {
                     </div>
 
                     <Tabs defaultValue="services" className="space-y-6">
-                        <TabsList className="grid w-full grid-cols-4">
+                        <TabsList className="grid w-full grid-cols-5">
                             <TabsTrigger value="services" className="flex items-center gap-2">
                                 <Wrench className="h-4 w-4" />
                                 Servicios
@@ -721,6 +885,10 @@ export default function AdminPage() {
                             <TabsTrigger value="products" className="flex items-center gap-2">
                                 <Package className="h-4 w-4" />
                                 Productos
+                            </TabsTrigger>
+                            <TabsTrigger value="suppliers" className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4" />
+                                Proveedores
                             </TabsTrigger>
                             <TabsTrigger value="users" className="flex items-center gap-2">
                                 <Users className="h-4 w-4" />
@@ -847,6 +1015,7 @@ export default function AdminPage() {
                                                 <TableHead>Precio</TableHead>
                                                 <TableHead>Stock</TableHead>
                                                 <TableHead>Stock Mínimo</TableHead>
+                                                <TableHead>Proveedores</TableHead>
                                                 <TableHead>Acciones</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -862,6 +1031,25 @@ export default function AdminPage() {
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell>{product.stock_minimo}</TableCell>
+                                                    <TableCell>
+                                                        {product.suppliers && product.suppliers.length > 0 ? (
+                                                            <div className="space-y-1">
+                                                                {product.suppliers.map((supplier) => (
+                                                                    <div key={supplier.id} className="text-xs bg-base-200 px-2 py-1 rounded flex items-center justify-between">
+                                                                        <span className="font-medium">{supplier.name}</span>
+                                                                        {/* <span className="text-muted-foreground">{supplier.email}</span> */}
+                                                                    </div>
+                                                                ))}
+                                                                <div className="text-xs text-muted-foreground mt-1 px-2">
+                                                                Total: {product.suppliers.length} proveedor{product.suppliers.length !== 1 ? 'es' : ''}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-xs text-muted-foreground italic">
+                                                                Sin proveedores asociados
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell>
                                                         <div className="flex gap-2">
                                                             <Button
@@ -887,6 +1075,108 @@ export default function AdminPage() {
                                 </CardContent>
                             </Card>
                         </TabsContent>
+
+                        {/* PESTAÑA DE PROVEEDORES */}
+                        <TabsContent value="suppliers" className="space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Gestión de Proveedores</CardTitle>
+                                        <CardDescription>Administra la información de tus proveedores.</CardDescription>
+                                    </div>
+                                    <Button onClick={() => setIsSupplierDialogOpen(true)}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Nuevo Proveedor
+                                    </Button>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Nombre</TableHead>
+                                                <TableHead>Email</TableHead>
+                                                <TableHead>Teléfono</TableHead>
+                                                <TableHead>Dirección</TableHead>
+                                                <TableHead>Contacto</TableHead>
+                                                <TableHead>Estado</TableHead>
+                                                <TableHead>Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {suppliers.map((supplier) => (
+                                                <TableRow key={supplier.id}>
+                                                    <TableCell className="font-medium">
+                                                        <div>
+                                                            <div className="font-semibold">{supplier.name}</div>
+                                                            {supplier.website && (
+                                                                <div className="text-xs text-muted-foreground">
+                                                                    <a href={supplier.website} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                                                        {supplier.website}
+                                                                    </a>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>{supplier.email}</TableCell>
+                                                    <TableCell>{supplier.phone}</TableCell>
+                                                    <TableCell>
+                                                        <div className="max-w-xs truncate" title={supplier.address}>
+                                                            {supplier.address}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>{supplier.contactPerson || '-'}</TableCell>
+                                                    <TableCell>
+                                                        <span className={`px-2 py-1 rounded-full text-xs ${supplier.isActive
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-red-100 text-red-800'
+                                                            }`}>
+                                                            {supplier.isActive ? 'Activo' : 'Inactivo'}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex gap-1">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleEditSupplier(supplier)}
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleToggleSupplierActive(supplier.id)}
+                                                                className={supplier.isActive ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}
+                                                            >
+                                                                {supplier.isActive ? (
+                                                                    <X className="h-4 w-4" />
+                                                                ) : (
+                                                                    <CheckCircle className="h-4 w-4" />
+                                                                )}
+                                                            </Button>
+                                                            {/* <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => openDeleteConfirm('supplier', supplier.id, supplier.name)}
+                                                                className="text-red-600 hover:bg-red-50"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button> */}
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                    {suppliers.length === 0 && (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            No hay proveedores registrados.
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
 
                         {/* PESTAÑA DE USUARIOS */}
                         <TabsContent value="users" className="space-y-6">
@@ -1051,9 +1341,9 @@ export default function AdminPage() {
                                                         <TableCell>
                                                             <Badge variant={
                                                                 // turno.estado === 'confirmado' ? 'default' :
-                                                                    turno.estado === 'finalizado' ? 'secondary' :
-                                                                        turno.estado === 'cancelado' ? 'destructive' :
-                                                                            'outline'
+                                                                turno.estado === 'finalizado' ? 'secondary' :
+                                                                    turno.estado === 'cancelado' ? 'destructive' :
+                                                                        'outline'
                                                             }>
                                                                 {turno.estado}
                                                             </Badge>
@@ -1103,6 +1393,8 @@ export default function AdminPage() {
                                 </CardContent>
                             </Card>
                         </TabsContent>
+
+
                     </Tabs>
                 </main>
 
@@ -1329,6 +1621,45 @@ export default function AdminPage() {
                                         placeholder="Ej: Ceras, Shampoos, Herramientas"
                                     />
                                 </div> */}
+                                
+                                <div className="space-y-2">
+                                    <Label>Proveedores (opcional)</Label>
+                                    <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
+                                        {suppliers.length === 0 ? (
+                                            <p className="text-sm text-muted-foreground">No hay proveedores disponibles</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {suppliers.map((supplier) => (
+                                                    <div key={supplier.id} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`supplier-${supplier.id}`}
+                                                            checked={productForm.supplierIds.includes(supplier.id)}
+                                                            onCheckedChange={(checked) => {
+                                                                if (checked) {
+                                                                    setProductForm({
+                                                                        ...productForm,
+                                                                        supplierIds: [...productForm.supplierIds, supplier.id]
+                                                                    })
+                                                                } else {
+                                                                    setProductForm({
+                                                                        ...productForm,
+                                                                        supplierIds: productForm.supplierIds.filter(id => id !== supplier.id)
+                                                                    })
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Label
+                                                            htmlFor={`supplier-${supplier.id}`}
+                                                            className="text-sm font-normal"
+                                                        >
+                                                            {supplier.name} - {supplier.email}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             <DialogFooter>
                                 <Button
@@ -1345,6 +1676,130 @@ export default function AdminPage() {
                                 <Button type="submit">
                                     <Save className="h-4 w-4 mr-2" />
                                     {editingProduct ? 'Actualizar' : 'Crear'}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* DIALOG PARA PROVEEDORES */}
+                <Dialog open={isSupplierDialogOpen} onOpenChange={setIsSupplierDialogOpen}>
+                    <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>
+                                {editingSupplier ? 'Editar Proveedor' : 'Crear Nuevo Proveedor'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {editingSupplier
+                                    ? 'Modifica la información del proveedor.'
+                                    : 'Completa la información para registrar un nuevo proveedor.'
+                                }
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleSupplierSubmit} className="space-y-4">
+                            <div className="grid gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="supplier-name">Nombre del Proveedor *</Label>
+                                        <Input
+                                            id="supplier-name"
+                                            value={supplierForm.name}
+                                            onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="supplier-email">Email *</Label>
+                                        <Input
+                                            id="supplier-email"
+                                            type="email"
+                                            value={supplierForm.email}
+                                            onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="supplier-phone">Teléfono *</Label>
+                                        <Input
+                                            id="supplier-phone"
+                                            value={supplierForm.phone}
+                                            onChange={(e) => {
+                                                const onlyNums = e.target.value.replace(/\D/g, "");
+                                                setSupplierForm({ ...supplierForm, phone: onlyNums });
+                                            }}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="supplier-contact">Persona de Contacto</Label>
+                                        <Input
+                                            id="supplier-contact"
+                                            value={supplierForm.contactPerson}
+                                            onChange={(e) => setSupplierForm({ ...supplierForm, contactPerson: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="supplier-address">Dirección *</Label>
+                                    <Textarea
+                                        id="supplier-address"
+                                        value={supplierForm.address}
+                                        onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="supplier-website">Sitio Web</Label>
+                                    <Input
+                                        id="supplier-website"
+                                        type="url"
+                                        value={supplierForm.website}
+                                        onChange={(e) => setSupplierForm({ ...supplierForm, website: e.target.value })}
+                                        placeholder="https://..."
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="supplier-notes">Notas</Label>
+                                    <Textarea
+                                        id="supplier-notes"
+                                        value={supplierForm.notes}
+                                        onChange={(e) => setSupplierForm({ ...supplierForm, notes: e.target.value })}
+                                        placeholder="Notas adicionales sobre el proveedor..."
+                                    />
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        id="supplier-active"
+                                        checked={supplierForm.isActive}
+                                        onChange={(e) => setSupplierForm({ ...supplierForm, isActive: e.target.checked })}
+                                        className="checkbox checkbox-sm"
+                                    />
+                                    <Label htmlFor="supplier-active">Proveedor activo</Label>
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsSupplierDialogOpen(false)
+                                        resetSupplierForm()
+                                    }}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button type="submit" className="btn btn-neutral">
+                                    <Save className="h-4 w-4 mr-2" />
+                                    {editingSupplier ? 'Actualizar' : 'Crear'} Proveedor
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -1544,6 +1999,8 @@ export default function AdminPage() {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+
+
             </div>
         </ProtectedRoute>
     )
