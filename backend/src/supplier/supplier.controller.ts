@@ -14,7 +14,7 @@ import { Supplier } from './entities/supplier.entity';
 import { RolesGuard } from '../roles/role.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { Roles } from '../roles/role.decorator';
-import { Role } from 'src/roles/role.enum';
+import { Role } from '../roles/role.enum';
 
 @Controller('supplier')
 @UseGuards(AuthGuard, RolesGuard)
