@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, Calendar, Car, X } from "lucide-react"
+import { CreditCard, Calendar, Car, X, FileDown } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 
@@ -139,6 +139,42 @@ export default function UserTurnos() {
         }
     }
 
+    // Función para descargar factura
+    const handleDownloadFactura = async (turnoId: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/factura/download/${turnoId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (!response.ok) {
+                throw new Error('Error al generar la factura')
+            }
+
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.style.display = 'none'
+            a.href = url
+            a.download = `factura-${turnoId}.pdf`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+
+            toast.success("Éxito", {
+                description: "Factura descargada correctamente.",
+            })
+        } catch (error) {
+            console.error('Error downloading factura:', error)
+            toast.error("Error", {
+                description: "No se pudo generar la factura. Verifica que el servicio esté pagado.",
+            })
+        }
+    }
+
     useEffect(() => {
         const fetchTurnos = async () => {
             try {
@@ -156,7 +192,6 @@ export default function UserTurnos() {
                 });
             } finally {
                 setLoading(false)
-                console.log("turnos: ", turnos);
             }
         }
 
@@ -272,7 +307,7 @@ export default function UserTurnos() {
                     <div className="space-y-4">
                         {historialTurnos.map(turno => (
                             <Card key={turno.id} className="opacity-80">
-                                <CardContent className="p-4 flex items-center justify-between">
+                                <CardContent className="p-4 grid gap-4 md:grid-cols-[1fr_auto]">
                                     <div>
                                         <div className="flex items-center gap-4 mb-2">
                                             <h4 className="font-semibold">{turno.servicio.map(s => s.name).join(', ')}</h4>
@@ -295,7 +330,24 @@ export default function UserTurnos() {
                                             <div className="flex items-center gap-2"><Car size={16} /> {turno.car.marca} {turno.car.model}</div>
                                         </div>
                                     </div>
-                                    <div className="text-lg font-bold">${turno.totalPrice.toLocaleString('es-AR')}</div>
+                                    <div className="flex flex-col items-end justify-between">
+                                        <div className="text-lg font-bold mb-2">${turno.totalPrice.toLocaleString('es-AR')}</div>
+                                        {isTurnoPagado(turno) ? (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleDownloadFactura(turno.id)}
+                                                className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                                            >
+                                                <FileDown className="mr-2 h-4 w-4" />
+                                                Descargar Factura
+                                            </Button>
+                                        ) :
+                                            <Button size="sm" onClick={() => handlePagarMercadoPago(turno)}>
+                                                <CreditCard className="mr-2 h-4 w-4" /> Pagar
+                                            </Button>
+                                        }
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))}

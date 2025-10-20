@@ -21,7 +21,8 @@ import {
     CreditCard,
     Clock,
     Car,
-    Building2
+    Building2,
+    FileDown
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -824,7 +825,45 @@ export default function AdminPage() {
                 description: "No se pudo marcar el turno como finalizado.",
             })
         }
-    }// ============ CONFIRMACIÓN DE ELIMINACIÓN ============
+    }
+
+    // ============ DESCARGAR FACTURA ============
+    const handleDownloadFactura = async (turnoId: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/factura/download/${turnoId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (!response.ok) {
+                throw new Error('Error al generar la factura')
+            }
+
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.style.display = 'none'
+            a.href = url
+            a.download = `factura-${turnoId}.pdf`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+
+            toast.success("Éxito", {
+                description: "Factura descargada correctamente.",
+            })
+        } catch (error) {
+            console.error('Error downloading factura:', error)
+            toast.error("Error", {
+                description: "No se pudo generar la factura. Verifica que el turno tenga un pago completado.",
+            })
+        }
+    }
+
+    // ============ CONFIRMACIÓN DE ELIMINACIÓN ============
     const openDeleteConfirm = (type: 'service' | 'product' | 'user' | 'supplier', id: number, name: string) => {
         setDeleteConfirmDialog({
             isOpen: true,
@@ -1357,7 +1396,7 @@ export default function AdminPage() {
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <div className="flex gap-2">
+                                                            <div className="flex gap-2 flex-wrap">
                                                                 {hasPendingPayment && (
                                                                     <Button
                                                                         size="sm"
@@ -1376,6 +1415,17 @@ export default function AdminPage() {
                                                                     >
                                                                         <CheckCircle className="h-4 w-4 mr-2" />
                                                                         Marcar como Finalizado
+                                                                    </Button>
+                                                                )}
+                                                                {isPaid && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => handleDownloadFactura(turno.id)}
+                                                                        className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                                                                    >
+                                                                        <FileDown className="h-4 w-4 mr-2" />
+                                                                        Factura
                                                                     </Button>
                                                                 )}
                                                             </div>

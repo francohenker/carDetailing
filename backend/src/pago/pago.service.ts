@@ -84,8 +84,7 @@ export class PagoService {
           title: turno.servicio.map((s) => s.name).join(', '),
           quantity: 1,
           currency_id: 'ARS',
-          // unit_price: turno.totalPrice,
-          unit_price: 108,
+          unit_price: turno.totalPrice,
         },
       ],
       back_urls: {
