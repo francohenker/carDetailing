@@ -13,6 +13,10 @@ export class CreateProductoDto {
   @IsNumber()
   stock_minimo: number;
 
+  @IsNumber()
+  @IsOptional()
+  servicios_por_producto?: number;
+
   @IsOptional()
   @IsArray()
   supplierIds?: number[];

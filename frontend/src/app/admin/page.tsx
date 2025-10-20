@@ -22,7 +22,9 @@ import {
     Clock,
     Car,
     Building2,
-    FileDown
+    FileDown,
+    Mail,
+    Send
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -83,6 +85,7 @@ interface Product {
     price: number
     stock_actual: number
     stock_minimo: number
+    servicios_por_producto?: number
     suppliers?: Supplier[]
 }
 
@@ -168,6 +171,7 @@ export default function AdminPage() {
         price: 0,
         stock_actual: 0,
         stock_minimo: 0,
+        servicios_por_producto: 1,
         supplierIds: [] as number[]
     })
 
@@ -209,6 +213,16 @@ export default function AdminPage() {
         isActive: true
     })
 
+    // Estados para stock
+    const [lowStockProducts, setLowStockProducts] = useState<Product[]>([])
+    const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
+    const [emailForm, setEmailForm] = useState({
+        supplierId: 0,
+        subject: '',
+        message: ''
+    })
+    const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
+
     // Estados generales
     const [loading, setLoading] = useState(true)
     const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
@@ -236,7 +250,8 @@ export default function AdminPage() {
                 fetchProducts(),
                 fetchUsers(),
                 fetchTurnos(),
-                fetchSuppliers()
+                fetchSuppliers(),
+                fetchLowStockProducts()
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
@@ -427,6 +442,7 @@ export default function AdminPage() {
             price: product.price,
             stock_actual: product.stock_actual,
             stock_minimo: product.stock_minimo,
+            servicios_por_producto: product.servicios_por_producto || 1,
             supplierIds: product.suppliers ? product.suppliers.map(s => s.id) : []
         })
         setOriginalStockValue(product.stock_actual)
@@ -475,6 +491,7 @@ export default function AdminPage() {
             price: 0,
             stock_actual: 0,
             stock_minimo: 0,
+            servicios_por_producto: 1,
             supplierIds: []
         })
         setEditingProduct(null)
@@ -703,6 +720,69 @@ export default function AdminPage() {
         }
     }
 
+    // ============ STOCK ============
+    const fetchLowStockProducts = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/stock/low-stock-products`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching low stock products')
+            const data = await response.json()
+            setLowStockProducts(data)
+        } catch (error) {
+            console.error('Error fetching low stock products:', error)
+        }
+    }
+
+    const handleSendSupplierEmail = async (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/stock/send-supplier-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify(emailForm)
+            })
+
+            if (!response.ok) throw new Error('Error sending email')
+
+            toast.success("Éxito", {
+                description: "Email enviado correctamente al proveedor.",
+            })
+
+            setIsEmailDialogOpen(false)
+            resetEmailForm()
+        } catch (error) {
+            console.error('Error sending email:', error)
+            toast.error("Error", {
+                description: "No se pudo enviar el email.",
+            })
+        }
+    }
+
+    const handleOpenEmailDialog = (supplier: Supplier) => {
+        setSelectedSupplier(supplier)
+        setEmailForm({
+            supplierId: supplier.id,
+            subject: `Solicitud de reposición de stock - ${new Date().toLocaleDateString()}`,
+            message: `Estimado/a ${supplier.contactPerson || supplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para solicitar información sobre la disponibilidad y precios de los siguientes productos que requieren reposición:\n\n[Lista de productos con stock bajo]\n\nAgradecemos su pronta respuesta.\n\nSaludos cordiales,\nEquipo de Car Detailing`
+        })
+        setIsEmailDialogOpen(true)
+    }
+
+    const resetEmailForm = () => {
+        setEmailForm({
+            supplierId: 0,
+            subject: '',
+            message: ''
+        })
+        setSelectedSupplier(null)
+    }
+
     const filterTurnos = (turnosData: Turno[], filter: 'all' | 'pending-payment' | 'paid' | 'pending-service') => {
         let filtered = turnosData
 
@@ -916,7 +996,7 @@ export default function AdminPage() {
                     </div>
 
                     <Tabs defaultValue="services" className="space-y-6">
-                        <TabsList className="grid w-full grid-cols-5">
+                        <TabsList className="grid w-full grid-cols-6">
                             <TabsTrigger value="services" className="flex items-center gap-2">
                                 <Wrench className="h-4 w-4" />
                                 Servicios
@@ -928,6 +1008,10 @@ export default function AdminPage() {
                             <TabsTrigger value="suppliers" className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4" />
                                 Proveedores
+                            </TabsTrigger>
+                            <TabsTrigger value="stock" className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                Control Stock
                             </TabsTrigger>
                             <TabsTrigger value="users" className="flex items-center gap-2">
                                 <Users className="h-4 w-4" />
@@ -992,7 +1076,7 @@ export default function AdminPage() {
                                                                             <span className="text-muted-foreground">${product.price.toLocaleString()}</span>
                                                                         </div>
                                                                     ))}
-                                                                    <div className="text-xs text-muted-foreground mt-1">
+                                                                    <div className="text-xs text-muted-foreground mt-1 px-2">
                                                                         Total: {service.Producto.length} producto{service.Producto.length !== 1 ? 's' : ''}
                                                                     </div>
                                                                 </div>
@@ -1054,6 +1138,7 @@ export default function AdminPage() {
                                                 <TableHead>Precio</TableHead>
                                                 <TableHead>Stock</TableHead>
                                                 <TableHead>Stock Mínimo</TableHead>
+                                                <TableHead>Servicios/Prod.</TableHead>
                                                 <TableHead>Proveedores</TableHead>
                                                 <TableHead>Acciones</TableHead>
                                             </TableRow>
@@ -1071,6 +1156,12 @@ export default function AdminPage() {
                                                     </TableCell>
                                                     <TableCell>{product.stock_minimo}</TableCell>
                                                     <TableCell>
+                                                        <div className="text-center">
+                                                            <span className="font-bold text-blue-600">{product.servicios_por_producto || 1}</span>
+                                                            <p className="text-xs text-muted-foreground">servicios</p>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
                                                         {product.suppliers && product.suppliers.length > 0 ? (
                                                             <div className="space-y-1">
                                                                 {product.suppliers.map((supplier) => (
@@ -1080,7 +1171,7 @@ export default function AdminPage() {
                                                                     </div>
                                                                 ))}
                                                                 <div className="text-xs text-muted-foreground mt-1 px-2">
-                                                                Total: {product.suppliers.length} proveedor{product.suppliers.length !== 1 ? 'es' : ''}
+                                                                    Total: {product.suppliers.length} proveedor{product.suppliers.length !== 1 ? 'es' : ''}
                                                                 </div>
                                                             </div>
                                                         ) : (
@@ -1212,6 +1303,139 @@ export default function AdminPage() {
                                             No hay proveedores registrados.
                                         </div>
                                     )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        {/* PESTAÑA DE CONTROL DE STOCK */}
+                        <TabsContent value="stock" className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* PRODUCTOS CON STOCK BAJO */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                                            Productos con Stock Bajo
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Productos que han alcanzado su stock mínimo
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {lowStockProducts.length === 0 ? (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
+                                                <p>¡Excelente! Todos los productos tienen stock suficiente.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {lowStockProducts.map((product) => (
+                                                    <div key={product.id} className="border rounded-lg p-3 bg-red-50 border-red-200">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <h3 className="font-medium text-red-900">{product.name}</h3>
+                                                                <p className="text-sm text-red-700">
+                                                                    Stock actual: <span className="font-bold">{product.stock_actual}</span>
+                                                                </p>
+                                                                <p className="text-sm text-red-600">
+                                                                    Stock mínimo: {product.stock_minimo}
+                                                                </p>
+                                                            </div>
+                                                            <Badge variant="destructive">
+                                                                ¡Crítico!
+                                                            </Badge>
+                                                        </div>
+                                                        {product.suppliers && product.suppliers.length > 0 && (
+                                                            <div className="mt-2">
+                                                                <p className="text-xs text-red-700 mb-1">Proveedores disponibles:</p>
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {product.suppliers.map((supplier) => (
+                                                                        <span key={supplier.id} className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                                                                            {supplier.name}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {/* COMUNICACIÓN CON PROVEEDORES */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Send className="h-5 w-5 text-blue-500" />
+                                            Contactar Proveedores
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Envía emails a proveedores para solicitar reposición
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {suppliers.filter(s => s.isActive).length === 0 ? (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <Building2 className="h-12 w-12 mx-auto mb-2" />
+                                                <p>No hay proveedores activos disponibles.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {suppliers.filter(s => s.isActive).map((supplier) => (
+                                                    <div key={supplier.id} className="border rounded-lg p-3 hover:bg-blue-50 transition-colors">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <h3 className="font-medium">{supplier.name}</h3>
+                                                                <p className="text-sm text-muted-foreground">{supplier.email}</p>
+                                                                {supplier.contactPerson && (
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        Contacto: {supplier.contactPerson}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => handleOpenEmailDialog(supplier)}
+                                                                className="bg-blue-600 hover:bg-blue-700"
+                                                            >
+                                                                <Mail className="h-4 w-4 mr-2" />
+                                                                Enviar Email
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* RESUMEN DE STOCK */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Resumen de Inventario</CardTitle>
+                                    <CardDescription>Vista general del estado del stock</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="text-center p-4 border rounded-lg">
+                                            <Package className="h-8 w-8 mx-auto mb-2 text-blue-500" />
+                                            <p className="text-2xl font-bold">{products.length}</p>
+                                            <p className="text-sm text-muted-foreground">Total Productos</p>
+                                        </div>
+                                        <div className="text-center p-4 border rounded-lg">
+                                            <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-red-500" />
+                                            <p className="text-2xl font-bold text-red-600">{lowStockProducts.length}</p>
+                                            <p className="text-sm text-muted-foreground">Stock Bajo</p>
+                                        </div>
+                                        <div className="text-center p-4 border rounded-lg">
+                                            <Building2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                                            <p className="text-2xl font-bold">{suppliers.filter(s => s.isActive).length}</p>
+                                            <p className="text-sm text-muted-foreground">Proveedores Activos</p>
+                                        </div>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -1619,7 +1843,7 @@ export default function AdminPage() {
                                         rows={3}
                                     />
                                 </div> */}
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-4 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="product-price">Precio ($)</Label>
                                         <Input
@@ -1661,6 +1885,20 @@ export default function AdminPage() {
                                             required
                                         />
                                     </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="product-servicios-por-producto">Servicios por Producto</Label>
+                                        <Input
+                                            id="product-servicios-por-producto"
+                                            type="number"
+                                            min="1"
+                                            value={productForm.servicios_por_producto}
+                                            onChange={(e) => setProductForm({ ...productForm, servicios_por_producto: Number(e.target.value) })}
+                                            required
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            ¿Cuántos servicios se pueden realizar con 1 unidad?
+                                        </p>
+                                    </div>
                                 </div>
                                 {/* <div className="space-y-2">
                                     <Label htmlFor="product-category">Categoría</Label>
@@ -1671,7 +1909,7 @@ export default function AdminPage() {
                                         placeholder="Ej: Ceras, Shampoos, Herramientas"
                                     />
                                 </div> */}
-                                
+
                                 <div className="space-y-2">
                                     <Label>Proveedores (opcional)</Label>
                                     <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
@@ -2047,6 +2285,101 @@ export default function AdminPage() {
                                 Confirmar Cambio
                             </Button>
                         </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* DIALOG PARA ENVIAR EMAIL A PROVEEDORES */}
+                <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+                    <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Mail className="h-5 w-5 text-blue-500" />
+                                Enviar Email a Proveedor
+                            </DialogTitle>
+                            <DialogDescription>
+                                Redacta un mensaje para contactar al proveedor {selectedSupplier?.name}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleSendSupplierEmail} className="space-y-4">
+                            <div className="grid gap-4">
+                                <div className="bg-blue-50 p-3 rounded-lg">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Building2 className="h-4 w-4 text-blue-600" />
+                                        <span className="font-medium text-blue-900">Información del Proveedor</span>
+                                    </div>
+                                    <div className="text-sm text-blue-800">
+                                        <p><strong>Nombre:</strong> {selectedSupplier?.name}</p>
+                                        <p><strong>Email:</strong> {selectedSupplier?.email}</p>
+                                        {selectedSupplier?.contactPerson && (
+                                            <p><strong>Contacto:</strong> {selectedSupplier.contactPerson}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="email-subject">Asunto</Label>
+                                    <Input
+                                        id="email-subject"
+                                        value={emailForm.subject}
+                                        onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="email-message">Mensaje</Label>
+                                    <Textarea
+                                        id="email-message"
+                                        value={emailForm.message}
+                                        onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })}
+                                        rows={8}
+                                        required
+                                        placeholder="Escriba su mensaje aquí..."
+                                    />
+                                </div>
+
+                                {lowStockProducts.length > 0 && (
+                                    <div className="bg-amber-50 p-3 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                            <span className="font-medium text-amber-900">Productos con Stock Bajo</span>
+                                        </div>
+                                        <div className="text-sm text-amber-800">
+                                            <p className="mb-1">Productos que requieren reposición:</p>
+                                            <ul className="list-disc list-inside space-y-1">
+                                                {lowStockProducts.slice(0, 5).map((product) => (
+                                                    <li key={product.id}>
+                                                        {product.name} (Stock actual: {product.stock_actual}, Mínimo: {product.stock_minimo}, {product.suppliers.find(s => s.id === selectedSupplier?.id) ? 'Proveedor asignado' : 'No asignado'})
+                                                    </li>
+
+                                                ))}
+                                                {lowStockProducts.length > 5 && (
+                                                    <li className="text-amber-600">... y {lowStockProducts.length - 5} productos más</li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsEmailDialogOpen(false)
+                                        resetEmailForm()
+                                    }}
+                                >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancelar
+                                </Button>
+                                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Enviar Email
+                                </Button>
+                            </DialogFooter>
+                        </form>
                     </DialogContent>
                 </Dialog>
 

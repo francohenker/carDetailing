@@ -18,6 +18,7 @@ import { PrecioModule } from './precio/precio.module';
 import { MailService } from './mail.services';
 import { SupplierModule } from './supplier/supplier.module';
 import { FacturaModule } from './factura/factura.module';
+import { StockModule } from './stock/stock.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { FacturaModule } from './factura/factura.module';
     PrecioModule,
     SupplierModule,
     FacturaModule,
+    StockModule,
   ],
   controllers: [AppController],
   providers: [

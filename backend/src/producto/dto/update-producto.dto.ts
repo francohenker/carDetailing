@@ -18,6 +18,10 @@ export class UpdateProductoDto {
   stock_minimo?: number;
 
   @IsOptional()
+  @IsNumber()
+  servicios_por_producto?: number;
+
+  @IsOptional()
   @IsArray()
   supplierIds?: number[];
 }

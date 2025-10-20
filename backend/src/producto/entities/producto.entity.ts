@@ -25,6 +25,14 @@ export class Producto {
   @Column({ type: 'decimal' })
   price: number;
 
+  @Column({
+    type: 'int',
+    default: 1,
+    comment:
+      'Cantidad de servicios que se pueden realizar con una unidad del producto',
+  })
+  servicios_por_producto: number;
+
   @ManyToMany(() => Servicio, (servicio) => servicio.Producto)
   servicio: Servicio[];
 
@@ -44,11 +52,13 @@ export class Producto {
     stock_actual: number,
     price: number,
     stock_minimo: number,
+    servicios_por_producto: number = 1,
   ) {
     this.name = name;
     this.stock_actual = stock_actual;
     this.stock_minimo = stock_minimo;
     this.price = price;
+    this.servicios_por_producto = servicios_por_producto;
     this.isDeleted = false;
   }
 }

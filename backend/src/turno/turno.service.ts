@@ -10,6 +10,7 @@ import { fetchWeatherApi } from 'openmeteo';
 import { estado_turno } from '../enums/estado_turno.enum';
 import { Users } from '../users/entities/users.entity';
 import { MailService } from '../mail.services';
+import { ProductoService } from '../producto/producto.service';
 
 @Injectable()
 export class TurnoService {
@@ -18,6 +19,7 @@ export class TurnoService {
     private readonly turnoRepository: Repository<Turno>,
     private servicioService: ServicioService,
     private mailService: MailService,
+    private productoService: ProductoService,
   ) {}
 
   async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
@@ -197,7 +199,7 @@ export class TurnoService {
   async markAsCompleted(turnoId: number): Promise<Turno> {
     const turno = await this.turnoRepository.findOne({
       where: { id: turnoId },
-      relations: ['car', 'car.user', 'servicio', 'pago'],
+      relations: ['car', 'car.user', 'servicio', 'servicio.Producto'],
     });
 
     if (!turno) {
@@ -205,6 +207,16 @@ export class TurnoService {
     }
 
     turno.estado = estado_turno.FINALIZADO;
+
+    // Descontar stock automáticamente de los productos asociados a los servicios
+    try {
+      await this.productoService.descontarStockPorServicios(turno.servicio);
+      console.log(`Stock descontado automáticamente para turno ${turnoId}`);
+    } catch (error) {
+      console.error(`Error descontando stock para turno ${turnoId}:`, error);
+      // No fallar el turno si hay error con el stock, solo loguear
+    }
+
     return await this.turnoRepository.save(turno);
   }
 

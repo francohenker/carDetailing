@@ -50,12 +50,41 @@ export class MailService {
     return `${día}/${mes}/${año}`;
   }
 
-  async sendMail(to: string, subject: string, text: string): Promise<void> {
-    await this.transporter.sendMail({
+  async sendMail(
+    to: string,
+    subject: string,
+    text: string,
+    html?: string,
+  ): Promise<void> {
+    const mailOptions: any = {
       from: process.env.SMTP_USER,
       to,
       subject,
       text,
-    });
+    };
+
+    // Si se proporciona HTML, lo agregamos al email
+    if (html) {
+      mailOptions.html = html;
+    }
+
+    await this.transporter.sendMail(mailOptions);
+  }
+
+  async sendHtmlMail(
+    to: string,
+    subject: string,
+    htmlContent: string,
+    textFallback?: string,
+  ): Promise<void> {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to,
+      subject,
+      html: htmlContent,
+      text: textFallback || 'Este email requiere un cliente que soporte HTML.',
+    };
+
+    await this.transporter.sendMail(mailOptions);
   }
 }
