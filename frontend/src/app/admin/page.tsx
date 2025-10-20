@@ -2349,7 +2349,7 @@ export default function AdminPage() {
                                             <ul className="list-disc list-inside space-y-1">
                                                 {lowStockProducts.slice(0, 5).map((product) => (
                                                     <li key={product.id}>
-                                                        {product.name} (Stock actual: {product.stock_actual}, Mínimo: {product.stock_minimo}, {product.suppliers.find(s => s.id === selectedSupplier?.id) ? 'Proveedor asignado' : 'No asignado'})
+                                                        {product.name} (Stock actual: {product.stock_actual}, Mínimo: {product.stock_minimo}, {(product.suppliers) && product.suppliers.find(s => s.id === selectedSupplier?.id) ? 'Proveedor asignado' : 'No asignado'})
                                                     </li>
 
                                                 ))}
