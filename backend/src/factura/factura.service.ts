@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Turno } from '../turno/entities/turno.entity';
 import { Pago } from '../pago/entities/pago.entity';
 import { estado_pago } from '../enums/estado_pago.enum';
-import * as PDFDocument from 'pdfkit';
+import PDFDocument from 'pdfkit';
 
 @Injectable()
 export class FacturaService {
