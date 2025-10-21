@@ -300,7 +300,7 @@ export default function UserTurnos() {
 
             {/* Sección de Historial de Servicios */}
             <div>
-                <h3 className="text-xl font-semibold mb-4">Historial de Servicios</h3>
+                <h3 className="text-xl font-semibold mb-4">Historial de Servicios Realizados</h3>
                 {historialTurnos.length === 0 ? (
                     <p className="text-muted-foreground">No tienes servicios en tu historial.</p>
                 ) : (

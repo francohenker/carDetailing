@@ -35,10 +35,14 @@ export class TurnoService {
     );
     const turno = this.turnoRepository.create(newTurno);
     this.turnoRepository.save(turno);
-    this.mailService.sendMail(
+
+    // Enviar email de confirmación con formato HTML
+    const htmlContent = this.generateTurnoCreatedEmailTemplate(newTurno);
+    this.mailService.sendHtmlMail(
       newTurno.car.user.email,
-      'Turno agendado',
-      `Turno agendado para el  ${this.mailService.formateDate(newTurno.fechaHora)} en el auto ${newTurno.car.marca} ${newTurno.car.model} ${newTurno.car.patente}`,
+      '✅ Turno Confirmado - Car Detailing',
+      htmlContent,
+      `Turno agendado para el ${this.mailService.formateDate(newTurno.fechaHora)} en el auto ${newTurno.car.marca} ${newTurno.car.model} ${newTurno.car.patente}`,
     );
     return turno;
   }
@@ -62,10 +66,14 @@ export class TurnoService {
     } catch (error) {
       throw new HttpException('Error modifying Turno: ' + error.message, 500);
     }
-    this.mailService.sendMail(
+
+    // Enviar email de modificación con formato HTML
+    const htmlContent = this.generateTurnoModifiedEmailTemplate(existingTurno);
+    this.mailService.sendHtmlMail(
       existingTurno.car.user.email,
-      'Turno modificado',
-      `Turno reagendado para el  ${this.mailService.formateDate(existingTurno.fechaHora)} en el auto ${existingTurno.car.marca} ${existingTurno.car.model} ${existingTurno.car.patente}`,
+      '📅 Turno Modificado - Car Detailing',
+      htmlContent,
+      `Turno reagendado para el ${this.mailService.formateDate(existingTurno.fechaHora)} en el auto ${existingTurno.car.marca} ${existingTurno.car.model} ${existingTurno.car.patente}`,
     );
     return existingTurno;
   }
@@ -77,10 +85,14 @@ export class TurnoService {
     } else {
       throw new HttpException('Turno not found', 404);
     }
-    this.mailService.sendMail(
+
+    // Enviar email de cancelación con formato HTML
+    const htmlContent = this.generateTurnoCancelledEmailTemplate(turno);
+    this.mailService.sendHtmlMail(
       turno.car.user.email,
-      'Turno cancelado',
-      `Turno cancelado que estaba agendado para el  ${this.mailService.formateDate(turno.fechaHora)} en el auto ${turno.car.marca} ${turno.car.model} ${turno.car.patente}`,
+      '❌ Turno Cancelado - Car Detailing',
+      htmlContent,
+      `Turno cancelado que estaba agendado para el ${this.mailService.formateDate(turno.fechaHora)} en el auto ${turno.car.marca} ${turno.car.model} ${turno.car.patente}`,
     );
   }
 
@@ -255,11 +267,518 @@ export class TurnoService {
     }
 
     turno.estado = estado_turno.CANCELADO;
-    this.mailService.sendMail(
+
+    // Enviar email de cancelación con formato HTML
+    const htmlContent = this.generateTurnoCancelledEmailTemplate(turno);
+    this.mailService.sendHtmlMail(
       turno.car.user.email,
-      'Turno cancelado',
-      `Turno cancelado que estaba agendado para el  ${this.mailService.formateDate(turno.fechaHora)} en el auto ${turno.car.marca} ${turno.car.model} ${turno.car.patente}`,
+      '❌ Turno Cancelado - Car Detailing',
+      htmlContent,
+      `Turno cancelado que estaba agendado para el ${this.mailService.formateDate(turno.fechaHora)} en el auto ${turno.car.marca} ${turno.car.model} ${turno.car.patente}`,
     );
     return await this.turnoRepository.save(turno);
+  }
+
+  // ============ TEMPLATES DE EMAIL HTML ============
+
+  private generateTurnoCreatedEmailTemplate(turno: Turno): string {
+    const serviciosList = turno.servicio
+      .map(
+        (servicio) => `
+        <tr>
+          <td style="padding: 12px; border: 1px solid #ddd; background-color: #f8f9fa;">
+            <strong>${servicio.name}</strong>
+          </td>
+          <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">
+            ${servicio.duration} min
+          </td>
+        </tr>
+      `,
+      )
+      .join('');
+
+    return `
+      <!DOCTYPE html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Turno Confirmado - Car Detailing</title>
+          <style>
+            body { 
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+              line-height: 1.6; 
+              color: #333; 
+              margin: 0; 
+              padding: 0; 
+              background-color: #f8f9fa;
+            }
+            .container { 
+              max-width: 600px; 
+              margin: 20px auto; 
+              background-color: white; 
+              border-radius: 12px; 
+              box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+              overflow: hidden;
+            }
+            .header { 
+              background: linear-gradient(135deg, #28a745, #20c997); 
+              color: white; 
+              padding: 30px 20px; 
+              text-align: center; 
+            }
+            .header h1 { 
+              margin: 0; 
+              font-size: 28px; 
+              font-weight: 600; 
+            }
+            .content { 
+              padding: 30px 20px; 
+            }
+            .success-box {
+              background-color: #d4edda;
+              border: 2px solid #c3e6cb;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 20px 0;
+              text-align: center;
+            }
+            .info-section {
+              background-color: #e3f2fd;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 20px 0;
+            }
+            .car-info {
+              background-color: #f8f9fa;
+              border-left: 4px solid #007bff;
+              padding: 15px;
+              margin: 15px 0;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin: 20px 0; 
+              border-radius: 8px;
+              overflow: hidden;
+            }
+            th { 
+              background: linear-gradient(135deg, #007bff, #0056b3); 
+              color: white; 
+              padding: 15px; 
+              font-weight: 600; 
+              text-align: left; 
+            }
+            .date-time {
+              font-size: 24px;
+              font-weight: bold;
+              color: #28a745;
+              text-align: center;
+              margin: 20px 0;
+            }
+            .total-price {
+              font-size: 20px;
+              font-weight: bold;
+              color: #007bff;
+              text-align: center;
+              background-color: #e3f2fd;
+              padding: 15px;
+              border-radius: 8px;
+              margin: 20px 0;
+            }
+            .footer { 
+              background-color: #f8f9fa;
+              padding: 20px; 
+              border-top: 1px solid #dee2e6; 
+              font-size: 13px; 
+              color: #6c757d; 
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>✅ ¡Turno Confirmado!</h1>
+              <p>Tu cita ha sido agendada exitosamente</p>
+            </div>
+            
+            <div class="content">
+              <div class="success-box">
+                <h2 style="margin: 0; color: #155724;">🎉 ¡Perfecto!</h2>
+                <p style="margin: 10px 0 0 0; color: #155724;">Hemos recibido tu solicitud y tu turno está confirmado.</p>
+              </div>
+
+              <div class="date-time">
+                📅 ${this.mailService.formateDate(turno.fechaHora)} a las ${new Date(turno.fechaHora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+
+              <div class="car-info">
+                <h3 style="margin-top: 0; color: #007bff;">🚗 Información del Vehículo</h3>
+                <p><strong>Marca:</strong> ${turno.car.marca}</p>
+                <p><strong>Modelo:</strong> ${turno.car.model}</p>
+                <p><strong>Patente:</strong> ${turno.car.patente}</p>
+                <p><strong>Color:</strong> ${turno.car.color}</p>
+                <p><strong>Tipo:</strong> ${turno.car.type}</p>
+              </div>
+
+              <div class="info-section">
+                <h3 style="margin-top: 0; color: #1976d2;">🛠️ Servicios Solicitados</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Servicio</th>
+                      <th>Duración</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${serviciosList}
+                  </tbody>
+                </table>
+                <p><strong>Duración total estimada:</strong> ${turno.duration} minutos</p>
+              </div>
+
+              <div class="total-price">
+                💰 Total: $${turno.totalPrice.toLocaleString('es-AR')}
+              </div>
+
+              ${
+                turno.observacion
+                  ? `
+                <div class="info-section">
+                  <h3 style="margin-top: 0; color: #1976d2;">📝 Observaciones</h3>
+                  <p>${turno.observacion}</p>
+                </div>
+              `
+                  : ''
+              }
+
+              <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                <h4 style="margin-top: 0; color: #856404;">📋 Información Importante</h4>
+                <ul style="margin: 0; color: #856404;">
+                  <li>Llegá 10 minutos antes de tu turno</li>
+                  <li>Traé las llaves y documentación del vehículo</li>
+                  <li>Si necesitás cancelar, hacelo con 24hs de anticipación</li>
+                  <li>Podés contactarnos por cualquier consulta</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p><strong>¡Gracias por confiar en Car Detailing!</strong></p>
+              <p>📧 info@cardetailing.com | 📞 +54 11 1234-5678</p>
+              <p>📍 Dirección del local - Ciudad, Provincia</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  private generateTurnoModifiedEmailTemplate(turno: Turno): string {
+    const serviciosList = turno.servicio
+      .map(
+        (servicio) => `
+        <tr>
+          <td style="padding: 12px; border: 1px solid #ddd; background-color: #f8f9fa;">
+            <strong>${servicio.name}</strong>
+          </td>
+          <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">
+            ${servicio.duration} min
+          </td>
+        </tr>
+      `,
+      )
+      .join('');
+
+    return `
+      <!DOCTYPE html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Turno Modificado - Car Detailing</title>
+          <style>
+            body { 
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+              line-height: 1.6; 
+              color: #333; 
+              margin: 0; 
+              padding: 0; 
+              background-color: #f8f9fa;
+            }
+            .container { 
+              max-width: 600px; 
+              margin: 20px auto; 
+              background-color: white; 
+              border-radius: 12px; 
+              box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+              overflow: hidden;
+            }
+            .header { 
+              background: linear-gradient(135deg, #ffc107, #e0a800); 
+              color: #333; 
+              padding: 30px 20px; 
+              text-align: center; 
+            }
+            .header h1 { 
+              margin: 0; 
+              font-size: 28px; 
+              font-weight: 600; 
+            }
+            .content { 
+              padding: 30px 20px; 
+            }
+            .warning-box {
+              background-color: #fff3cd;
+              border: 2px solid #ffc107;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 20px 0;
+              text-align: center;
+            }
+            .info-section {
+              background-color: #e3f2fd;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 20px 0;
+            }
+            .car-info {
+              background-color: #f8f9fa;
+              border-left: 4px solid #007bff;
+              padding: 15px;
+              margin: 15px 0;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin: 20px 0; 
+              border-radius: 8px;
+              overflow: hidden;
+            }
+            th { 
+              background: linear-gradient(135deg, #007bff, #0056b3); 
+              color: white; 
+              padding: 15px; 
+              font-weight: 600; 
+              text-align: left; 
+            }
+            .date-time {
+              font-size: 24px;
+              font-weight: bold;
+              color: #ffc107;
+              text-align: center;
+              margin: 20px 0;
+            }
+            .footer { 
+              background-color: #f8f9fa;
+              padding: 20px; 
+              border-top: 1px solid #dee2e6; 
+              font-size: 13px; 
+              color: #6c757d; 
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📅 Turno Modificado</h1>
+              <p>Tu cita ha sido reagendada</p>
+            </div>
+            
+            <div class="content">
+              <div class="warning-box">
+                <h2 style="margin: 0; color: #856404;">🔄 Cambios Realizados</h2>
+                <p style="margin: 10px 0 0 0; color: #856404;">Los detalles de tu turno han sido actualizados.</p>
+              </div>
+
+              <div class="date-time">
+                📅 Nueva fecha: ${this.mailService.formateDate(turno.fechaHora)} a las ${new Date(turno.fechaHora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+
+              <div class="car-info">
+                <h3 style="margin-top: 0; color: #007bff;">🚗 Información del Vehículo</h3>
+                <p><strong>Marca:</strong> ${turno.car.marca}</p>
+                <p><strong>Modelo:</strong> ${turno.car.model}</p>
+                <p><strong>Patente:</strong> ${turno.car.patente}</p>
+                <p><strong>Color:</strong> ${turno.car.color}</p>
+                <p><strong>Tipo:</strong> ${turno.car.type}</p>
+              </div>
+
+              <div class="info-section">
+                <h3 style="margin-top: 0; color: #1976d2;">🛠️ Servicios</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Servicio</th>
+                      <th>Duración</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${serviciosList}
+                  </tbody>
+                </table>
+                <p><strong>Duración total estimada:</strong> ${turno.duration} minutos</p>
+              </div>
+
+              ${
+                turno.observacion
+                  ? `
+                <div class="info-section">
+                  <h3 style="margin-top: 0; color: #1976d2;">📝 Observaciones</h3>
+                  <p>${turno.observacion}</p>
+                </div>
+              `
+                  : ''
+              }
+
+              <div style="background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                <h4 style="margin-top: 0; color: #0c5460;">💡 Recordatorio</h4>
+                <ul style="margin: 0; color: #0c5460;">
+                  <li>Llegá 10 minutos antes de tu nuevo horario</li>
+                  <li>Si tenés alguna duda, no dudes en contactarnos</li>
+                  <li>Agendá este nuevo horario en tu calendario</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p><strong>Gracias por tu flexibilidad - Car Detailing</strong></p>
+              <p>📧 info@cardetailing.com | 📞 +54 11 1234-5678</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  private generateTurnoCancelledEmailTemplate(turno: Turno): string {
+    return `
+      <!DOCTYPE html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Turno Cancelado - Car Detailing</title>
+          <style>
+            body { 
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+              line-height: 1.6; 
+              color: #333; 
+              margin: 0; 
+              padding: 0; 
+              background-color: #f8f9fa;
+            }
+            .container { 
+              max-width: 600px; 
+              margin: 20px auto; 
+              background-color: white; 
+              border-radius: 12px; 
+              box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+              overflow: hidden;
+            }
+            .header { 
+              background: linear-gradient(135deg, #dc3545, #c82333); 
+              color: white; 
+              padding: 30px 20px; 
+              text-align: center; 
+            }
+            .header h1 { 
+              margin: 0; 
+              font-size: 28px; 
+              font-weight: 600; 
+            }
+            .content { 
+              padding: 30px 20px; 
+            }
+            .cancel-box {
+              background-color: #f8d7da;
+              border: 2px solid #f5c6cb;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 20px 0;
+              text-align: center;
+            }
+            .info-section {
+              background-color: #f8f9fa;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 20px 0;
+            }
+            .car-info {
+              background-color: #f8f9fa;
+              border-left: 4px solid #dc3545;
+              padding: 15px;
+              margin: 15px 0;
+            }
+            .date-time {
+              font-size: 20px;
+              font-weight: bold;
+              color: #dc3545;
+              text-align: center;
+              margin: 20px 0;
+              text-decoration: line-through;
+            }
+            .footer { 
+              background-color: #f8f9fa;
+              padding: 20px; 
+              border-top: 1px solid #dee2e6; 
+              font-size: 13px; 
+              color: #6c757d; 
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>❌ Turno Cancelado</h1>
+              <p>Tu cita ha sido cancelada</p>
+            </div>
+            
+            <div class="content">
+              <div class="cancel-box">
+                <h2 style="margin: 0; color: #721c24;">😔 Lamentamos informarte</h2>
+                <p style="margin: 10px 0 0 0; color: #721c24;">Tu turno ha sido cancelado.</p>
+              </div>
+
+              <div class="date-time">
+                📅 ${this.mailService.formateDate(turno.fechaHora)} a las ${new Date(turno.fechaHora).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+
+              <div class="car-info">
+                <h3 style="margin-top: 0; color: #dc3545;">🚗 Detalles del Turno Cancelado</h3>
+                <p><strong>Vehículo:</strong> ${turno.car.marca} ${turno.car.model}</p>
+                <p><strong>Patente:</strong> ${turno.car.patente}</p>
+                <p><strong>Color:</strong> ${turno.car.color}</p>
+                <p><strong>Tipo:</strong> ${turno.car.type}</p>
+              </div>
+
+              <div class="info-section">
+                <h3 style="margin-top: 0; color: #495057;">📞 ¿Querés agendar un nuevo turno?</h3>
+                <p>Entendemos que a veces surgen imprevistos. Estamos aquí para ayudarte a reprogramar tu cita cuando te sea conveniente.</p>
+                <ul>
+                  <li>Llamanos al +54 11 1234-5678</li>
+                  <li>Escribinos a info@cardetailing.com</li>
+                  <li>Visitá nuestro sitio web para agendar online</li>
+                </ul>
+              </div>
+
+              <div style="background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                <h4 style="margin-top: 0; color: #155724;">💚 Te esperamos pronto</h4>
+                <p style="margin: 0; color: #155724;">Estaremos encantados de cuidar tu vehículo cuando estés listo para agendar una nueva cita.</p>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p><strong>Car Detailing - Siempre a tu servicio</strong></p>
+              <p>📧 info@cardetailing.com | 📞 +54 11 1234-5678</p>
+              <p>Esperamos verte pronto 💙</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
   }
 }
