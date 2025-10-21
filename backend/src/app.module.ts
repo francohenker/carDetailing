@@ -19,6 +19,8 @@ import { MailService } from './mail.services';
 import { SupplierModule } from './supplier/supplier.module';
 import { FacturaModule } from './factura/factura.module';
 import { StockModule } from './stock/stock.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { WeatherModule } from './weather/weather.module';
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { StockModule } from './stock/stock.module';
       signOptions: { expiresIn: '30d' },
     }),
     ConfigModule.forRoot(),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
     UserModule,
     AuthModule,
@@ -40,6 +43,7 @@ import { StockModule } from './stock/stock.module';
     SupplierModule,
     FacturaModule,
     StockModule,
+    WeatherModule,
   ],
   controllers: [AppController],
   providers: [
