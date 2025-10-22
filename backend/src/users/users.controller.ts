@@ -17,6 +17,11 @@ import { RolesGuard } from '../roles/role.guard';
 import { Roles } from '../roles/role.decorator';
 import { AuthService } from '../auth/auth.service';
 import { Users } from './entities/users.entity';
+import { Auditar } from '../auditoria/decorators/auditar.decorator';
+import {
+  TipoAccion,
+  TipoEntidad,
+} from '../auditoria/entities/auditoria.entity';
 
 @Controller('users')
 export class UsersController {
@@ -26,6 +31,11 @@ export class UsersController {
   ) {}
 
   @Post('register')
+  @Auditar({
+    accion: TipoAccion.CREAR,
+    entidad: TipoEntidad.USUARIO,
+    descripcion: 'Registro de nuevo usuario',
+  })
   async create(@Body() createUserDto: CreateUserDto) {
     await this.userService.create(createUserDto);
     return {
@@ -37,11 +47,21 @@ export class UsersController {
   @Put('change-role/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
+  @Auditar({
+    accion: TipoAccion.MODIFICAR_ROL,
+    entidad: TipoEntidad.USUARIO,
+    descripcion: 'Cambio de rol de usuario',
+  })
   async changeRole(@Param('id') id: number, @Body('role') role: Role) {
     return this.userService.changeRole(id, role);
   }
 
   @Post('login')
+  @Auditar({
+    accion: TipoAccion.LOGIN,
+    entidad: TipoEntidad.SISTEMA,
+    descripcion: 'Inicio de sesión de usuario',
+  })
   async login(
     @Body('email') email: string,
     @Body('password') password: string,

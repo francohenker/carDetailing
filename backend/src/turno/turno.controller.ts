@@ -17,6 +17,11 @@ import { AuthService } from '../auth/auth.service';
 import { RolesGuard } from '../roles/role.guard';
 import { Roles } from '../roles/role.decorator';
 import { Role } from '../roles/role.enum';
+import { Auditar } from '../auditoria/decorators/auditar.decorator';
+import {
+  TipoAccion,
+  TipoEntidad,
+} from '../auditoria/entities/auditoria.entity';
 
 @Controller('turno')
 export class TurnoController {
@@ -27,6 +32,11 @@ export class TurnoController {
   ) {}
 
   @Post('create')
+  @Auditar({
+    accion: TipoAccion.CREAR,
+    entidad: TipoEntidad.TURNO,
+    descripcion: 'Creación de nuevo turno',
+  })
   async createTurno(
     @Req() request,
     @Body() createTurnoDto: CreateTurnoDto,
@@ -98,6 +108,11 @@ export class TurnoController {
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
   @Post('admin/mark-completed/:id')
+  @Auditar({
+    accion: TipoAccion.MARCAR_COMPLETADO,
+    entidad: TipoEntidad.TURNO,
+    descripcion: 'Turno marcado como completado por administrador',
+  })
   async markTurnoAsCompleted(@Req() request): Promise<Turno> {
     const turnoId = parseInt(request.params.id, 10);
     if (isNaN(turnoId)) {
@@ -108,6 +123,11 @@ export class TurnoController {
 
   @UseGuards(TurnoOwnerGuard)
   @Post('cancel/:id')
+  @Auditar({
+    accion: TipoAccion.CANCELAR,
+    entidad: TipoEntidad.TURNO,
+    descripcion: 'Turno cancelado por el usuario',
+  })
   async cancelTurno(@Req() request): Promise<Turno> {
     const turnoId = parseInt(request.params.id, 10);
     if (isNaN(turnoId)) {

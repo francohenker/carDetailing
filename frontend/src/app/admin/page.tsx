@@ -28,7 +28,8 @@ import {
     TrendingUp,
     DollarSign,
     Activity,
-    TrendingDown
+    TrendingDown,
+    FileText
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -244,6 +245,23 @@ export default function AdminPage() {
     })
     const [statisticsLoading, setStatisticsLoading] = useState(false)
 
+    // Estados para auditoría
+    const [auditoriaRecords, setAuditoriaRecords] = useState<any[]>([])
+    const [auditoriaLoading, setAuditoriaLoading] = useState(false)
+    const [auditoriaStats, setAuditoriaStats] = useState<{
+        totalRegistros: number
+        registrosHoy: number
+        registrosEstaSemana: number
+        accionesMasComunes: Array<{ accion: string; cantidad: number }>
+        entidadesMasAuditadas: Array<{ entidad: string; cantidad: number }>
+    }>({
+        totalRegistros: 0,
+        registrosHoy: 0,
+        registrosEstaSemana: 0,
+        accionesMasComunes: [],
+        entidadesMasAuditadas: []
+    })
+
     // Estados generales
     const [loading, setLoading] = useState(true)
     const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
@@ -274,7 +292,9 @@ export default function AdminPage() {
                 fetchTurnos(),
                 fetchSuppliers(),
                 fetchLowStockProducts(),
-                fetchStatistics()
+                fetchStatistics(),
+                fetchAuditoria(),
+                fetchAuditoriaStats()
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
@@ -744,6 +764,40 @@ export default function AdminPage() {
         }
     }
 
+    // ============ AUDITORÍA ============
+    const fetchAuditoria = async () => {
+        try {
+            setAuditoriaLoading(true)
+            const response = await fetch(`/api/auditoria?limit=20`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching auditoria')
+            const data = await response.json()
+            setAuditoriaRecords(data.data || [])
+        } catch (error) {
+            console.error('Error fetching auditoria:', error)
+        } finally {
+            setAuditoriaLoading(false)
+        }
+    }
+
+    const fetchAuditoriaStats = async () => {
+        try {
+            const response = await fetch(`/api/auditoria/estadisticas`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching auditoria stats')
+            const data = await response.json()
+            setAuditoriaStats(data)
+        } catch (error) {
+            console.error('Error fetching auditoria stats:', error)
+        }
+    }
+
     // ============ TURNOS ============
     const fetchTurnos = async () => {
         try {
@@ -1037,7 +1091,7 @@ export default function AdminPage() {
                     </div>
 
                     <Tabs defaultValue="services" className="space-y-6">
-                        <TabsList className="grid w-full grid-cols-7">
+                        <TabsList className="grid w-full grid-cols-8">
                             <TabsTrigger value="services" className="flex items-center gap-2">
                                 <Wrench className="h-4 w-4" />
                                 Servicios
@@ -1065,6 +1119,10 @@ export default function AdminPage() {
                             <TabsTrigger value="statistics" className="flex items-center gap-2">
                                 <TrendingUp className="h-4 w-4" />
                                 Estadísticas
+                            </TabsTrigger>
+                            <TabsTrigger value="auditoria" className="flex items-center gap-2">
+                                <FileText className="h-4 w-4" />
+                                Auditoría
                             </TabsTrigger>
                         </TabsList>
 
@@ -1880,6 +1938,192 @@ export default function AdminPage() {
                                     </div>
                                 </CardContent>
                             </Card>
+                        </TabsContent>
+
+                        {/* PESTAÑA DE AUDITORÍA */}
+                        <TabsContent value="auditoria" className="space-y-6">
+                            {/* Estadísticas de auditoría */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Total Registros</p>
+                                                <p className="text-2xl font-bold">{auditoriaStats.totalRegistros}</p>
+                                            </div>
+                                            <FileText className="h-8 w-8 text-blue-600 bg-blue-100 p-1.5 rounded-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Registros Hoy</p>
+                                                <p className="text-2xl font-bold">{auditoriaStats.registrosHoy}</p>
+                                            </div>
+                                            <Calendar className="h-8 w-8 text-green-600 bg-green-100 p-1.5 rounded-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Esta Semana</p>
+                                                <p className="text-2xl font-bold">{auditoriaStats.registrosEstaSemana}</p>
+                                            </div>
+                                            <Activity className="h-8 w-8 text-purple-600 bg-purple-100 p-1.5 rounded-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Acciones Más Comunes</p>
+                                                <p className="text-lg font-bold">
+                                                    {auditoriaStats.accionesMasComunes[0]?.accion || 'N/A'}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {auditoriaStats.accionesMasComunes[0]?.cantidad || 0} veces
+                                                </p>
+                                            </div>
+                                            <TrendingUp className="h-8 w-8 text-orange-600 bg-orange-100 p-1.5 rounded-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Registros recientes */}
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <FileText className="h-5 w-5" />
+                                            Registros de Auditoría Recientes
+                                        </CardTitle>
+                                        <CardDescription>Últimas 20 acciones realizadas en el sistema</CardDescription>
+                                    </div>
+                                    <Link href="/admin/auditoria">
+                                        <Button className="bg-blue-600 hover:bg-blue-700">
+                                            <FileText className="h-4 w-4 mr-2" />
+                                            Ver Todos los Registros
+                                        </Button>
+                                    </Link>
+                                </CardHeader>
+                                <CardContent>
+                                    {auditoriaLoading ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <span className="loading loading-spinner loading-lg"></span>
+                                        </div>
+                                    ) : auditoriaRecords.length === 0 ? (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            No hay registros de auditoría disponibles.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {auditoriaRecords.map((record) => (
+                                                <div key={record.id} className="border rounded-lg p-4 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                                record.accion === 'CREAR' ? 'bg-green-100 text-green-700' :
+                                                                record.accion === 'ACTUALIZAR' ? 'bg-blue-100 text-blue-700' :
+                                                                record.accion === 'ELIMINAR' ? 'bg-red-100 text-red-700' :
+                                                                record.accion === 'LOGIN' ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-gray-100 text-gray-700'
+                                                            }`}>
+                                                                {record.accion}
+                                                            </span>
+                                                            <span className="text-sm font-medium">{record.entidad}</span>
+                                                            {record.entidadId && (
+                                                                <span className="text-xs text-muted-foreground">ID: {record.entidadId}</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {new Date(record.fechaCreacion).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {record.descripcion && (
+                                                        <p className="text-sm text-muted-foreground">{record.descripcion}</p>
+                                                    )}
+                                                    
+                                                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                                        {record.usuario && (
+                                                            <span>Usuario: {record.usuario.firstname} {record.usuario.lastname}</span>
+                                                        )}
+                                                        {record.ip && (
+                                                            <span>IP: {record.ip}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Análisis de acciones y entidades */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Acciones Más Frecuentes</CardTitle>
+                                        <CardDescription>Top 5 de acciones realizadas</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-3">
+                                            {auditoriaStats.accionesMasComunes.map((accion, index) => (
+                                                <div key={accion.accion} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                                                            index === 0 ? 'bg-yellow-500' :
+                                                            index === 1 ? 'bg-gray-400' :
+                                                            index === 2 ? 'bg-orange-500' :
+                                                            'bg-gray-300'
+                                                        }`}>
+                                                            {index + 1}
+                                                        </div>
+                                                        <span className="font-medium">{accion.accion}</span>
+                                                    </div>
+                                                    <span className="text-sm text-muted-foreground">{accion.cantidad}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Entidades Más Auditadas</CardTitle>
+                                        <CardDescription>Top 5 de entidades con más actividad</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-3">
+                                            {auditoriaStats.entidadesMasAuditadas.map((entidad, index) => (
+                                                <div key={entidad.entidad} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                                                            index === 0 ? 'bg-blue-500' :
+                                                            index === 1 ? 'bg-green-500' :
+                                                            index === 2 ? 'bg-purple-500' :
+                                                            'bg-gray-300'
+                                                        }`}>
+                                                            {index + 1}
+                                                        </div>
+                                                        <span className="font-medium">{entidad.entidad}</span>
+                                                    </div>
+                                                    <span className="text-sm text-muted-foreground">{entidad.cantidad}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
                         </TabsContent>
 
 
