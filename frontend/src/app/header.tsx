@@ -40,9 +40,9 @@ export default function HeaderDefault() {
                     <Link href="/turno" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
                         Reservar Turno
                     </Link>
-                    <Link href="#contacto" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
-                        Contacto
-                    </Link>
+                    {/* <Link href="/admin/statistics" prefetch className="text-lg font-medium hover:text-red-600 transition-colors">
+                        Estadisticas
+                    </Link> */}
                 </nav>
 
                 <div className="ml-auto flex items-center gap-4 ">

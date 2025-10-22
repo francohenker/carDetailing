@@ -25,7 +25,10 @@ import {
     FileDown,
     Mail,
     Send,
-    TrendingUp
+    TrendingUp,
+    DollarSign,
+    Activity,
+    TrendingDown
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -184,7 +187,6 @@ export default function AdminPage() {
     // Estados para usuarios
     const [users, setUsers] = useState<User[]>([])
     const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
-    const [setEditingUser] = useState<User | null>(null)
     const [userForm, setUserForm] = useState({
         firstname: '',
         lastname: '',
@@ -224,6 +226,24 @@ export default function AdminPage() {
     })
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
 
+    // Estados para estadísticas
+    const [statistics, setStatistics] = useState<{
+        currentMonthRevenue: number
+        revenueChange: number
+        currentMonthTurnos: number
+        completedTurnos: number
+        newUsersThisMonth: number
+        popularServices: Array<{ name: string; count: number }>
+    }>({
+        currentMonthRevenue: 0,
+        revenueChange: 0,
+        currentMonthTurnos: 0,
+        completedTurnos: 0,
+        newUsersThisMonth: 0,
+        popularServices: []
+    })
+    const [statisticsLoading, setStatisticsLoading] = useState(false)
+
     // Estados generales
     const [loading, setLoading] = useState(true)
     const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
@@ -241,6 +261,7 @@ export default function AdminPage() {
     // Cargar datos iniciales
     useEffect(() => {
         fetchAllData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const fetchAllData = async () => {
@@ -252,7 +273,8 @@ export default function AdminPage() {
                 fetchUsers(),
                 fetchTurnos(),
                 fetchSuppliers(),
-                fetchLowStockProducts()
+                fetchLowStockProducts(),
+                fetchStatistics()
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
@@ -549,7 +571,6 @@ export default function AdminPage() {
             password: '',
             role: 'user'
         })
-        // setEditingUser(null)
     }
 
     const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') => {
@@ -702,6 +723,25 @@ export default function AdminPage() {
             isActive: true
         })
         setEditingSupplier(null)
+    }
+
+    // ============ ESTADÍSTICAS ============
+    const fetchStatistics = async () => {
+        try {
+            setStatisticsLoading(true)
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/statistics`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching statistics')
+            const data = await response.json()
+            setStatistics(data)
+        } catch (error) {
+            console.error('Error fetching statistics:', error)
+        } finally {
+            setStatisticsLoading(false)
+        }
     }
 
     // ============ TURNOS ============
@@ -1675,15 +1715,140 @@ export default function AdminPage() {
 
                         {/* PESTAÑA DE ESTADÍSTICAS */}
                         <TabsContent value="statistics" className="space-y-6">
+                            {/* Métricas generales */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {/* Ingresos del mes */}
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Ingresos este mes</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-2xl font-bold">
+                                                        ${statisticsLoading ? '...' : statistics.currentMonthRevenue.toLocaleString()}
+                                                    </p>
+                                                    {!statisticsLoading && statistics.revenueChange !== 0 && (
+                                                        <span className={`text-xs flex items-center gap-1 ${
+                                                            statistics.revenueChange > 0 ? 'text-green-600' : 'text-red-600'
+                                                        }`}>
+                                                            {statistics.revenueChange > 0 ? (
+                                                                <TrendingUp className="h-3 w-3" />
+                                                            ) : (
+                                                                <TrendingDown className="h-3 w-3" />
+                                                            )}
+                                                            {Math.abs(statistics.revenueChange).toFixed(1)}%
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <DollarSign className="h-8 w-8 text-green-600 bg-green-100 p-1.5 rounded-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Total de usuarios */}
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Total usuarios</p>
+                                                <p className="text-2xl font-bold">
+                                                    {statisticsLoading ? '...' : users.length}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    +{statisticsLoading ? '...' : statistics.newUsersThisMonth} este mes
+                                                </p>
+                                            </div>
+                                            <Users className="h-8 w-8 text-blue-600 bg-blue-100 p-1.5 rounded-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Total de servicios */}
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Servicios disponibles</p>
+                                                <p className="text-2xl font-bold">{services.length}</p>
+                                                <p className="text-xs text-muted-foreground">Activos</p>
+                                            </div>
+                                            <Wrench className="h-8 w-8 text-purple-600 bg-purple-100 p-1.5 rounded-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Turnos completados */}
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-muted-foreground">Turnos completados</p>
+                                                <p className="text-2xl font-bold">
+                                                    {statisticsLoading ? '...' : statistics.completedTurnos}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {statisticsLoading ? '...' : statistics.currentMonthTurnos} este mes
+                                                </p>
+                                            </div>
+                                            <Activity className="h-8 w-8 text-orange-600 bg-orange-100 p-1.5 rounded-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Servicios más populares */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <TrendingUp className="h-5 w-5" />
+                                        Servicios Más Populares
+                                    </CardTitle>
+                                    <CardDescription>Top 3 servicios más solicitados</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {statisticsLoading ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <span className="loading loading-spinner loading-lg"></span>
+                                        </div>
+                                    ) : statistics.popularServices.length === 0 ? (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            No hay datos de servicios disponibles.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {statistics.popularServices.map((service, index) => (
+                                                <div key={service.name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
+                                                            index === 0 ? 'bg-yellow-500' :
+                                                            index === 1 ? 'bg-gray-400' :
+                                                            'bg-orange-500'
+                                                        }`}>
+                                                            {index + 1}
+                                                        </div>
+                                                        <span className="font-medium">{service.name}</span>
+                                                    </div>
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {service.count} {service.count === 1 ? 'vez' : 'veces'}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Dashboard completo */}
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between">
                                     <div>
                                         <CardTitle className="flex items-center gap-2">
                                             <TrendingUp className="h-6 w-6 text-primary" />
-                                            Estadísticas del Sistema
+                                            Dashboard Completo de Estadísticas
                                         </CardTitle>
                                         <CardDescription>
-                                            Visualiza las métricas y estadísticas importantes del negocio.
+                                            Accede al dashboard completo para ver análisis detallados y gráficos avanzados.
                                         </CardDescription>
                                     </div>
                                     <Link href="/admin/statistics">
@@ -1694,36 +1859,24 @@ export default function AdminPage() {
                                     </Link>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-center py-8">
-                                        <TrendingUp className="h-16 w-16 mx-auto mb-4 text-blue-500" />
-                                        <h3 className="text-xl font-semibold mb-2">Dashboard de Estadísticas</h3>
+                                    <div className="text-center py-4">
                                         <p className="text-muted-foreground mb-4">
-                                            Accede al dashboard completo de estadísticas para ver métricas detalladas sobre:
+                                            El dashboard completo incluye gráficos detallados, análisis de tendencias, comparaciones mensuales y métricas avanzadas para una mejor toma de decisiones.
                                         </p>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                             <div className="bg-blue-50 p-4 rounded-lg">
-                                                <div className="text-blue-600 font-bold text-lg">Ingresos</div>
-                                                <div className="text-sm text-blue-700">Totales y mensuales</div>
+                                                <div className="text-blue-600 font-bold text-sm">📊 Gráficos interactivos</div>
+                                                <div className="text-xs text-blue-700">Visualización de datos</div>
                                             </div>
                                             <div className="bg-green-50 p-4 rounded-lg">
-                                                <div className="text-green-600 font-bold text-lg">Turnos</div>
-                                                <div className="text-sm text-green-700">Completados y pendientes</div>
+                                                <div className="text-green-600 font-bold text-sm">📈 Análisis de tendencias</div>
+                                                <div className="text-xs text-green-700">Comparaciones temporales</div>
                                             </div>
                                             <div className="bg-purple-50 p-4 rounded-lg">
-                                                <div className="text-purple-600 font-bold text-lg">Usuarios</div>
-                                                <div className="text-sm text-purple-700">Registros nuevos</div>
-                                            </div>
-                                            <div className="bg-orange-50 p-4 rounded-lg">
-                                                <div className="text-orange-600 font-bold text-lg">Servicios</div>
-                                                <div className="text-sm text-orange-700">Más populares</div>
+                                                <div className="text-purple-600 font-bold text-sm">📋 Reportes detallados</div>
+                                                <div className="text-xs text-purple-700">Métricas avanzadas</div>
                                             </div>
                                         </div>
-                                        <Link href="/admin/statistics">
-                                            <Button className="mt-6 bg-blue-600 hover:bg-blue-700" size="lg">
-                                                <TrendingUp className="h-4 w-4 mr-2" />
-                                                Ir al Dashboard de Estadísticas
-                                            </Button>
-                                        </Link>
                                     </div>
                                 </CardContent>
                             </Card>

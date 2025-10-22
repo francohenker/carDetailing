@@ -98,7 +98,7 @@ export default function Servicios() {
             </div>
 
             {/* Breadcrumb */}
-            <div className="container mx-auto px-4 py-4">
+            {/* <div className="container mx-auto px-4 py-4">
                 <div className="text-sm breadcrumbs">
                     <ul>
                         <li>
@@ -109,7 +109,7 @@ export default function Servicios() {
                         <li>Servicios</li>
                     </ul>
                 </div>
-            </div>
+            </div> */}
 
             {/* Filtros de Categorías */}
             {/* <div className="container mx-auto px-4 mb-8">

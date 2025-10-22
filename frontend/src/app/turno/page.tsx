@@ -443,7 +443,7 @@ return (
         </div >
 
         {/* Breadcrumb */}
-        <div className="container mx-auto px-4 py-4">
+        {/* <div className="container mx-auto px-4 py-4">
             <div className="text-sm breadcrumbs">
                 <ul>
                     <li>
@@ -459,7 +459,7 @@ return (
                     <li>Reservar Turno</li>
                 </ul>
             </div>
-        </div>
+        </div> */}
 
         {/* Progress Steps */}
         <div className="container mx-auto px-4 mb-8">
