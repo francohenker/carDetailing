@@ -24,7 +24,8 @@ import {
     Building2,
     FileDown,
     Mail,
-    Send
+    Send,
+    TrendingUp
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -996,7 +997,7 @@ export default function AdminPage() {
                     </div>
 
                     <Tabs defaultValue="services" className="space-y-6">
-                        <TabsList className="grid w-full grid-cols-6">
+                        <TabsList className="grid w-full grid-cols-7">
                             <TabsTrigger value="services" className="flex items-center gap-2">
                                 <Wrench className="h-4 w-4" />
                                 Servicios
@@ -1020,6 +1021,10 @@ export default function AdminPage() {
                             <TabsTrigger value="turnos" className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4" />
                                 Turnos
+                            </TabsTrigger>
+                            <TabsTrigger value="statistics" className="flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4" />
+                                Estadísticas
                             </TabsTrigger>
                         </TabsList>
 
@@ -1664,6 +1669,62 @@ export default function AdminPage() {
                                             No se encontraron turnos para el filtro seleccionado.
                                         </div>
                                     )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        {/* PESTAÑA DE ESTADÍSTICAS */}
+                        <TabsContent value="statistics" className="space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <TrendingUp className="h-6 w-6 text-primary" />
+                                            Estadísticas del Sistema
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Visualiza las métricas y estadísticas importantes del negocio.
+                                        </CardDescription>
+                                    </div>
+                                    <Link href="/admin/statistics">
+                                        <Button className="bg-blue-600 hover:bg-blue-700">
+                                            <TrendingUp className="h-4 w-4 mr-2" />
+                                            Ver Dashboard Completo
+                                        </Button>
+                                    </Link>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-center py-8">
+                                        <TrendingUp className="h-16 w-16 mx-auto mb-4 text-blue-500" />
+                                        <h3 className="text-xl font-semibold mb-2">Dashboard de Estadísticas</h3>
+                                        <p className="text-muted-foreground mb-4">
+                                            Accede al dashboard completo de estadísticas para ver métricas detalladas sobre:
+                                        </p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                                            <div className="bg-blue-50 p-4 rounded-lg">
+                                                <div className="text-blue-600 font-bold text-lg">Ingresos</div>
+                                                <div className="text-sm text-blue-700">Totales y mensuales</div>
+                                            </div>
+                                            <div className="bg-green-50 p-4 rounded-lg">
+                                                <div className="text-green-600 font-bold text-lg">Turnos</div>
+                                                <div className="text-sm text-green-700">Completados y pendientes</div>
+                                            </div>
+                                            <div className="bg-purple-50 p-4 rounded-lg">
+                                                <div className="text-purple-600 font-bold text-lg">Usuarios</div>
+                                                <div className="text-sm text-purple-700">Registros nuevos</div>
+                                            </div>
+                                            <div className="bg-orange-50 p-4 rounded-lg">
+                                                <div className="text-orange-600 font-bold text-lg">Servicios</div>
+                                                <div className="text-sm text-orange-700">Más populares</div>
+                                            </div>
+                                        </div>
+                                        <Link href="/admin/statistics">
+                                            <Button className="mt-6 bg-blue-600 hover:bg-blue-700" size="lg">
+                                                <TrendingUp className="h-4 w-4 mr-2" />
+                                                Ir al Dashboard de Estadísticas
+                                            </Button>
+                                        </Link>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>

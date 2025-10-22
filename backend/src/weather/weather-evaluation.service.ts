@@ -270,8 +270,7 @@ export class WeatherEvaluationService {
   ) {
     const turnos = [];
     for (const evaluation of evaluations) {
-      const { turno, consecutiveBadDays, daysUntilTurno, turnoDayForecast } =
-        evaluation;
+      const { turno, daysUntilTurno, turnoDayForecast } = evaluation;
       turnos.push(turno);
 
       // Verificar si el día específico del turno tiene condiciones adversas

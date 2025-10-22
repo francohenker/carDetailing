@@ -37,6 +37,9 @@ export class Users {
   @Column({ type: 'varchar', length: 15, unique: true })
   phone: string;
 
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
+
   @OneToMany(() => Car, (car) => car.user)
   cars: Car[];
 
