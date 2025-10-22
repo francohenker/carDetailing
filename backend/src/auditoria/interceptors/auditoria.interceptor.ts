@@ -22,6 +22,58 @@ export class AuditoriaInterceptor implements NestInterceptor {
     private readonly reflector: Reflector,
   ) {}
 
+  private getRealClientIP(request: any): string {
+    // Lista de headers a verificar en orden de prioridad para Vercel
+    const ipHeaders = [
+      'x-forwarded-for', // Header principal para IPs forwarded
+      'x-real-ip', // Header alternativo
+      'x-client-ip', // Otro header común
+      'x-forwarded', // Header más genérico
+      'forwarded-for', // Header estándar
+      'forwarded', // Header RFC 7239
+    ];
+
+    // Verificar cada header
+    for (const header of ipHeaders) {
+      const value = request.get(header) || request.headers[header];
+      if (value) {
+        // Si hay múltiples IPs separadas por comas (caso común con proxies)
+        const ips = value.split(',').map((ip: string) => ip.trim());
+        // Tomar la primera IP que no sea privada
+        for (const ip of ips) {
+          if (this.isPublicIP(ip)) {
+            return ip;
+          }
+        }
+        // Si no hay IPs públicas, tomar la primera
+        return ips[0];
+      }
+    }
+
+    // Fallback a los métodos tradicionales
+    return (
+      request.ip ||
+      request.connection?.remoteAddress ||
+      request.socket?.remoteAddress ||
+      request.connection?.socket?.remoteAddress ||
+      '127.0.0.1'
+    );
+  }
+
+  private isPublicIP(ip: string): boolean {
+    // Verificar si la IP no es privada/local
+    const privateRanges = [
+      /^127\./, // 127.x.x.x (localhost)
+      /^10\./, // 10.x.x.x (private)
+      /^172\.(1[6-9]|2\d|3[01])\./, // 172.16.x.x - 172.31.x.x (private)
+      /^192\.168\./, // 192.168.x.x (private)
+      /^::1$/, // IPv6 localhost
+      /^fc00:/, // IPv6 private
+    ];
+
+    return !privateRanges.some((range) => range.test(ip));
+  }
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const auditoriaMetadata = this.reflector.get<AuditoriaMetadata>(
       AUDITORIA_KEY,
@@ -50,8 +102,8 @@ export class AuditoriaInterceptor implements NestInterceptor {
             }
           }
 
-          // Obtener información de la solicitud
-          const ip = request.ip || request.connection.remoteAddress;
+          // Obtener la IP real del cliente
+          const ip = this.getRealClientIP(request);
           const userAgent = request.get('User-Agent');
 
           // Extraer ID de la entidad desde los parámetros o el resultado
