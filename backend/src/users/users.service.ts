@@ -44,9 +44,6 @@ export class UserService {
     if (!user) {
       throw new HttpException('User not found', 404);
     }
-    // if(bcrypt.compareSync("GOOGLE_ENTRY", user.password)){
-    //     throw new Error('User or password incorrect');
-    // }
 
     if (bcrypt.compareSync(password, user.password)) {
       return this.authService.generateAccessToken(user);

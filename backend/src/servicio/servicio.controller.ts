@@ -18,11 +18,11 @@ import { Roles } from '../roles/role.decorator';
 import { RolesGuard } from '../roles/role.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { Auditar } from 'src/auditoria/decorators/auditar.decorator';
+import { Auditar } from '../auditoria/decorators/auditar.decorator';
 import {
   TipoAccion,
   TipoEntidad,
-} from 'src/auditoria/entities/auditoria.entity';
+} from '../auditoria/entities/auditoria.entity';
 
 @Controller('services')
 export class ServicioController {
@@ -59,6 +59,11 @@ export class ServicioController {
     return this.servicioService.update(servicio, id);
   }
 
+  @Auditar({
+    accion: TipoAccion.ELIMINAR,
+    entidad: TipoEntidad.SERVICIO,
+    descripcion: 'Eliminación de servicio',
+  })
   @Delete('delete/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)

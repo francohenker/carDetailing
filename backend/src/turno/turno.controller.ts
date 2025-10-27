@@ -67,20 +67,6 @@ export class TurnoController {
     return this.turnoService.modifyTurno(modifyTurnoDto);
   }
 
-  //use in tests only for now
-  // @Get(':id')
-  // async findTurnoById(@Req() request): Promise<Turno> {
-  //   const turnoId = parseInt(request.params.id, 10);
-  //   if (isNaN(turnoId)) {
-  //     throw new HttpException('Invalid turno ID', 400);
-  //   }
-  //   const turno = await this.turnoService.findById(turnoId);
-  //   if (!turno) {
-  //     throw new HttpException('Turno not found', 404);
-  //   }
-  //   return turno;
-  // }
-
   @Get('/history')
   async getUserTurnos(@Req() request): Promise<Turno[]> {
     const user = await this.authService.findUserByToken(
@@ -91,10 +77,6 @@ export class TurnoController {
 
   @Get('get-date')
   async getTurnosByDate(): Promise<any> {
-    // const date = request.query.date;
-    // if (!date) {
-    //   throw new HttpException('Date query parameter is required', 400);
-    // }
     return this.turnoService.findDate();
   }
 
@@ -135,14 +117,4 @@ export class TurnoController {
     }
     return this.turnoService.cancelTurno(turnoId);
   }
-
-  // @Post('delete')
-  // async deleteTurno(@Req() request): Promise<void> {
-  //     return this.turnoService.deleteTurno(user);
-  // }
-
-  // @Post('list')
-  // async listTurnos(@Req() request): Promise<Turno[]> {
-  //     return this.turnoService.listTurnos(user);
-  // }
 }

@@ -20,7 +20,7 @@ export class Turno {
   @ManyToOne(() => Car, (Car) => Car.turno)
   car: Car;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamp', unique: true })
   fechaHora: Date;
 
   @Column()
