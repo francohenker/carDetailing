@@ -202,6 +202,12 @@ export default function AdminPage() {
     const [filteredTurnos, setFilteredTurnos] = useState<Turno[]>([])
     const [turnoFilter, setTurnoFilter] = useState<'all' | 'pending-payment' | 'paid' | 'pending-service'>('all')
 
+    // Estados para paginación de turnos
+    const [currentPageTurnos, setCurrentPageTurnos] = useState(1)
+    const [itemsPerPageTurnos] = useState(10)
+    const [paginatedTurnos, setPaginatedTurnos] = useState<Turno[]>([])
+    const [totalPagesTurnos, setTotalPagesTurnos] = useState(0)
+
     // Estados para proveedores
     const [suppliers, setSuppliers] = useState<Supplier[]>([])
     const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false)
@@ -226,6 +232,7 @@ export default function AdminPage() {
         message: ''
     })
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
+    const [selectedProducts, setSelectedProducts] = useState<number[]>([])  // IDs de productos seleccionados
 
     // Estados para estadísticas
     const [statistics, setStatistics] = useState<{
@@ -861,12 +868,68 @@ export default function AdminPage() {
 
     const handleOpenEmailDialog = (supplier: Supplier) => {
         setSelectedSupplier(supplier)
+
+        // Filtrar productos con stock bajo que están asignados a este proveedor
+        const supplierProducts = lowStockProducts.filter(product =>
+            product.suppliers && product.suppliers.some(s => s.id === supplier.id)
+        );
+
+        // Seleccionar todos los productos del proveedor por defecto
+        setSelectedProducts(supplierProducts.map(p => p.id))
+
+        // Generar mensaje inicial con productos del proveedor
+        const generateInitialMessage = (products: Product[]) => {
+            if (products.length === 0) {
+                return `Estimado/a ${supplier.contactPerson || supplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para consultar sobre disponibilidad de productos.\n\nSaludos cordiales,\nEquipo de Car Detailing`
+            }
+
+            const productList = products.map(p =>
+                // `• ${p.name} - Stock actual: ${p.stock_actual}, Stock mínimo: ${p.stock_minimo}, Consumo por servicio: ${p.servicios_por_producto || 1}`
+                `• ${p.name}, cantidad: ${p.stock_minimo * 2}`
+            ).join('\n')
+
+            return `Estimado/a ${supplier.contactPerson || supplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para solicitar información sobre la disponibilidad y precios de los siguientes productos que requieren reposición:\n\n${productList}\n\nPor favor, envíenos información sobre:\n- Disponibilidad actual\n- Precios unitarios\n- Tiempo de entrega\n- Cantidades mínimas de pedido\n\nAgradecemos su pronta respuesta.\n\nSaludos cordiales,\nEquipo de Car Detailing`
+        }
+
         setEmailForm({
             supplierId: supplier.id,
             subject: `Solicitud de reposición de stock - ${new Date().toLocaleDateString()}`,
-            message: `Estimado/a ${supplier.contactPerson || supplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para solicitar información sobre la disponibilidad y precios de los siguientes productos que requieren reposición:\n\n[Lista de productos con stock bajo]\n\nAgradecemos su pronta respuesta.\n\nSaludos cordiales,\nEquipo de Car Detailing`
+            message: generateInitialMessage(supplierProducts)
         })
         setIsEmailDialogOpen(true)
+    }
+
+    const updateEmailMessage = (productIds: number[]) => {
+        if (!selectedSupplier) return;
+
+        const selectedProductsList = lowStockProducts.filter(p => productIds.includes(p.id));
+
+        const generateMessage = (products: Product[]) => {
+            if (products.length === 0) {
+                return `Estimado/a ${selectedSupplier.contactPerson || selectedSupplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para consultar sobre disponibilidad de productos.\n\nSaludos cordiales,\nEquipo de Car Detailing`
+            }
+
+            const productList = products.map(p =>
+                // `• ${p.name} - Stock actual: ${p.stock_actual}, Stock mínimo: ${p.stock_minimo}, Consumo por servicio: ${p.servicios_por_producto || 1}`
+                `• ${p.name}, cantidad: ${p.stock_minimo * 2}`
+            ).join('\n')
+
+            return `Estimado/a ${selectedSupplier.contactPerson || selectedSupplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para solicitar información sobre la disponibilidad y precios de los siguientes productos que requieren reposición:\n\n${productList}\n\nPor favor, envíenos información sobre:\n- Disponibilidad actual\n- Precios unitarios\n- Tiempo de entrega\n- Cantidades mínimas de pedido\n\nAgradecemos su pronta respuesta.\n\nSaludos cordiales,\nEquipo de Car Detailing`
+        }
+
+        setEmailForm(prev => ({
+            ...prev,
+            message: generateMessage(selectedProductsList)
+        }))
+    }
+
+    const handleProductSelection = (productId: number, isSelected: boolean) => {
+        const newSelection = isSelected
+            ? [...selectedProducts, productId]
+            : selectedProducts.filter(id => id !== productId);
+
+        setSelectedProducts(newSelection);
+        updateEmailMessage(newSelection);
     }
 
     const resetEmailForm = () => {
@@ -876,6 +939,7 @@ export default function AdminPage() {
             message: ''
         })
         setSelectedSupplier(null)
+        setSelectedProducts([])
     }
 
     const filterTurnos = (turnosData: Turno[], filter: 'all' | 'pending-payment' | 'paid' | 'pending-service') => {
@@ -905,6 +969,28 @@ export default function AdminPage() {
         filtered = filtered.sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime())
 
         setFilteredTurnos(filtered)
+
+        // Calcular paginación
+        const totalPages = Math.ceil(filtered.length / itemsPerPageTurnos)
+        setTotalPagesTurnos(totalPages)
+
+        // Resetear a la primera página cuando se cambia el filtro
+        setCurrentPageTurnos(1)
+
+        // Paginar resultados
+        paginateTurnos(filtered, 1)
+    }
+
+    const paginateTurnos = (turnosData: Turno[], page: number) => {
+        const startIndex = (page - 1) * itemsPerPageTurnos
+        const endIndex = startIndex + itemsPerPageTurnos
+        const paginated = turnosData.slice(startIndex, endIndex)
+        setPaginatedTurnos(paginated)
+    }
+
+    const handlePageChangeTurnos = (page: number) => {
+        setCurrentPageTurnos(page)
+        paginateTurnos(filteredTurnos, page)
     }
 
     const handleFilterChange = (newFilter: 'all' | 'pending-payment' | 'paid' | 'pending-service') => {
@@ -982,16 +1068,8 @@ export default function AdminPage() {
                 )
             );
 
-            setFilteredTurnos(prevTurnos => {
-                const updatedTurnos = prevTurnos.map(t =>
-                    t.id === turnoId ? { ...t, estado: 'finalizado' as const } : t
-                );
-                // Si el filtro es 'pending-service', elimina el turno recién finalizado de la vista
-                if (turnoFilter === 'pending-service') {
-                    return updatedTurnos.filter(t => t.estado !== 'finalizado');
-                }
-                return updatedTurnos;
-            });
+            // Recargar turnos para mantener consistencia con la paginación
+            fetchTurnos();
 
 
         } catch (error) {
@@ -1146,7 +1224,7 @@ export default function AdminPage() {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Nombre</TableHead>
-                                                <TableHead>Descripción</TableHead>
+                                                <TableHead className="w-80">Descripción</TableHead>
                                                 <TableHead>Precios por Tipo</TableHead>
                                                 <TableHead>Productos Asociados</TableHead>
                                                 <TableHead>Duración</TableHead>
@@ -1163,7 +1241,27 @@ export default function AdminPage() {
                                                 return (
                                                     <TableRow key={service.id}>
                                                         <TableCell className="font-medium">{service.name}</TableCell>
-                                                        <TableCell>{service.description}</TableCell>
+                                                        <TableCell className="w-80">
+                                                            <div className="group relative">
+                                                                <p
+                                                                    className="text-sm text-gray-600 truncate cursor-help"
+                                                                    title={service.description.length > 80 ? service.description : undefined}
+                                                                >
+                                                                    {service.description.length > 80
+                                                                        ? `${service.description.substring(0, 80)}...`
+                                                                        : service.description
+                                                                    }
+                                                                </p>
+                                                                {service.description.length > 80 && (
+                                                                    <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50 animate-in fade-in-0 zoom-in-95">
+                                                                        <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 max-w-sm shadow-xl border">
+                                                                            <p className="whitespace-pre-wrap break-words">{service.description}</p>
+                                                                            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell>
                                                             <div className="text-xs space-y-1">
                                                                 <div>🚗 Auto: ${getPrecio('AUTO').toLocaleString()}</div>
@@ -1239,9 +1337,9 @@ export default function AdminPage() {
                                                 <TableHead>Nombre</TableHead>
                                                 {/* <TableHead>Descripción</TableHead> */}
                                                 <TableHead>Precio</TableHead>
-                                                <TableHead>Stock</TableHead>
-                                                <TableHead>Stock Mínimo</TableHead>
-                                                <TableHead>Servicios/Prod.</TableHead>
+                                                <TableHead className="text-center">Stock</TableHead>
+                                                <TableHead className="text-center">Stock Mínimo</TableHead>
+                                                <TableHead className="text-center">Rendimiento</TableHead>
                                                 <TableHead>Proveedores</TableHead>
                                                 <TableHead>Acciones</TableHead>
                                             </TableRow>
@@ -1252,16 +1350,35 @@ export default function AdminPage() {
                                                     <TableCell className="font-medium">{product.name}</TableCell>
                                                     {/* <TableCell>{product.description}</TableCell> */}
                                                     <TableCell>${product.price.toLocaleString()}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={product.stock_actual > 0 ? "default" : "destructive"}>
-                                                            {product.stock_actual}
-                                                        </Badge>
+                                                    <TableCell className="text-center">
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <Badge
+                                                                variant={
+                                                                    product.stock_actual <= 0 ? "destructive" :
+                                                                        product.stock_actual <= product.stock_minimo ? "secondary" :
+                                                                            "default"
+                                                                }
+                                                            >
+                                                                {product.stock_actual}
+                                                            </Badge>
+                                                            {product.stock_actual <= product.stock_minimo && product.stock_actual > 0 && (
+                                                                <span className="text-xs text-amber-600 font-medium">Bajo stock</span>
+                                                            )}
+                                                            {product.stock_actual <= 0 && (
+                                                                <span className="text-xs text-red-600 font-medium">Sin stock</span>
+                                                            )}
+                                                        </div>
                                                     </TableCell>
-                                                    <TableCell>{product.stock_minimo}</TableCell>
-                                                    <TableCell>
-                                                        <div className="text-center">
-                                                            <span className="font-bold text-blue-600">{product.servicios_por_producto || 1}</span>
-                                                            <p className="text-xs text-muted-foreground">servicios</p>
+                                                    <TableCell className="text-center">
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="font-semibold text-orange-600">{product.stock_minimo}</span>
+                                                            <span className="text-xs text-muted-foreground">mínimo</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="font-bold text-blue-600 text-lg">{product.servicios_por_producto || 1}</span>
+                                                            <span className="text-xs text-muted-foreground">por servicio</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
@@ -1433,20 +1550,40 @@ export default function AdminPage() {
                                         ) : (
                                             <div className="space-y-3">
                                                 {lowStockProducts.map((product) => (
-                                                    <div key={product.id} className="border rounded-lg p-3 bg-red-50 border-red-200">
+                                                    <div key={product.id} className="border rounded-lg p-4 bg-gradient-to-r from-red-50 to-orange-50 border-red-200">
                                                         <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <h3 className="font-medium text-red-900">{product.name}</h3>
-                                                                <p className="text-sm text-red-700">
-                                                                    Stock actual: <span className="font-bold">{product.stock_actual}</span>
-                                                                </p>
-                                                                <p className="text-sm text-red-600">
-                                                                    Stock mínimo: {product.stock_minimo}
-                                                                </p>
+                                                            <div className="flex-1">
+                                                                <h3 className="font-medium text-red-900 mb-2">{product.name}</h3>
+                                                                <div className="grid grid-cols-2 gap-4 mb-2">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-xs text-red-600 font-medium uppercase tracking-wide">Stock Actual</span>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-lg font-bold text-red-800">{product.stock_actual}</span>
+                                                                            <Badge variant="destructive" className="text-xs">
+                                                                                {product.stock_actual <= 0 ? 'Sin stock' : 'Bajo stock'}
+                                                                            </Badge>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-xs text-orange-600 font-medium uppercase tracking-wide">Stock Mínimo</span>
+                                                                        <span className="text-lg font-semibold text-orange-700">{product.stock_minimo}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-xs text-blue-600 font-medium uppercase tracking-wide">Consumo por Servicio</span>
+                                                                    <span className="text-sm font-semibold text-blue-700">{product.servicios_por_producto || 1} unidades</span>
+                                                                </div>
                                                             </div>
-                                                            <Badge variant="destructive">
-                                                                ¡Crítico!
-                                                            </Badge>
+                                                            <div className="flex flex-col items-end gap-2">
+                                                                <Badge variant="destructive" className="animate-pulse">
+                                                                    ¡Crítico!
+                                                                </Badge>
+                                                                {product.stock_actual <= 0 && (
+                                                                    <Badge variant="outline" className="text-red-700 border-red-300">
+                                                                        Agotado
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         {product.suppliers && product.suppliers.length > 0 && (
                                                             <div className="mt-2">
@@ -1656,7 +1793,7 @@ export default function AdminPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {filteredTurnos.map((turno) => {
+                                            {paginatedTurnos.map((turno) => {
                                                 const isPaid = turno.pago.some(pago => pago.estado === 'PAGADO')
                                                 const hasPendingPayment = (turno.pago.length === 0 || turno.pago.every(pago => pago.estado === 'PENDIENTE')) && turno.estado !== 'cancelado';
 
@@ -1762,6 +1899,47 @@ export default function AdminPage() {
                                             })}
                                         </TableBody>
                                     </Table>
+
+                                    {/* Paginación */}
+                                    {filteredTurnos.length > 0 && (
+                                        <div className="flex items-center justify-between mt-4">
+                                            <div className="text-sm text-muted-foreground">
+                                                Mostrando {Math.min((currentPageTurnos - 1) * itemsPerPageTurnos + 1, filteredTurnos.length)} a {Math.min(currentPageTurnos * itemsPerPageTurnos, filteredTurnos.length)} de {filteredTurnos.length} turnos
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handlePageChangeTurnos(currentPageTurnos - 1)}
+                                                    disabled={currentPageTurnos === 1}
+                                                >
+                                                    Anterior
+                                                </Button>
+                                                <div className="flex gap-1">
+                                                    {Array.from({ length: totalPagesTurnos }, (_, i) => i + 1).map((page) => (
+                                                        <Button
+                                                            key={page}
+                                                            variant={currentPageTurnos === page ? "default" : "outline"}
+                                                            size="sm"
+                                                            onClick={() => handlePageChangeTurnos(page)}
+                                                            className="w-8 h-8 p-0"
+                                                        >
+                                                            {page}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handlePageChangeTurnos(currentPageTurnos + 1)}
+                                                    disabled={currentPageTurnos === totalPagesTurnos}
+                                                >
+                                                    Siguiente
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {filteredTurnos.length === 0 && (
                                         <div className="text-center py-8 text-muted-foreground">
                                             No se encontraron turnos para el filtro seleccionado.
@@ -1786,9 +1964,8 @@ export default function AdminPage() {
                                                         ${statisticsLoading ? '...' : statistics.currentMonthRevenue.toLocaleString()}
                                                     </p>
                                                     {!statisticsLoading && statistics.revenueChange !== 0 && (
-                                                        <span className={`text-xs flex items-center gap-1 ${
-                                                            statistics.revenueChange > 0 ? 'text-green-600' : 'text-red-600'
-                                                        }`}>
+                                                        <span className={`text-xs flex items-center gap-1 ${statistics.revenueChange > 0 ? 'text-green-600' : 'text-red-600'
+                                                            }`}>
                                                             {statistics.revenueChange > 0 ? (
                                                                 <TrendingUp className="h-3 w-3" />
                                                             ) : (
@@ -1878,11 +2055,10 @@ export default function AdminPage() {
                                             {statistics.popularServices.map((service, index) => (
                                                 <div key={service.name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                                                            index === 0 ? 'bg-yellow-500' :
-                                                            index === 1 ? 'bg-gray-400' :
-                                                            'bg-orange-500'
-                                                        }`}>
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${index === 0 ? 'bg-yellow-500' :
+                                                                index === 1 ? 'bg-gray-400' :
+                                                                    'bg-orange-500'
+                                                            }`}>
                                                             {index + 1}
                                                         </div>
                                                         <span className="font-medium">{service.name}</span>
@@ -2030,13 +2206,12 @@ export default function AdminPage() {
                                                 <div key={record.id} className="border rounded-lg p-4 space-y-2">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                                record.accion === 'CREAR' ? 'bg-green-100 text-green-700' :
-                                                                record.accion === 'ACTUALIZAR' ? 'bg-blue-100 text-blue-700' :
-                                                                record.accion === 'ELIMINAR' ? 'bg-red-100 text-red-700' :
-                                                                record.accion === 'LOGIN' ? 'bg-yellow-100 text-yellow-700' :
-                                                                'bg-gray-100 text-gray-700'
-                                                            }`}>
+                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.accion === 'CREAR' ? 'bg-green-100 text-green-700' :
+                                                                    record.accion === 'ACTUALIZAR' ? 'bg-blue-100 text-blue-700' :
+                                                                        record.accion === 'ELIMINAR' ? 'bg-red-100 text-red-700' :
+                                                                            record.accion === 'LOGIN' ? 'bg-yellow-100 text-yellow-700' :
+                                                                                'bg-gray-100 text-gray-700'
+                                                                }`}>
                                                                 {record.accion}
                                                             </span>
                                                             <span className="text-sm font-medium">{record.entidad}</span>
@@ -2048,11 +2223,11 @@ export default function AdminPage() {
                                                             {new Date(record.fechaCreacion).toLocaleString()}
                                                         </span>
                                                     </div>
-                                                    
+
                                                     {record.descripcion && (
                                                         <p className="text-sm text-muted-foreground">{record.descripcion}</p>
                                                     )}
-                                                    
+
                                                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                                         {record.usuario && (
                                                             <span>Usuario: {record.usuario.firstname} {record.usuario.lastname}</span>
@@ -2080,12 +2255,11 @@ export default function AdminPage() {
                                             {auditoriaStats.accionesMasComunes.map((accion, index) => (
                                                 <div key={accion.accion} className="flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                                                            index === 0 ? 'bg-yellow-500' :
-                                                            index === 1 ? 'bg-gray-400' :
-                                                            index === 2 ? 'bg-orange-500' :
-                                                            'bg-gray-300'
-                                                        }`}>
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${index === 0 ? 'bg-yellow-500' :
+                                                                index === 1 ? 'bg-gray-400' :
+                                                                    index === 2 ? 'bg-orange-500' :
+                                                                        'bg-gray-300'
+                                                            }`}>
                                                             {index + 1}
                                                         </div>
                                                         <span className="font-medium">{accion.accion}</span>
@@ -2107,12 +2281,11 @@ export default function AdminPage() {
                                             {auditoriaStats.entidadesMasAuditadas.map((entidad, index) => (
                                                 <div key={entidad.entidad} className="flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                                                            index === 0 ? 'bg-blue-500' :
-                                                            index === 1 ? 'bg-green-500' :
-                                                            index === 2 ? 'bg-purple-500' :
-                                                            'bg-gray-300'
-                                                        }`}>
+                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${index === 0 ? 'bg-blue-500' :
+                                                                index === 1 ? 'bg-green-500' :
+                                                                    index === 2 ? 'bg-purple-500' :
+                                                                        'bg-gray-300'
+                                                            }`}>
                                                             {index + 1}
                                                         </div>
                                                         <span className="font-medium">{entidad.entidad}</span>
@@ -2314,37 +2487,53 @@ export default function AdminPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="product-stock" className="flex items-center gap-2">
+                                            <Package className="h-4 w-4" />
                                             Stock Actual
                                             {editingProduct && (
-                                                <span className="badge badge-warning badge-sm"></span>
+                                                <span className="badge badge-warning badge-sm">Editar stock</span>
                                             )}
                                         </Label>
                                         <Input
                                             id="product-stock"
                                             type="number"
+                                            min="0"
                                             value={productForm.stock_actual}
                                             onChange={(e) => setProductForm({ ...productForm, stock_actual: Number(e.target.value) })}
                                             required
                                             className={editingProduct ? "border-warning" : ""}
                                         />
                                         {editingProduct && productForm.stock_actual !== originalStockValue && (
-                                            <p className="text-xs text-warning">
-                                                ⚠️ Este cambio requerirá confirmación al actualizar
+                                            <p className="text-xs text-warning flex items-center gap-1">
+                                                <AlertTriangle className="h-3 w-3" />
+                                                Este cambio requerirá confirmación al actualizar
                                             </p>
                                         )}
+                                        <p className="text-xs text-muted-foreground">
+                                            Cantidad actual disponible en inventario
+                                        </p>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="product-stock-min">Stock Mínimo</Label>
+                                        <Label htmlFor="product-stock-min" className="flex items-center gap-2">
+                                            <AlertTriangle className="h-4 w-4 text-orange-500" />
+                                            Stock Mínimo
+                                        </Label>
                                         <Input
                                             id="product-stock-min"
                                             type="number"
+                                            min="0"
                                             value={productForm.stock_minimo}
                                             onChange={(e) => setProductForm({ ...productForm, stock_minimo: Number(e.target.value) })}
                                             required
                                         />
+                                        <p className="text-xs text-muted-foreground">
+                                            Cantidad mínima antes de generar alerta de reposición
+                                        </p>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="product-servicios-por-producto">Servicios por Producto</Label>
+                                        <Label htmlFor="product-servicios-por-producto" className="flex items-center gap-2">
+                                            <Wrench className="h-4 w-4 text-blue-500" />
+                                            Rendimiento por Unidad
+                                        </Label>
                                         <Input
                                             id="product-servicios-por-producto"
                                             type="number"
@@ -2354,19 +2543,10 @@ export default function AdminPage() {
                                             required
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            ¿Cuántos servicios se pueden realizar con 1 unidad?
+                                            ¿Cuántos servicios se pueden realizar con 1 unidad de este producto?
                                         </p>
                                     </div>
                                 </div>
-                                {/* <div className="space-y-2">
-                                    <Label htmlFor="product-category">Categoría</Label>
-                                    <Input
-                                        id="product-category"
-                                        value={productForm.category}
-                                        onChange={(e) => setProductForm({...productForm, category: e.target.value})}
-                                        placeholder="Ej: Ceras, Shampoos, Herramientas"
-                                    />
-                                </div> */}
 
                                 <div className="space-y-2">
                                     <Label>Proveedores (opcional)</Label>
@@ -2661,7 +2841,7 @@ export default function AdminPage() {
                         <DialogHeader>
                             <DialogTitle>Confirmar eliminación</DialogTitle>
                             <DialogDescription>
-                                ¿Estás seguro que deseas eliminar &quote;{deleteConfirmDialog.name}&quote;?
+                                ¿Estás seguro que deseas eliminar {deleteConfirmDialog.name}?
                                 Esta acción no se puede deshacer.
                             </DialogDescription>
                         </DialogHeader>
@@ -2798,23 +2978,82 @@ export default function AdminPage() {
 
                                 {lowStockProducts.length > 0 && (
                                     <div className="bg-amber-50 p-3 rounded-lg">
-                                        <div className="flex items-center gap-2 mb-2">
+                                        <div className="flex items-center gap-2 mb-3">
                                             <AlertTriangle className="h-4 w-4 text-amber-600" />
-                                            <span className="font-medium text-amber-900">Productos con Stock Bajo</span>
+                                            <span className="font-medium text-amber-900">Seleccionar Productos para Solicitar</span>
                                         </div>
-                                        <div className="text-sm text-amber-800">
-                                            <p className="mb-1">Productos que requieren reposición:</p>
-                                            <ul className="list-disc list-inside space-y-1">
-                                                {lowStockProducts.slice(0, 5).map((product) => (
-                                                    <li key={product.id}>
-                                                        {product.name} (Stock actual: {product.stock_actual}, Mínimo: {product.stock_minimo}, {(product.suppliers) && product.suppliers.find(s => s.id === selectedSupplier?.id) ? 'Proveedor asignado' : 'No asignado'})
-                                                    </li>
+                                        <div className="text-sm text-amber-800 mb-3">
+                                            <p>Marca los productos que deseas incluir en la solicitud de reposición:</p>
+                                        </div>
 
-                                                ))}
-                                                {lowStockProducts.length > 5 && (
-                                                    <li className="text-amber-600">... y {lowStockProducts.length - 5} productos más</li>
-                                                )}
-                                            </ul>
+                                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                                            {lowStockProducts.map((product) => {
+                                                const isSupplierProduct = product.suppliers && product.suppliers.some(s => s.id === selectedSupplier?.id);
+                                                const isSelected = selectedProducts.includes(product.id);
+
+                                                return (
+                                                    <div
+                                                        key={product.id}
+                                                        className={`bg-white p-3 rounded border transition-all ${isSelected ? 'border-blue-300 bg-blue-50' : 'border-amber-200'
+                                                            } ${!isSupplierProduct ? 'opacity-50' : ''}`}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <input
+                                                                type="checkbox"
+                                                                id={`product-${product.id}`}
+                                                                checked={isSelected}
+                                                                onChange={(e) => handleProductSelection(product.id, e.target.checked)}
+                                                                className="checkbox checkbox-sm mt-1"
+                                                                disabled={!isSupplierProduct}
+                                                            />
+                                                            <label
+                                                                htmlFor={`product-${product.id}`}
+                                                                className="flex-1 cursor-pointer"
+                                                                aria-label={`Seleccionar producto ${product.name}`}
+                                                            >
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <span className={`font-medium ${isSelected ? 'text-blue-900' : 'text-amber-900'}`}>
+                                                                            {product.name}
+                                                                        </span>
+                                                                        <div className="flex gap-4 text-xs text-amber-700 mt-1">
+                                                                            <span>Stock: <strong className="text-red-600">{product.stock_actual}</strong></span>
+                                                                            <span>Mínimo: <strong>{product.stock_minimo}</strong></span>
+                                                                            <span>Por servicio: <strong>{product.servicios_por_producto || 1}</strong></span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex flex-col items-end gap-1">
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className={`text-xs ${isSupplierProduct ? 'text-green-700 border-green-300' : 'text-gray-500 border-gray-300'}`}
+                                                                        >
+                                                                            {isSupplierProduct ? 'Asignado' : 'No asignado'}
+                                                                        </Badge>
+                                                                        {isSelected && (
+                                                                            <Badge variant="default" className="text-xs bg-blue-600">
+                                                                                Seleccionado
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                        {selectedProducts.length > 0 && (
+                                            <div className="mt-3 p-2 bg-blue-100 rounded border border-blue-200">
+                                                <div className="flex items-center gap-2">
+                                                    <CheckCircle className="h-4 w-4 text-blue-600" />
+                                                    <span className="text-sm font-medium text-blue-800">
+                                                        {selectedProducts.length} producto(s) seleccionado(s) para incluir en el email
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="mt-2 text-xs text-amber-600">
+                                            <p>💡 Solo se pueden seleccionar productos asignados a este proveedor. El mensaje se actualizará automáticamente.</p>
                                         </div>
                                     </div>
                                 )}

@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, Calendar, Car, X, FileDown } from "lucide-react"
+import { CreditCard, Calendar, Car, X, FileDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 
@@ -88,6 +88,29 @@ export default function UserTurnos() {
     const [turnos, setTurnos] = useState<Turno[]>([])
     const [loading, setLoading] = useState(true)
 
+    // Estados para paginación del historial
+    const [currentPageHistorial, setCurrentPageHistorial] = useState(1)
+    const [itemsPerPageHistorial] = useState(5)
+    const [paginatedHistorial, setPaginatedHistorial] = useState<Turno[]>([])
+    const [totalPagesHistorial, setTotalPagesHistorial] = useState(0)
+
+    // Función para paginar el historial
+    const paginateHistorial = useCallback((historialData: Turno[], page: number) => {
+        const startIndex = (page - 1) * itemsPerPageHistorial
+        const endIndex = startIndex + itemsPerPageHistorial
+        const paginated = historialData.slice(startIndex, endIndex)
+        setPaginatedHistorial(paginated)
+    }, [itemsPerPageHistorial])
+
+    // Función para cambiar de página en el historial
+    const handlePageChangeHistorial = (page: number) => {
+        setCurrentPageHistorial(page)
+        const historialTurnos = turnos
+            .filter(t => t.estado === 'finalizado')
+            .sort((a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime())
+        paginateHistorial(historialTurnos, page)
+    }
+
     // Función para determinar si un turno se puede cancelar
     const canCancelTurno = (turno: Turno): boolean => {
         // Solo se puede cancelar si está en estado pendiente
@@ -130,6 +153,19 @@ export default function UserTurnos() {
             if (updatedResponse.ok) {
                 const updatedData = await updatedResponse.json()
                 setTurnos(updatedData)
+                
+                // Actualizar paginación del historial
+                const historialTurnos = updatedData
+                    .filter((t: Turno) => t.estado === 'finalizado')
+                    .sort((a: Turno, b: Turno) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime())
+                
+                const totalPages = Math.ceil(historialTurnos.length / itemsPerPageHistorial)
+                setTotalPagesHistorial(totalPages)
+                
+                // Mantener la página actual si es válida, sino ir a la primera
+                const newPage = currentPageHistorial <= totalPages ? currentPageHistorial : 1
+                setCurrentPageHistorial(newPage)
+                paginateHistorial(historialTurnos, newPage)
             }
         } catch (error) {
             console.error('Error canceling turno:', error)
@@ -186,6 +222,17 @@ export default function UserTurnos() {
                 if (!response.ok) throw new Error("No se pudieron cargar los turnos.");
                 const data = await response.json();
                 setTurnos(data);
+                
+                // Inicializar paginación del historial
+                const historialTurnos = data
+                    .filter((t: Turno) => t.estado === 'finalizado')
+                    .sort((a: Turno, b: Turno) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime())
+                
+                const totalPages = Math.ceil(historialTurnos.length / itemsPerPageHistorial)
+                setTotalPagesHistorial(totalPages)
+                setCurrentPageHistorial(1)
+                paginateHistorial(historialTurnos, 1)
+                
             } catch {
                 toast.error("Error", {
                     description: "No se pudieron cargar los turnos. Intenta nuevamente más tarde.",
@@ -196,7 +243,7 @@ export default function UserTurnos() {
         }
 
         fetchTurnos();
-    }, [])
+    }, [itemsPerPageHistorial, paginateHistorial])
 
     const handlePagarMercadoPago = async (turno: Turno) => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/mercadopago`, {
@@ -225,6 +272,7 @@ export default function UserTurnos() {
         .filter(t => t.estado !== 'finalizado') // Todos los turnos que NO están finalizados
         .sort((a, b) => new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime());
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const historialTurnos = turnos
         .filter(t => t.estado === 'finalizado') // Solo turnos finalizados
         .sort((a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime());
@@ -301,11 +349,11 @@ export default function UserTurnos() {
             {/* Sección de Historial de Servicios */}
             <div>
                 <h3 className="text-xl font-semibold mb-4">Historial de Servicios Realizados</h3>
-                {historialTurnos.length === 0 ? (
+                {paginatedHistorial.length === 0 ? (
                     <p className="text-muted-foreground">No tienes servicios en tu historial.</p>
                 ) : (
                     <div className="space-y-4">
-                        {historialTurnos.map(turno => (
+                        {paginatedHistorial.map(turno => (
                             <Card key={turno.id} className="opacity-80">
                                 <CardContent className="p-4 grid gap-4 md:grid-cols-[1fr_auto]">
                                     <div>
@@ -351,6 +399,45 @@ export default function UserTurnos() {
                                 </CardContent>
                             </Card>
                         ))}
+                    </div>
+                )}
+                
+                {/* Controles de paginación para historial */}
+                {totalPagesHistorial > 1 && (
+                    <div className="flex justify-center items-center gap-2 mt-6">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChangeHistorial(Math.max(currentPageHistorial - 1, 1))}
+                            disabled={currentPageHistorial === 1}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            Anterior
+                        </Button>
+                        
+                        <div className="flex gap-1">
+                            {Array.from({ length: totalPagesHistorial }, (_, i) => i + 1).map(page => (
+                                <Button
+                                    key={page}
+                                    variant={currentPageHistorial === page ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => handlePageChangeHistorial(page)}
+                                    className="min-w-[2.5rem]"
+                                >
+                                    {page}
+                                </Button>
+                            ))}
+                        </div>
+                        
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChangeHistorial(Math.min(currentPageHistorial + 1, totalPagesHistorial))}
+                            disabled={currentPageHistorial === totalPagesHistorial}
+                        >
+                            Siguiente
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
                     </div>
                 )}
             </div>

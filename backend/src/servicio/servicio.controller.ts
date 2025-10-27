@@ -18,6 +18,11 @@ import { Roles } from '../roles/role.decorator';
 import { RolesGuard } from '../roles/role.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
+import { Auditar } from 'src/auditoria/decorators/auditar.decorator';
+import {
+  TipoAccion,
+  TipoEntidad,
+} from 'src/auditoria/entities/auditoria.entity';
 
 @Controller('services')
 export class ServicioController {
@@ -30,6 +35,11 @@ export class ServicioController {
     return this.authService.findUserByToken(request.headers.authorization);
   }
 
+  @Auditar({
+    accion: TipoAccion.CREAR,
+    entidad: TipoEntidad.SERVICIO,
+    descripcion: 'Creación de nuevo servicio',
+  })
   @Post('create')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)

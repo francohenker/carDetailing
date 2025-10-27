@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  HttpException,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -98,7 +99,7 @@ export class AuditoriaInterceptor implements NestInterceptor {
                 request.headers.authorization,
               );
             } catch (error) {
-              // Si no se puede obtener el usuario, continuamos sin él
+              return new HttpException('Unauthorized, ' + error.message, 401);
             }
           }
 
