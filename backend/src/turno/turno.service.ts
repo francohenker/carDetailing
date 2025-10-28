@@ -23,6 +23,9 @@ export class TurnoService {
   ) {}
 
   async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
+    // Validación mejorada que considera conflictos de tiempo basados en duración
+    await this.validateTimeSlotAvailability(turnoView.date, turnoView.duration);
+
     const servicios = await this.servicioService.findByIds(turnoView.services);
     const newTurno = new Turno(
       car,
@@ -45,6 +48,46 @@ export class TurnoService {
       `Turno agendado para el ${this.mailService.formateDate(newTurno.fechaHora)} en el auto ${newTurno.car.marca} ${newTurno.car.model} ${newTurno.car.patente}`,
     );
     return turno;
+  }
+
+  private async validateTimeSlotAvailability(
+    requestedDateTime: Date,
+    duration: number,
+  ): Promise<void> {
+    // Asegurarse de que sea un objeto Date válido
+    const dateObj = new Date(requestedDateTime);
+
+    // Obtener la fecha sin la hora para buscar turnos del día
+    const dateString = dateObj.toISOString().split('T')[0];
+
+    // Obtener todos los turnos del día
+    const existingTurnos = await this.findDate(dateString);
+
+    // Crear las fechas de inicio y fin del nuevo turno
+    const newTurnoStart = new Date(dateObj);
+    const newTurnoEnd = new Date(dateObj);
+    newTurnoEnd.setMinutes(newTurnoEnd.getMinutes() + duration);
+
+    // Verificar conflictos con turnos existentes
+    for (const existingTurno of existingTurnos) {
+      const existingStart = new Date(existingTurno.fechaHora);
+      const existingEnd = new Date(existingTurno.fechaHora);
+      existingEnd.setMinutes(
+        existingEnd.getMinutes() + (existingTurno.duration || 60),
+      );
+
+      // Verificar si hay solapamiento
+      const hasOverlap =
+        newTurnoStart < existingEnd && newTurnoEnd > existingStart;
+
+      if (hasOverlap) {
+        throw new HttpException(
+          `El horario solicitado (${newTurnoStart.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${newTurnoEnd.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}) ` +
+            `se superpone con un turno existente (${existingStart.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${existingEnd.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })})`,
+          400,
+        );
+      }
+    }
   }
 
   //VERIFICAR!!!!!!!!!!, agregar validaciones con respecto a la fecha (y posiblemente a los demas campos, try no funciona como deberia)
@@ -183,20 +226,113 @@ export class TurnoService {
     // }
   }
 
-  async findDate(): Promise<any> {
-    const startDate = new Date(Date.now());
+  async findDate(targetDate?: string): Promise<any> {
+    // Si no se proporciona fecha, usar la fecha actual
+    const baseDate = targetDate ? new Date(targetDate) : new Date();
+
+    const startDate = new Date(baseDate);
     startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(Date.now());
-    endDate.setHours(23, 59, 59, 999);
+
+    const endDate = new Date(baseDate);
+    endDate.setMonth(endDate.getMonth() + 2);
+    // endDate.setHours(23, 59, 59, 999);
 
     const turnos = await this.turnoRepository.find({
       where: {
         fechaHora: Between(startDate, endDate),
+        estado: estado_turno.PENDIENTE, // Solo turnos activos que ocupan horarios
       },
       relations: ['car', 'car.user', 'servicio'],
     });
 
     return turnos;
+  }
+
+  async getAvailableTimeSlots(
+    targetDate: string,
+    duration: number,
+  ): Promise<any> {
+    // Obtener todos los turnos del día especificado
+    const turnos = await this.findDate(targetDate);
+
+    // Configuración de horarios de trabajo
+    const workStartHour = 8; // 8:00 AM
+    const workEndHour = 19; // 7:00 PM
+    const slotInterval = 60; // Intervalos de 60 minutos
+
+    // Crear lista de todos los slots posibles
+    const allSlots: string[] = [];
+    for (let hour = workStartHour; hour < workEndHour; hour++) {
+      for (let minute = 0; minute < 60; minute += slotInterval) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        allSlots.push(timeString);
+      }
+    }
+
+    // Crear set de horarios ocupados considerando la duración
+    const occupiedSlots = new Set<string>();
+
+    for (const turno of turnos) {
+      const turnoStart = new Date(turno.fechaHora);
+      const turnoStartTime = `${turnoStart.getHours().toString().padStart(2, '0')}:${turnoStart.getMinutes().toString().padStart(2, '0')}`;
+
+      // Marcar como ocupados todos los slots que coinciden con la duración del turno
+      const turnoDuration = turno.duration || 60; // Duración por defecto si no está definida
+      const slotsToBlock = Math.ceil(turnoDuration / slotInterval);
+
+      const startSlotIndex = allSlots.indexOf(turnoStartTime);
+      if (startSlotIndex !== -1) {
+        for (let i = 0; i < slotsToBlock; i++) {
+          if (startSlotIndex + i < allSlots.length) {
+            occupiedSlots.add(allSlots[startSlotIndex + i]);
+          }
+        }
+      }
+    }
+
+    // Determinar slots disponibles considerando la duración solicitada
+    const availableSlots: { time: string; available: boolean }[] = [];
+    const slotsNeeded = Math.ceil(duration / slotInterval);
+
+    for (let i = 0; i <= allSlots.length - slotsNeeded; i++) {
+      const currentTime = allSlots[i];
+
+      // Verificar si este slot y los siguientes (según duración) están disponibles
+      let isAvailable = true;
+      for (let j = 0; j < slotsNeeded; j++) {
+        if (i + j >= allSlots.length || occupiedSlots.has(allSlots[i + j])) {
+          isAvailable = false;
+          break;
+        }
+      }
+
+      availableSlots.push({
+        time: currentTime,
+        available: isAvailable,
+      });
+    }
+
+    // Agregar los slots restantes como no disponibles si no hay suficiente tiempo
+    for (let i = allSlots.length - slotsNeeded + 1; i < allSlots.length; i++) {
+      if (i >= 0) {
+        availableSlots.push({
+          time: allSlots[i],
+          available: false,
+        });
+      }
+    }
+
+    return {
+      date: targetDate,
+      duration: duration,
+      slots: availableSlots,
+      occupiedTurnos: turnos.map((t) => ({
+        id: t.id,
+        fechaHora: t.fechaHora,
+        duration: t.duration,
+        servicios: t.servicio.map((s) => s.name),
+      })),
+    };
   }
 
   async findAll(): Promise<Turno[]> {

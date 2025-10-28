@@ -76,8 +76,26 @@ export class TurnoController {
   }
 
   @Get('get-date')
-  async getTurnosByDate(): Promise<any> {
-    return this.turnoService.findDate();
+  async getTurnosByDate(@Req() request): Promise<any> {
+    const targetDate = request.query.date;
+    return this.turnoService.findDate(targetDate);
+  }
+
+  @Get('available-slots')
+  async getAvailableTimeSlots(@Req() request): Promise<any> {
+    const { date, duration } = request.query;
+
+    if (!date) {
+      throw new HttpException('Date parameter is required', 400);
+    }
+
+    const durationMinutes = duration ? parseInt(duration, 10) : 60;
+
+    if (isNaN(durationMinutes) || durationMinutes <= 0) {
+      throw new HttpException('Duration must be a positive number', 400);
+    }
+
+    return this.turnoService.getAvailableTimeSlots(date, durationMinutes);
   }
 
   @UseGuards(RolesGuard)

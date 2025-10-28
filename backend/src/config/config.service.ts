@@ -47,7 +47,9 @@ class ConfigService {
       migrations: ['src/migration/*.ts'],
 
       autoLoadEntities: true,
-      synchronize: true,
+
+      //SINCRONIZAR LA BD (OSEA MIGRACIONES DE LAS ENTIDADES)
+      synchronize: false,
 
       // ssl: this.getValue('POSTGRES_SSL', false) === 'true',
       ssl: true,

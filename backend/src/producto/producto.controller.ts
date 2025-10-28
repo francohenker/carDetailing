@@ -82,13 +82,6 @@ export class ProductoController {
     return this.productoService.update(id, { stock_actual, stock_minimo });
   }
 
-  //use for change stock_minimo alert
-  // @Post('ajust-stock')
-  // // @UseGuards(AuthGuard)
-  // async ajustStock(@Body('id') id: number, @Body('cantidad') cantidad: number) {
-  //     return this.productoService.ajustStock(id, cantidad);
-  // }
-
   @Auditar({
     accion: TipoAccion.ELIMINAR,
     entidad: TipoEntidad.PRODUCTO,
