@@ -31,13 +31,28 @@ export class AuditoriaService {
     datosNuevos?: any,
     ip?: string,
     userAgent?: string,
+    cambios?: any,
   ): Promise<Auditoria> {
+    // Si hay cambios calculados, agregarlos a la descripción
+    let descripcionFinal = descripcion;
+    if (cambios && Object.keys(cambios).length > 0) {
+      const cambiosTexto = Object.keys(cambios)
+        .map((key) => {
+          const cambio = cambios[key];
+          return `${key}: "${cambio.anterior}" → "${cambio.nuevo}"`;
+        })
+        .join(', ');
+      descripcionFinal = descripcion
+        ? `${descripcion} - Cambios: ${cambiosTexto}`
+        : `Cambios: ${cambiosTexto}`;
+    }
+
     const auditoriaDto: CreateAuditoriaDto = {
       accion,
       entidad,
       usuarioId,
       entidadId,
-      descripcion,
+      descripcion: descripcionFinal,
       datosAnteriores,
       datosNuevos,
       ip,

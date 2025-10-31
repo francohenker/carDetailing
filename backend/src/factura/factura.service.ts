@@ -5,6 +5,7 @@ import { Turno } from '../turno/entities/turno.entity';
 import { Pago } from '../pago/entities/pago.entity';
 import { estado_pago } from '../enums/estado_pago.enum';
 import PDFDocument from 'pdfkit';
+import { empresaInfo } from '../config/empresa.config';
 
 @Injectable()
 export class FacturaService {
@@ -51,34 +52,57 @@ export class FacturaService {
         resolve(pdfData);
       });
 
-      // Header de la factura
+      // Header del comprobante
       doc
         .fontSize(20)
-        .text('FACTURA DE SERVICIO', { align: 'center' })
+        .text('COMPROBANTE DE PAGO', { align: 'center' })
         .moveDown();
 
       // Información de la empresa
       doc
         .fontSize(14)
-        .text('Car Detailing', { align: 'left' })
+        .text(empresaInfo.razonSocial, { align: 'left' })
         .fontSize(10)
+        .text(`CUIT: ${empresaInfo.cuit}`)
         .text('Servicio profesional de lavado y detailing de vehículos')
-        .text('Email: cardetailingtf@gmail.com')
-        .text('Teléfono: +54 1234-567890')
-        .moveDown();
+        .text(`Email: ${empresaInfo.email}`)
+        .text(`Teléfono: ${empresaInfo.telefono}`);
+
+      if (empresaInfo.web) {
+        doc.text(`Web: ${empresaInfo.web}`);
+      }
+
+      doc.moveDown();
+
+      // Información de la sucursal
+      doc
+        .fontSize(11)
+        .text('SUCURSAL:', { underline: true })
+        .fontSize(10)
+        .text(empresaInfo.sucursal.nombre)
+        .text(empresaInfo.sucursal.direccion)
+        .text(
+          `${empresaInfo.sucursal.localidad}, ${empresaInfo.sucursal.provincia} - CP: ${empresaInfo.sucursal.codigoPostal}`,
+        );
+
+      if (empresaInfo.sucursal.telefono) {
+        doc.text(`Tel: ${empresaInfo.sucursal.telefono}`);
+      }
+
+      doc.moveDown();
 
       // Línea separadora
       doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke().moveDown();
 
-      // Información de la factura
-      const facturaNumber = `FACT-${turno.id.toString().padStart(6, '0')}`;
-      const fechaFactura = new Date().toLocaleDateString('es-AR');
+      // Información del comprobante
+      const comprobanteNumber = `COMP-${turno.id.toString().padStart(6, '0')}`;
+      const fechaComprobante = new Date().toLocaleDateString('es-AR');
       const fechaPago = pago.fecha_pago.toLocaleDateString('es-AR');
 
       doc
         .fontSize(12)
-        .text(`Factura N°: ${facturaNumber}`, { align: 'right' })
-        .text(`Fecha: ${fechaFactura}`, { align: 'right' })
+        .text(`Comprobante N°: ${comprobanteNumber}`, { align: 'right' })
+        .text(`Fecha de Emisión: ${fechaComprobante}`, { align: 'right' })
         .text(`Fecha de Pago: ${fechaPago}`, { align: 'right' })
         .moveDown();
 
@@ -184,9 +208,15 @@ export class FacturaService {
           { align: 'center' },
         )
         .text(
-          'Esta es una factura generada automáticamente',
+          `${empresaInfo.razonSocial} - CUIT: ${empresaInfo.cuit}`,
           50,
           doc.page.height - 85,
+          { align: 'center' },
+        )
+        .text(
+          'Este es un comprobante de pago generado automáticamente',
+          50,
+          doc.page.height - 70,
           { align: 'center' },
         );
 

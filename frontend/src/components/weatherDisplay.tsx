@@ -43,8 +43,8 @@ export function WeatherWidget() {
             useWeatherStore.setState({ loading: true })
             try {
                 const params = {
-                    latitude: [-27.0005],
-                    longitude: [-54.4816],
+                    latitude: [-27.9200], // Apóstoles, Misiones -27.92,-55.74
+                    longitude: [-55.7400],
                     hourly: ["temperature_2m", "apparent_temperature", "precipitation_probability", "precipitation"],
                     current: ["temperature_2m", "precipitation", "weather_code", "cloud_cover", "apparent_temperature", "wind_speed_10m", "relative_humidity_2m"],
                     timezone: "America/Sao_Paulo",
@@ -58,7 +58,7 @@ export function WeatherWidget() {
                 const current = response.current()!
 
                 const weatherData = {
-                    location: "San Vicente, Misiones",
+                    location: "Apóstoles, Misiones",
                     temperature: current.variables(0)!.value(),
                     precipitation: current.variables(1)!.value(),
                     condition: current.variables(2)!.value(),

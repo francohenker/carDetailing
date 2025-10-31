@@ -54,6 +54,7 @@ export class ProductoController {
     accion: TipoAccion.MODIFICAR,
     entidad: TipoEntidad.PRODUCTO,
     descripcion: 'Actualización de producto',
+    capturarDatosAnteriores: true,
   })
   @Put('update/:id')
   @UseGuards(AuthGuard, RolesGuard)
@@ -69,6 +70,7 @@ export class ProductoController {
     accion: TipoAccion.MODIFICAR,
     entidad: TipoEntidad.PRODUCTO,
     descripcion: 'Actualización de producto stock mínimo',
+    capturarDatosAnteriores: true,
   })
   // Método legacy para actualizar solo stock - mantener compatibilidad
   @Put('update-stock/:id')

@@ -75,6 +75,80 @@ export class AuditoriaInterceptor implements NestInterceptor {
     return !privateRanges.some((range) => range.test(ip));
   }
 
+  /**
+   * Captura los datos actuales de una entidad antes de que sea modificada
+   */
+  private async capturarDatosAnteriores(
+    request: any,
+    entidad: string,
+  ): Promise<any> {
+    const entidadId = request.params?.id;
+    if (!entidadId) return null;
+
+    // Aquí necesitarías inyectar los repositorios correspondientes
+    // Por simplicidad, retornamos null por ahora
+    // En una implementación completa, deberías buscar la entidad en la BD
+    return null;
+  }
+
+  /**
+   * Limpia los datos sensibles antes de guardarlos en auditoría
+   */
+  private limpiarDatos(datos: any): any {
+    if (!datos) return null;
+
+    const datosLimpios = { ...datos };
+
+    // Eliminar campos sensibles
+    const camposSensibles = ['password', 'token', 'refreshToken', 'apiKey'];
+    camposSensibles.forEach((campo) => {
+      if (datosLimpios[campo]) {
+        datosLimpios[campo] = '***';
+      }
+    });
+
+    // Eliminar relaciones circulares y campos muy grandes
+    return JSON.parse(JSON.stringify(datosLimpios, this.getCircularReplacer()));
+  }
+
+  /**
+   * Reemplazador para evitar referencias circulares
+   */
+  private getCircularReplacer() {
+    const seen = new WeakSet();
+    return (key: string, value: any) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return '[Circular]';
+        }
+        seen.add(value);
+      }
+      return value;
+    };
+  }
+
+  /**
+   * Calcula los cambios específicos entre datos anteriores y nuevos
+   */
+  private calcularCambios(datosAnteriores: any, datosNuevos: any): any {
+    const cambios: any = {};
+
+    // Comparar todos los campos
+    Object.keys(datosNuevos).forEach((key) => {
+      if (
+        datosAnteriores[key] !== undefined &&
+        datosAnteriores[key] !== datosNuevos[key]
+      ) {
+        cambios[key] = {
+          anterior: datosAnteriores[key],
+          nuevo: datosNuevos[key],
+        };
+      }
+    });
+
+    return Object.keys(cambios).length > 0 ? cambios : null;
+  }
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const auditoriaMetadata = this.reflector.get<AuditoriaMetadata>(
       AUDITORIA_KEY,
@@ -86,7 +160,28 @@ export class AuditoriaInterceptor implements NestInterceptor {
     }
 
     const request = context.switchToHttp().getRequest();
-    const { accion, entidad, descripcion } = auditoriaMetadata;
+    const { accion, entidad, descripcion, capturarDatosAnteriores } =
+      auditoriaMetadata;
+
+    // Capturar datos anteriores si es necesario (antes de ejecutar la operación)
+    let datosAnterioresPromise: Promise<any> = Promise.resolve(null);
+
+    if (
+      capturarDatosAnteriores &&
+      (accion === 'ACTUALIZAR' ||
+        accion === 'ELIMINAR' ||
+        accion === 'MODIFICAR' ||
+        accion === 'MODIFICAR_ROL' ||
+        accion === 'ACTIVAR_DESACTIVAR' ||
+        accion === 'MARCAR_COMPLETADO' ||
+        accion === 'MARCAR_PAGADO' ||
+        accion === 'CANCELAR')
+    ) {
+      datosAnterioresPromise = this.capturarDatosAnteriores(
+        request,
+        entidad,
+      ).catch(() => null);
+    }
 
     return next.handle().pipe(
       tap(async (result) => {
@@ -115,9 +210,26 @@ export class AuditoriaInterceptor implements NestInterceptor {
             entidadId = result.id;
           }
 
-          // Obtener datos anteriores y nuevos
-          const datosNuevos = request.body || null;
-          const datosAnteriores = null; // Esto se podría mejorar obteniendo los datos antes de la operación
+          // Obtener datos anteriores (si se capturaron)
+          const datosAnteriores = await datosAnterioresPromise;
+
+          // Obtener datos nuevos
+          let datosNuevos = null;
+          if (
+            accion === 'CREAR' ||
+            accion === 'ACTUALIZAR' ||
+            accion === 'MODIFICAR'
+          ) {
+            datosNuevos = this.limpiarDatos(request.body);
+          } else if (result && typeof result === 'object') {
+            datosNuevos = this.limpiarDatos(result);
+          }
+
+          // Calcular cambios específicos si hay datos anteriores y nuevos
+          let cambios = null;
+          if (datosAnteriores && datosNuevos) {
+            cambios = this.calcularCambios(datosAnteriores, datosNuevos);
+          }
 
           // Registrar la auditoría
           await this.auditoriaService.registrarAccion(
@@ -130,6 +242,7 @@ export class AuditoriaInterceptor implements NestInterceptor {
             datosNuevos,
             ip,
             userAgent,
+            cambios,
           );
         } catch (error) {
           console.error('Error al registrar auditoría:', error);

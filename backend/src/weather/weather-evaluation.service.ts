@@ -115,8 +115,8 @@ export class WeatherEvaluationService {
       endDate.setDate(startDate.getDate() + days);
 
       const params = {
-        latitude: [-27.0005], // San Vicente, Misiones
-        longitude: [-54.4816],
+        latitude: [-27.92], // Apóstoles, Misiones -27.92,-55.74
+        longitude: [-55.74],
         daily: [
           'weather_code',
           'precipitation_sum',
@@ -552,7 +552,7 @@ export class WeatherEvaluationService {
 
           <div class="footer">
             <p>Car Detailing - Servicios Premium de Lavado</p>
-            <p>📍 San Vicente, Misiones | 📞 (+54) 3764-123456</p>
+            <p>📍 Apóstoles, Misiones | 📞 (+54) 3764-123456</p>
             <p style="margin: 5px 0;">Este es un mensaje automático basado en pronósticos meteorológicos.</p>
           </div>
         </div>

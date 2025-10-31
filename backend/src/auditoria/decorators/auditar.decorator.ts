@@ -5,6 +5,7 @@ export interface AuditoriaMetadata {
   accion: TipoAccion;
   entidad: TipoEntidad;
   descripcion?: string;
+  capturarDatosAnteriores?: boolean; // Nueva opción para capturar datos anteriores
 }
 
 export const AUDITORIA_KEY = 'auditoria';

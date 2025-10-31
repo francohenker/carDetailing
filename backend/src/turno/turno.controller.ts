@@ -112,6 +112,7 @@ export class TurnoController {
     accion: TipoAccion.MARCAR_COMPLETADO,
     entidad: TipoEntidad.TURNO,
     descripcion: 'Turno marcado como completado por administrador',
+    capturarDatosAnteriores: true,
   })
   async markTurnoAsCompleted(@Req() request): Promise<Turno> {
     const turnoId = parseInt(request.params.id, 10);
@@ -127,6 +128,7 @@ export class TurnoController {
     accion: TipoAccion.CANCELAR,
     entidad: TipoEntidad.TURNO,
     descripcion: 'Turno cancelado por el usuario',
+    capturarDatosAnteriores: true,
   })
   async cancelTurno(@Req() request): Promise<Turno> {
     const turnoId = parseInt(request.params.id, 10);

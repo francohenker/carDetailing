@@ -41,8 +41,8 @@ export function DateWeatherWidget({ date, className = "" }: DateWeatherWidgetPro
             
             try {
                 const params = {
-                    latitude: [-27.0005],
-                    longitude: [-54.4816],
+                    latitude: [-27.9200], // Apóstoles, Misiones -27.92,-55.74
+                    longitude: [-55.7400],
                     daily: ["temperature_2m_max", "temperature_2m_min", "weather_code", "precipitation_probability_max", "wind_speed_10m_max"],
                     timezone: "America/Sao_Paulo",
                     start_date: dateString,
