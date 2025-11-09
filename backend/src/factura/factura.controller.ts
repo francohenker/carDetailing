@@ -25,7 +25,7 @@ export class FacturaController {
 
       res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="factura-${turnoId}.pdf"`,
+        'Content-Disposition': `attachment; filename="comprobante-${turnoId}.pdf"`,
         'Content-Length': pdfBuffer.length,
       });
 

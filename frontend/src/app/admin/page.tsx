@@ -1099,7 +1099,7 @@ export default function AdminPage() {
             const a = document.createElement('a')
             a.style.display = 'none'
             a.href = url
-            a.download = `factura-${turnoId}.pdf`
+            a.download = `comprobante-${turnoId}.pdf`
             document.body.appendChild(a)
             a.click()
             window.URL.revokeObjectURL(url)
@@ -1889,7 +1889,7 @@ export default function AdminPage() {
                                                                         className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
                                                                     >
                                                                         <FileDown className="h-4 w-4 mr-2" />
-                                                                        Factura
+                                                                        Comprobante
                                                                     </Button>
                                                                 )}
                                                             </div>
