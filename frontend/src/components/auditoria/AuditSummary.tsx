@@ -14,7 +14,7 @@ interface AuditSummaryProps {
 const AuditSummary: React.FC<AuditSummaryProps> = ({
   accion,
   entidad,
-  entidadId,
+  // entidadId,
   descripcion,
   datosAnteriores,
   datosNuevos,

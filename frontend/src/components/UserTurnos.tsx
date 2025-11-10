@@ -99,7 +99,7 @@ const getMontoFaltante = (turno: Turno): number => {
 };
 
 export default function UserTurnos() {
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [loading, setLoading] = useState(true);
 

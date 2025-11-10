@@ -30,17 +30,6 @@ export async function POST(request: Request) {
             role: data.role
         });
 
-        // Set HttpOnly cookie
-        // res.cookies.set({
-        //     name: 'jwt',
-        //     value: data.access_token,
-        //     httpOnly: true,
-        //     // secure: process.env.NODE_ENV === 'production',
-        //     maxAge: 60 * 60 * 24 * 7, // 7 days
-        //     path: '/',
-        //     sameSite: 'strict'
-        // });
-
         res.cookies.set({
             name: "jwt",
             value: data.access_token,
@@ -49,7 +38,7 @@ export async function POST(request: Request) {
             sameSite: "strict",
         });
         return res;
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: 'Error al iniciar sesión' },
             { status: 500 }

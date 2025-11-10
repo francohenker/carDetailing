@@ -7,15 +7,15 @@ import { fetchWeatherApi } from "openmeteo"
 import { useWeatherStore } from "../lib/stores/weatherStore"
 import { getWeatherDescription, getWeatherIconn } from "@/lib/utils/weatherUtils"
 
-interface WeatherData {
-    location: string
-    temperature: number
-    condition: number
-    humidity: number
-    windSpeed: number
-    description: string
-    icon: string
-}
+// interface WeatherData {
+//     location: string
+//     temperature: number
+//     condition: number
+//     humidity: number
+//     windSpeed: number
+//     description: string
+//     icon: string
+// }
 
 export function WeatherWidget() {
     const weather = useWeatherStore((state) => state.weather)

@@ -1,7 +1,7 @@
 'use client'
 import HeaderDefault from "../header";
 import Link from "next/link"
-import { Clock, Droplets, Shield, Sparkles, Star, Wrench } from "lucide-react"
+import { Clock, Droplets, Shield, Sparkles, Wrench } from "lucide-react"
 import Name from "@/components/Name";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";

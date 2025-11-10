@@ -10,10 +10,10 @@ const HourlyActivity: React.FC<HourlyActivityProps> = ({
   distribucionPorHora,
 }) => {
   // Función para convertir hora UTC a UTC-3
-  const convertUTCtoUTC3 = (utcHour: number) => {
-    const utc3Hour = utcHour - 3;
-    return utc3Hour < 0 ? utc3Hour + 24 : utc3Hour;
-  };
+  // const convertUTCtoUTC3 = (utcHour: number) => {
+  //   const utc3Hour = utcHour - 3;
+  //   return utc3Hour < 0 ? utc3Hour + 24 : utc3Hour;
+  // };
 
   // Crear array completo de 24 horas con datos convertidos a UTC-3
   const hoursData = Array.from({ length: 24 }, (_, displayHour) => {
