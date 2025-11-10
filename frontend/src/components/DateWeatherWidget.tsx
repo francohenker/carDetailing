@@ -69,7 +69,7 @@ export function DateWeatherWidget({ date, className = "" }: DateWeatherWidgetPro
                 setDateWeatherError(null)
             } catch (error) {
                 console.error('Error fetching date weather:', error)
-                setDateWeatherError("Error al obtener el clima para esta fecha")
+                setDateWeatherError("Unicamente podemos obtener los datos del tiempo de los proximos 15 días")
             } finally {
                 setDateWeatherLoading(false)
             }

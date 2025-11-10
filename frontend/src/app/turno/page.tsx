@@ -406,7 +406,9 @@ function TurnoPageContent() {
             })
             if (res.status === 201) {
                 toast.success("¡Turno reservado exitosamente!")
-                router.push("/user/profile")
+                setTimeout(() => {
+                    router.push("/user/profile")
+                }, 2000)
             } else {
                 toast.error("Error al reservar el turno. Por favor, intenta nuevamente.")
             }

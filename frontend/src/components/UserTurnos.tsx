@@ -4,9 +4,10 @@ import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, Calendar, Car, X, FileDown, ChevronLeft, ChevronRight } from "lucide-react"
+import { CreditCard, Calendar, Car, X, FileDown, ChevronLeft, ChevronRight, Edit2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
+import ModifyTurno from "./ModifyTurno"
 
 // Utilidades de fecha nativas
 const formatDateTime = (dateString: string): string => {
@@ -34,8 +35,8 @@ const formatShortDate = (dateString: string): string => {
 interface Turno {
     id: number;
     fechaHora: string;
-    servicio: { name: string }[];
-    car: { marca: string; model: string };
+    servicio: { id: string; name: string }[];
+    car: { id: string; marca: string; model: string; type: string };
     totalPrice: number;
     pago: Pago[];
     estado: 'pendiente' | 'finalizado' | 'cancelado';
@@ -94,6 +95,10 @@ export default function UserTurnos() {
     const [paginatedHistorial, setPaginatedHistorial] = useState<Turno[]>([])
     const [totalPagesHistorial, setTotalPagesHistorial] = useState(0)
 
+    // Estados para modificar turno
+    const [modifyTurnoOpen, setModifyTurnoOpen] = useState(false)
+    const [selectedTurno, setSelectedTurno] = useState<Turno | null>(null)
+
     // Función para paginar el historial
     const paginateHistorial = useCallback((historialData: Turno[], page: number) => {
         const startIndex = (page - 1) * itemsPerPageHistorial
@@ -125,6 +130,63 @@ export default function UserTurnos() {
 
         // Se puede cancelar si faltan más de 24 horas
         return hoursDiff > 24
+    }
+
+    // Función para determinar si un turno se puede modificar
+    const canModifyTurno = (turno: Turno): boolean => {
+        // Solo se puede modificar si está en estado pendiente
+        if (turno.estado !== 'pendiente') {
+            return false
+        }
+
+        const turnoDate = new Date(turno.fechaHora)
+        const now = new Date()
+        const timeDiff = turnoDate.getTime() - now.getTime()
+        const hoursDiff = timeDiff / (1000 * 3600)
+
+        // Se puede modificar si faltan más de 2 horas
+        return hoursDiff > 2
+    }
+
+    // Función para abrir modal de modificación
+    const handleModifyTurno = (turno: Turno) => {
+        setSelectedTurno(turno)
+        setModifyTurnoOpen(true)
+    }
+
+    // Función para cerrar modal de modificación
+    const handleCloseModifyModal = () => {
+        setModifyTurnoOpen(false)
+        setSelectedTurno(null)
+    }
+
+    // Función para refrescar turnos después de modificar
+    const handleModifySuccess = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/history`, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("jwt")}`
+                }
+            });
+            if (!response.ok) throw new Error("No se pudieron cargar los turnos.");
+            const data = await response.json();
+            setTurnos(data);
+            
+            // Actualizar paginación del historial
+            const historialTurnos = data
+                .filter((t: Turno) => t.estado === 'finalizado')
+                .sort((a: Turno, b: Turno) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime())
+            
+            const totalPages = Math.ceil(historialTurnos.length / itemsPerPageHistorial)
+            setTotalPagesHistorial(totalPages)
+            
+            const newPage = currentPageHistorial <= totalPages ? currentPageHistorial : 1
+            setCurrentPageHistorial(newPage)
+            paginateHistorial(historialTurnos, newPage)
+            
+        } catch (error) {
+            console.error('Error refreshing turnos:', error)
+        }
     }
 
     // Función para cancelar un turno
@@ -326,6 +388,15 @@ export default function UserTurnos() {
                                                     <CreditCard className="mr-2 h-4 w-4" /> Pagar
                                                 </Button>
                                             )}
+                                            {canModifyTurno(turno) && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleModifyTurno(turno)}
+                                                >
+                                                    <Edit2 className="mr-2 h-4 w-4" /> Modificar
+                                                </Button>
+                                            )}
                                             {canCancelTurno(turno) && (
                                                 <Button
                                                     variant="destructive"
@@ -441,6 +512,14 @@ export default function UserTurnos() {
                     </div>
                 )}
             </div>
+
+            {/* Modal para modificar turno */}
+            <ModifyTurno
+                turno={selectedTurno}
+                isOpen={modifyTurnoOpen}
+                onClose={handleCloseModifyModal}
+                onSuccess={handleModifySuccess}
+            />
         </div>
     )
 }
