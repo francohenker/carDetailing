@@ -4,12 +4,22 @@ import {
   ExecutionContext,
   CallHandler,
   HttpException,
+  Inject,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Reflector } from '@nestjs/core';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { AuditoriaService } from '../auditoria.service';
 import { AuthService } from '../../auth/auth.service';
+import { Users } from '../../users/entities/users.entity';
+import { Turno } from '../../turno/entities/turno.entity';
+import { Servicio } from '../../servicio/entities/servicio.entity';
+import { Producto } from '../../producto/entities/producto.entity';
+import { Supplier } from '../../supplier/entities/supplier.entity';
+import { Pago } from '../../pago/entities/pago.entity';
+import { Car } from '../../car/entities/car.entity';
 import {
   AUDITORIA_KEY,
   AuditoriaMetadata,
@@ -21,6 +31,20 @@ export class AuditoriaInterceptor implements NestInterceptor {
     private readonly auditoriaService: AuditoriaService,
     private readonly authService: AuthService,
     private readonly reflector: Reflector,
+    @Inject(getRepositoryToken(Users))
+    private readonly usersRepository: Repository<Users>,
+    @Inject(getRepositoryToken(Turno))
+    private readonly turnoRepository: Repository<Turno>,
+    @Inject(getRepositoryToken(Servicio))
+    private readonly servicioRepository: Repository<Servicio>,
+    @Inject(getRepositoryToken(Producto))
+    private readonly productoRepository: Repository<Producto>,
+    @Inject(getRepositoryToken(Supplier))
+    private readonly supplierRepository: Repository<Supplier>,
+    @Inject(getRepositoryToken(Pago))
+    private readonly pagoRepository: Repository<Pago>,
+    @Inject(getRepositoryToken(Car))
+    private readonly carRepository: Repository<Car>,
   ) {}
 
   private getRealClientIP(request: any): string {
@@ -85,10 +109,36 @@ export class AuditoriaInterceptor implements NestInterceptor {
     const entidadId = request.params?.id;
     if (!entidadId) return null;
 
-    // Aquí necesitarías inyectar los repositorios correspondientes
-    // Por simplicidad, retornamos null por ahora
-    // En una implementación completa, deberías buscar la entidad en la BD
-    return null;
+    try {
+      const repository = this.getRepository(entidad);
+      if (!repository) return null;
+
+      const entity = await repository.findOne({
+        where: { id: parseInt(entidadId) },
+      });
+
+      return entity ? this.limpiarDatos(entity) : null;
+    } catch (error) {
+      console.error('Error capturando datos anteriores:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtiene el repositorio correspondiente para una entidad
+   */
+  private getRepository(entidad: string): Repository<any> | null {
+    const repositories: { [key: string]: Repository<any> } = {
+      USUARIO: this.usersRepository,
+      TURNO: this.turnoRepository,
+      SERVICIO: this.servicioRepository,
+      PRODUCTO: this.productoRepository,
+      PROVEEDOR: this.supplierRepository,
+      PAGO: this.pagoRepository,
+      CAR: this.carRepository,
+    };
+
+    return repositories[entidad] || null;
   }
 
   /**

@@ -146,8 +146,15 @@ export class AuditoriaService {
     totalRegistros: number;
     registrosHoy: number;
     registrosEstaSemana: number;
+    registrosEsteMes: number;
+    registrosAyer: number;
+    registrosSemanaAnterior: number;
+    crecimientoHoy: number;
+    crecimientoSemana: number;
     accionesMasComunes: Array<{ accion: string; cantidad: number }>;
     entidadesMasAuditadas: Array<{ entidad: string; cantidad: number }>;
+    usuariosMasActivos: Array<{ usuario: string; cantidad: number }>;
+    distribucionPorHora: Array<{ hora: number; cantidad: number }>;
   }> {
     const today = new Date();
     const startOfDay = new Date(
@@ -168,6 +175,38 @@ export class AuditoriaService {
     startOfWeek.setDate(today.getDate() - today.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
+    // Fechas para comparaciones
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const startOfYesterday = new Date(
+      yesterday.getFullYear(),
+      yesterday.getMonth(),
+      yesterday.getDate(),
+    );
+    const endOfYesterday = new Date(
+      yesterday.getFullYear(),
+      yesterday.getMonth(),
+      yesterday.getDate(),
+      23,
+      59,
+      59,
+    );
+
+    const startOfLastWeek = new Date(startOfWeek);
+    startOfLastWeek.setDate(startOfWeek.getDate() - 7);
+    const endOfLastWeek = new Date(startOfWeek);
+    endOfLastWeek.setMilliseconds(-1);
+
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+    );
+
     // Total de registros
     const totalRegistros = await this.auditoriaRepository.count();
 
@@ -184,6 +223,46 @@ export class AuditoriaService {
         fechaCreacion: Between(startOfWeek, endOfDay),
       },
     });
+
+    // Registros de este mes
+    const registrosEsteMes = await this.auditoriaRepository.count({
+      where: {
+        fechaCreacion: Between(startOfMonth, endOfMonth),
+      },
+    });
+
+    // Registros de ayer
+    const registrosAyer = await this.auditoriaRepository.count({
+      where: {
+        fechaCreacion: Between(startOfYesterday, endOfYesterday),
+      },
+    });
+
+    // Registros de la semana anterior
+    const registrosSemanaAnterior = await this.auditoriaRepository.count({
+      where: {
+        fechaCreacion: Between(startOfLastWeek, endOfLastWeek),
+      },
+    });
+
+    // Cálculo de crecimiento
+    const crecimientoHoy =
+      registrosAyer > 0
+        ? Math.round(((registrosHoy - registrosAyer) / registrosAyer) * 100)
+        : registrosHoy > 0
+          ? 100
+          : 0;
+
+    const crecimientoSemana =
+      registrosSemanaAnterior > 0
+        ? Math.round(
+            ((registrosEstaSemana - registrosSemanaAnterior) /
+              registrosSemanaAnterior) *
+              100,
+          )
+        : registrosEstaSemana > 0
+          ? 100
+          : 0;
 
     // Acciones más comunes
     const accionesMasComunes = await this.auditoriaRepository
@@ -205,16 +284,51 @@ export class AuditoriaService {
       .limit(5)
       .getRawMany();
 
+    // Usuarios más activos
+    const usuariosMasActivos = await this.auditoriaRepository
+      .createQueryBuilder('auditoria')
+      .leftJoin('auditoria.usuario', 'usuario')
+      .select("CONCAT(usuario.firstname, ' ', usuario.lastname)", 'usuario')
+      .addSelect('COUNT(auditoria.id)', 'cantidad')
+      .where('auditoria.usuarioId IS NOT NULL')
+      .groupBy('usuario.id, usuario.firstname, usuario.lastname')
+      .orderBy('cantidad', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    // Distribución por hora (últimas 24 horas)
+    const distribucionPorHora = await this.auditoriaRepository
+      .createQueryBuilder('auditoria')
+      .select('EXTRACT(HOUR FROM auditoria.fechaCreacion)', 'hora')
+      .addSelect('COUNT(auditoria.id)', 'cantidad')
+      .where('auditoria.fechaCreacion >= :startOfDay', { startOfDay })
+      .groupBy('EXTRACT(HOUR FROM auditoria.fechaCreacion)')
+      .orderBy('hora', 'ASC')
+      .getRawMany();
+
     return {
       totalRegistros,
       registrosHoy,
       registrosEstaSemana,
+      registrosEsteMes,
+      registrosAyer,
+      registrosSemanaAnterior,
+      crecimientoHoy,
+      crecimientoSemana,
       accionesMasComunes: accionesMasComunes.map((item) => ({
         accion: item.accion,
         cantidad: parseInt(item.cantidad),
       })),
       entidadesMasAuditadas: entidadesMasAuditadas.map((item) => ({
         entidad: item.entidad,
+        cantidad: parseInt(item.cantidad),
+      })),
+      usuariosMasActivos: usuariosMasActivos.map((item) => ({
+        usuario: item.usuario || 'Sistema',
+        cantidad: parseInt(item.cantidad),
+      })),
+      distribucionPorHora: distribucionPorHora.map((item) => ({
+        hora: parseInt(item.hora),
         cantidad: parseInt(item.cantidad),
       })),
     };

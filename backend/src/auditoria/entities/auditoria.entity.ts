@@ -37,7 +37,6 @@ export enum TipoEntidad {
 export class Auditoria {
   @PrimaryGeneratedColumn()
   id: number;
-
   @Column({
     type: 'enum',
     enum: TipoAccion,

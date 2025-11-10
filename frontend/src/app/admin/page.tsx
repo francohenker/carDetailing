@@ -2177,12 +2177,12 @@ export default function AdminPage() {
                             {/* Registros recientes */}
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between">
-                                    <div>
-                                        <CardTitle className="flex items-center gap-2">
+                                    <div className="">
+                                        <CardTitle className="flex items-center gap-2 mb-2">
                                             <FileText className="h-5 w-5" />
                                             Registros de Auditoría Recientes
                                         </CardTitle>
-                                        <CardDescription>Últimas 20 acciones realizadas en el sistema</CardDescription>
+                                        <CardDescription>Últimas 10 acciones realizadas en el sistema</CardDescription>
                                     </div>
                                     <Link href="/admin/auditoria">
                                         <Button className="bg-blue-600 hover:bg-blue-700">
@@ -2202,7 +2202,7 @@ export default function AdminPage() {
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
-                                            {auditoriaRecords.map((record) => (
+                                            {auditoriaRecords.slice(0, 10).map((record) => (
                                                 <div key={record.id} className="border rounded-lg p-4 space-y-2">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
@@ -2215,9 +2215,9 @@ export default function AdminPage() {
                                                                 {record.accion}
                                                             </span>
                                                             <span className="text-sm font-medium">{record.entidad}</span>
-                                                            {record.entidadId && (
+                                                            {/*{record.entidadId && (
                                                                 <span className="text-xs text-muted-foreground">ID: {record.entidadId}</span>
-                                                            )}
+                                                            )}*/}
                                                         </div>
                                                         <span className="text-xs text-muted-foreground">
                                                             {new Date(record.fechaCreacion).toLocaleString()}
