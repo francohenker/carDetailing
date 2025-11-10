@@ -108,6 +108,102 @@ export class WeatherEvaluationService {
     return forecasts;
   }
 
+  // Método para envío manual de correo de prueba (solo para desarrollo)
+  async sendTestWeatherEmail(
+    turnoId: number,
+    emailType: 'advance' | 'urgent' = 'advance',
+  ) {
+    this.logger.log(
+      `Enviando correo de prueba para turno ID: ${turnoId} (tipo: ${emailType})`,
+    );
+
+    try {
+      // Buscar el turno específico
+      const turno = await this.turnoRepository.findOne({
+        where: { id: turnoId },
+        relations: ['car', 'car.user', 'servicio'],
+      });
+
+      if (!turno) {
+        throw new Error(`Turno con ID ${turnoId} no encontrado`);
+      }
+
+      // Crear datos de pronóstico simulados para prueba
+      const mockWeatherForecasts: WeatherForecast[] = [];
+      const startDate = new Date();
+
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+
+        // Simular mal tiempo para el día del turno y algunos días adicionales
+        const isTurnoDay =
+          new Date(turno.fechaHora).toDateString() === date.toDateString();
+        const isBadWeather = isTurnoDay || Math.random() > 0.6;
+
+        mockWeatherForecasts.push({
+          date,
+          weatherCode: isBadWeather ? 61 : 1, // 61 = lluvia, 1 = despejado
+          precipitation: isBadWeather ? Math.random() * 5 + 2 : 0, // 2-7mm si llueve
+          temperature: 15 + Math.random() * 10, // 15-25°C
+        });
+      }
+
+      // Crear evaluación simulada
+      const turnoDate = new Date(turno.fechaHora);
+      const today = new Date();
+      const daysUntilTurno = Math.ceil(
+        (turnoDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      // Encontrar el pronóstico específico del día del turno
+      const turnoDayForecast =
+        mockWeatherForecasts.find(
+          (f) => f.date.toDateString() === turnoDate.toDateString(),
+        ) || mockWeatherForecasts[0];
+
+      const mockEvaluation: TurnoWeatherEvaluation = {
+        turno,
+        badWeatherDays: mockWeatherForecasts.filter((f) =>
+          this.isBadWeatherForCarDetailing(f),
+        ).length,
+        consecutiveBadDays: 2,
+        daysUntilTurno,
+        weatherForecasts: mockWeatherForecasts,
+        turnoDayForecast,
+      };
+
+      // Enviar el correo de prueba
+      await this.sendWeatherRescheduleEmail(mockEvaluation, emailType);
+
+      this.logger.log(
+        `✅ Correo de prueba enviado exitosamente a ${turno.car.user.email}`,
+      );
+
+      return {
+        success: true,
+        message: `Correo de prueba enviado exitosamente a ${turno.car.user.email}`,
+        turnoId,
+        emailType,
+        userEmail: turno.car.user.email,
+        daysUntilTurno,
+        weatherSimulated: {
+          turnoDayWeather: {
+            description: this.getWeatherDescription(
+              turnoDayForecast.weatherCode,
+            ),
+            precipitation: turnoDayForecast.precipitation,
+            temperature: turnoDayForecast.temperature,
+          },
+          totalBadDays: mockEvaluation.badWeatherDays,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error enviando correo de prueba:`, error);
+      throw new Error(`Error enviando correo de prueba: ${error.message}`);
+    }
+  }
+
   private async getWeatherForecast(days: number): Promise<WeatherForecast[]> {
     try {
       const startDate = new Date();
@@ -447,6 +543,22 @@ export class WeatherEvaluationService {
             border-radius: 6px;
             font-weight: 600;
             margin: 10px 5px;
+            transition: background-color 0.3s ease;
+          }
+          .btn:hover {
+            background-color: #059669;
+          }
+          .btn-primary {
+            background-color: #3b82f6;
+          }
+          .btn-primary:hover {
+            background-color: #2563eb;
+          }
+          .btn-warning {
+            background-color: #f59e0b;
+          }
+          .btn-warning:hover {
+            background-color: #d97706;
           }
           .footer {
             background-color: #f8fafc;
@@ -527,7 +639,12 @@ export class WeatherEvaluationService {
                 <h4 style="margin-top: 0; color: #059669;">💡 Nuestra Recomendación</h4>
                 <p>Te sugerimos reprogramar tu turno para garantizar los mejores resultados. Tenés tiempo suficiente para elegir una fecha con mejores condiciones climáticas.</p>
                 <p><strong>¿Querés reprogramar tu turno?</strong></p>
-                <p>Contactanos para coordinar una nueva fecha:</p>
+                <div style="text-align: center; margin: 25px 0;">
+                  <a href="${process.env.URL_FRONTEND}/user/profile?tab=turnos&modify=${turno.id}" class="btn btn-primary" style="font-size: 16px; padding: 15px 30px;">
+                    🔧 Modificar mi Turno
+                  </a>
+                </div>
+                <p>O contactanos para coordinar una nueva fecha:</p>
                 <a href="tel:+543764123456" class="btn">📞 Llamar Ahora</a>
                 <a href="https://wa.me/543764123456" class="btn">💬 WhatsApp</a>
               </div>
@@ -536,7 +653,12 @@ export class WeatherEvaluationService {
               <div class="contact-info">
                 <h4 style="margin-top: 0; color: #d97706;">⚠️ Aviso Importante</h4>
                 <p>Tu turno está próximo y las condiciones climáticas no son ideales. Te contactaremos para evaluar las opciones disponibles.</p>
-                <p>Si querés reprogramar urgentemente:</p>
+                <div style="text-align: center; margin: 25px 0;">
+                  <a href="${process.env.URL_FRONTEND}/user/profile?tab=turnos&modify=${turno.id}" class="btn btn-warning" style="font-size: 16px; padding: 15px 30px;">
+                    ⚡ Modificar Turno Urgente
+                  </a>
+                </div>
+                <p>O si querés contactarnos directamente:</p>
                 <a href="tel:+543764123456" class="btn">📞 Llamar Urgente</a>
                 <a href="https://wa.me/543764123456" class="btn">💬 WhatsApp</a>
               </div>
@@ -546,6 +668,12 @@ export class WeatherEvaluationService {
             <div style="background-color: #f8fafc; border-radius: 8px; padding: 15px; margin: 20px 0;">
               <p style="margin: 0; font-size: 14px; color: #64748b;">
                 <strong>Nota:</strong> Nuestro objetivo es brindarte el mejor servicio posible. Las condiciones climáticas adversas pueden afectar el tiempo de secado y la calidad final del trabajo.
+              </p>
+            </div>
+
+            <div style="background-color: #e0f2fe; border: 1px solid #b3e5fc; border-radius: 8px; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 14px; color: #0277bd;">
+                <strong>💡 Tip:</strong> Al hacer clic en "Modificar mi Turno" serás redirigido a tu perfil donde podrás seleccionar una nueva fecha y horario que se ajuste mejor a las condiciones climáticas.
               </p>
             </div>
           </div>
