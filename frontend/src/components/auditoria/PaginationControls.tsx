@@ -200,21 +200,6 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
             placeholder="Página"
           />
         </div>
-
-        {/* <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Registros por página:</span>
-          <select
-            value={recordsPerPage}
-            disabled={loading}
-            onChange={(e) => onRecordsPerPageChange(e.target.value)}
-            className="h-8 px-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-            <option value={200}>200</option>
-          </select>
-        </div> */}
       </div>
 
       {/* Indicador de carga */}

@@ -8,6 +8,7 @@ import { Calendar as ShadCalendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { DateWeatherWidget } from "@/components/DateWeatherWidget"
+import ServiceSearch from "@/components/ServiceSearch"
 import {
     Car,
     ChevronLeft,
@@ -165,21 +166,19 @@ function TurnoPageContent() {
                 }))
 
                 setServices(servicesWithNumericPrices)
-            } catch (error) {
+            } catch (err) {
                 setError("Error fetching services")
-                console.error("Error fetching services:", error)
+                console.error("Error fetching services:", err)
+                toast.error("Error", {
+                    description: "No se pudieron cargar los servicios",
+                })
             } finally {
                 setLoading(false)
-                if (error) {
-                    toast.error("error", {
-                        description: error,
-                    })
-                }
             }
         }
 
         fetchServices()
-    }, [error])
+    }, [])
 
     // Cargar vehículos del usuario
     useEffect(() => {
@@ -197,14 +196,12 @@ function TurnoPageContent() {
                     setError("Token expirado");
                     setcars([]);
                 }
-            } catch (error) {
-                setError("Error fetching cars: " + error);
-            } finally {
-                if (error) {
-                    toast.error("error", {
-                        description: error,
-                    })
-                }
+            } catch (err) {
+                const errorMessage = "Error fetching cars: " + err;
+                setError(errorMessage);
+                toast.error("Error", {
+                    description: "No se pudieron cargar los vehículos",
+                })
             }
         }
 
@@ -291,6 +288,18 @@ function TurnoPageContent() {
         const type = carType.toUpperCase()
         const precio = service.precio?.find(p => p.tipoVehiculo === type)
         return precio ? Number(precio.precio) : 0
+    }
+
+    // Limpiar todos los servicios seleccionados
+    const handleClearAllServices = () => {
+        const newBookingData = {
+            ...bookingData,
+            services: [],
+            totalPrice: 0,
+            totalDuration: 0,
+            timeSlot: null, // Resetear el slot seleccionado
+        }
+        setBookingData(newBookingData)
     }
 
     // Manejar selección de servicios
@@ -565,77 +574,20 @@ function TurnoPageContent() {
                                         Selecciona los Servicios
                                     </h2>
 
-                                    {loading ? (
-                                        <div className="space-y-4">
-                                            {[...Array(6)].map((_, i) => (
-                                                <div key={i} className="skeleton h-20 w-full"></div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {!bookingData.car && (
-                                                <div className="alert alert-info">
-                                                    <span>Selecciona primero tu vehículo para ver los precios correspondientes</span>
-                                                </div>
-                                            )}
-                                            {services.map((service) => {
-                                                const isSelected = bookingData.services.some((s) => s.id === service.id)
-                                                const carType = bookingData.car?.type || 'sedan'
-                                                const servicePrice = getPriceForCarType(service, carType)
-
-                                                return (
-                                                    <div
-                                                        key={service.id}
-                                                        className={`card bg-base-200 cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-primary bg-primary/10" : ""
-                                                            }`}
-                                                        onClick={() => handleServiceToggle(service)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                                e.preventDefault();
-                                                                handleServiceToggle(service);
-                                                            }
-                                                        }}
-                                                        tabIndex={0}
-                                                        role="button"
-                                                        aria-label={`${isSelected ? 'Deseleccionar' : 'Seleccionar'} servicio ${service.name} - $${servicePrice.toLocaleString()}`}
-                                                    >
-                                                        <div className="card-body p-4">
-                                                            <div className="flex items-start justify-between">
-                                                                <div className="flex-1">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            className="checkbox checkbox-primary"
-                                                                            checked={isSelected}
-                                                                            readOnly
-                                                                        />
-                                                                        <div>
-                                                                            <h3 className="font-semibold">{service.name}</h3>
-                                                                            <p className="text-sm text-base-content/70">{service.description}</p>
-                                                                            <div className="flex items-center gap-4 mt-2">
-                                                                                <div className="flex items-center gap-1 text-sm">
-                                                                                    <Clock className="h-4 w-4" />
-                                                                                    {service.duration} min
-                                                                                </div>
-                                                                                {bookingData.car && (
-                                                                                    <div className="badge badge-outline text-xs">
-                                                                                        Para {bookingData.car.type}
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <div className="text-lg font-bold">${servicePrice.toLocaleString()}</div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )
-                                            })}
+                                    {!bookingData.car && (
+                                        <div className="alert alert-info mb-6">
+                                            <span>Selecciona primero tu vehículo para ver los precios correspondientes</span>
                                         </div>
                                     )}
+
+                                    <ServiceSearch
+                                        services={services}
+                                        selectedServices={bookingData.services}
+                                        onServiceToggle={handleServiceToggle}
+                                        onClearAll={handleClearAllServices}
+                                        carType={bookingData.car?.type || 'sedan'}
+                                        loading={loading}
+                                    />
                                 </div>
                             </div>
                         )}
