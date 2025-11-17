@@ -462,14 +462,10 @@ export default function ProfileClient() {
             setActiveTab("history");
         }
 
-        // Si viene con parámetro modify, mostrar mensaje informativo
+        // Si viene con parámetro modify, cambiar a la pestaña de historial automáticamente
         if (modifyParam) {
-            setTimeout(() => {
-                toast.info("Modificación de turno", {
-                    description:
-                        "Puedes modificar tu turno desde la sección 'Próximos Turnos' haciendo clic en el botón 'Modificar'.",
-                });
-            }, 1000);
+            setActiveTab("history");
+            // El componente UserTurnos detectará automáticamente el parámetro 'modify' y abrirá el modal
         }
     }, [router, searchParams]);
 

@@ -99,7 +99,7 @@ const getMontoFaltante = (turno: Turno): number => {
 };
 
 export default function UserTurnos() {
-  // const searchParams = useSearchParams();
+  const searchParams = useSearchParams();
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -358,6 +358,31 @@ export default function UserTurnos() {
 
     fetchTurnos();
   }, [itemsPerPageHistorial, paginateHistorial]);
+
+  // Detectar parámetro 'modify' en la URL para abrir automáticamente el modal
+  useEffect(() => {
+    const modifyTurnoId = searchParams.get('modify');
+    if (modifyTurnoId && turnos.length > 0) {
+      const turnoToModify = turnos.find(t => t.id.toString() === modifyTurnoId);
+      if (turnoToModify && canModifyTurno(turnoToModify)) {
+        setSelectedTurno(turnoToModify);
+        setModifyTurnoOpen(true);
+        
+        // Limpiar el parámetro de la URL después de abrir el modal
+        const url = new URL(window.location.href);
+        url.searchParams.delete('modify');
+        window.history.replaceState({}, '', url.toString());
+        
+        // toast.success("Modal abierto", {
+        //   description: "Se ha abierto automáticamente el modal para modificar tu turno."
+        // });
+      } else if (turnoToModify && !canModifyTurno(turnoToModify)) {
+        toast.error("No se puede modificar", {
+          description: "Este turno ya no se puede modificar debido a restricciones de tiempo o estado."
+        });
+      }
+    }
+  }, [searchParams, turnos]);
 
   const handlePagarMercadoPago = async (turno: Turno) => {
     const res = await fetch(
