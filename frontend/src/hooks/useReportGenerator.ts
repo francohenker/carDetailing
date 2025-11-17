@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { prepareChartsForCapture, forceChartResize } from '@/utils/chartUtils';
 
 interface StatisticsData {
   period?: {
@@ -146,6 +147,8 @@ export function useReportGenerator() {
       try {
         const chartsContainer = document.getElementById('charts-container');
         if (chartsContainer) {
+          console.log('📊 Iniciando captura de gráficos...');
+          
           pdf.addPage();
           yPosition = 20;
           
@@ -154,40 +157,230 @@ export function useReportGenerator() {
           pdf.text('GRÁFICOS ESTADÍSTICOS', pageWidth / 2, yPosition, { align: 'center' });
           yPosition += 20;
 
-          // Capturar cada gráfico individualmente
-          const charts = chartsContainer.querySelectorAll('.chart-container');
+          // Preparar gráficos y evitar problemas de CSS
+          forceChartResize();
+          await prepareChartsForCapture();
           
-          for (let i = 0; i < Math.min(charts.length, 4); i++) {
-            const chart = charts[i] as HTMLElement;
+          // Aplicar estilos seguros temporalmente
+          const tempStyles = document.createElement('style');
+          tempStyles.id = 'pdf-capture-styles';
+          tempStyles.textContent = `
+            .chart-container, .chart-element {
+              background-color: #ffffff !important;
+              color: #000000 !important;
+              border-color: #e5e5e5 !important;
+            }
+            .chart-container * {
+              color: #000000 !important;
+            }
+            canvas {
+              background-color: #ffffff !important;
+            }
+          `;
+          document.head.appendChild(tempStyles);
+          
+          // Esperar a que se apliquen los estilos
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Forzar re-renderizado de gráficos con estilos seguros
+          const existingCanvases = chartsContainer.querySelectorAll('canvas');
+          existingCanvases.forEach((canvas) => {
+            try {
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.save();
+                ctx.restore();
+              }
+              const resizeEvent = new Event('resize');
+              window.dispatchEvent(resizeEvent);
+            } catch (e) {
+              // Silenciar errores de canvas
+            }
+          });
+          
+          // Esperar renderizado completo con nuevos estilos
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          // Buscar por diferentes selectores
+          const chartContainers = chartsContainer.querySelectorAll('.chart-container');
+          const chartElements = chartsContainer.querySelectorAll('.chart-element');
+          const chartCanvases = chartsContainer.querySelectorAll('canvas');
+          
+          console.log(`📊 Encontrados ${chartContainers.length} contenedores, ${chartElements.length} elementos y ${chartCanvases.length} canvas`);
+
+          // Priorizar captura directa de canvas para evitar problemas con oklch
+          let chartsProcessed = 0;
+
+          // Método Prioritario: Captura directa de Canvas (evita problemas CSS)
+          for (let i = 0; i < Math.min(chartCanvases.length, 4); i++) {
+            const canvas = chartCanvases[i] as HTMLCanvasElement;
             
             try {
-              const canvas = await html2canvas(chart, {
-                backgroundColor: '#ffffff',
-                scale: 2,
-                logging: false,
-                useCORS: true
-              });
+              console.log(`📊 Capturando canvas directo ${i + 1}...`);
               
-              const imgData = canvas.toDataURL('image/png');
-              const imgWidth = 170;
-              const imgHeight = (canvas.height * imgWidth) / canvas.width;
+              // Obtener imagen directamente del canvas
+              const imgData = canvas.toDataURL('image/png', 1.0);
               
-              // Verificar si el gráfico cabe en la página actual
-              if (yPosition + imgHeight > pageHeight - 20) {
-                pdf.addPage();
-                yPosition = 20;
+              if (imgData && imgData.length > 100 && !imgData.includes('data:,')) {
+                const imgWidth = 170;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                if (yPosition + imgHeight > pageHeight - 20) {
+                  pdf.addPage();
+                  yPosition = 20;
+                }
+                
+                // Buscar título del gráfico
+                const chartContainer = canvas.closest('.chart-container');
+                const titleElement = chartContainer?.querySelector('h3, h4, .chart-title');
+                if (titleElement?.textContent) {
+                  pdf.setFontSize(14);
+                  pdf.setTextColor(0, 0, 0);
+                  pdf.text(titleElement.textContent, 20, yPosition);
+                  yPosition += 15;
+                }
+                
+                pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
+                yPosition += imgHeight + 15;
+                chartsProcessed++;
+                
+                console.log(`✅ Canvas directo ${i + 1} procesado exitosamente`);
               }
-              
-              pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
-              yPosition += imgHeight + 20;
-              
-            } catch (chartError) {
-              console.error('Error capturando gráfico:', chartError);
+            } catch (canvasError) {
+              console.error(`❌ Error con canvas directo ${i + 1}:`, canvasError);
             }
           }
+
+          // Método Fallback: html2canvas solo si no se procesaron gráficos directamente
+          if (chartsProcessed === 0) {
+            const elementsToCapture = chartElements.length > 0 ? chartElements : chartContainers;
+            
+            console.log(`📊 Fallback: usando html2canvas para ${elementsToCapture.length} elementos`);
+
+            for (let i = 0; i < Math.min(elementsToCapture.length, 4); i++) {
+            const chartContainer = elementsToCapture[i] as HTMLElement;
+            
+            try {
+              console.log(`📊 Capturando gráfico ${i + 1}...`);
+              
+              // Hacer visible y scroll al elemento
+              chartContainer.scrollIntoView({ behavior: 'instant', block: 'center' });
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              const canvas = await html2canvas(chartContainer, {
+                backgroundColor: '#ffffff',
+                scale: 1.5,
+                logging: false,
+                useCORS: true,
+                allowTaint: true,
+                foreignObjectRendering: false,
+                width: chartContainer.offsetWidth,
+                height: chartContainer.offsetHeight,
+                x: 0,
+                y: 0,
+                ignoreElements: (element) => {
+                  // Ignorar elementos con colores problemáticos
+                  const computedStyle = window.getComputedStyle(element);
+                  const colorProps = ['color', 'backgroundColor', 'borderColor'];
+                  
+                  for (const prop of colorProps) {
+                    const value = computedStyle.getPropertyValue(prop);
+                    if (value.includes('oklch') || value.includes('color-mix') || value.includes('var(--')) {
+                      return true;
+                    }
+                  }
+                  return false;
+                },
+                onclone: (clonedDoc) => {
+                  // Forzar colores básicos en el documento clonado
+                  const style = clonedDoc.createElement('style');
+                  style.textContent = `
+                    * {
+                      color: #000000 !important;
+                      background-color: transparent !important;
+                      border-color: #000000 !important;
+                    }
+                    canvas {
+                      background-color: #ffffff !important;
+                    }
+                    .chart-container, .chart-element {
+                      background-color: #ffffff !important;
+                      color: #000000 !important;
+                    }
+                  `;
+                  clonedDoc.head.appendChild(style);
+                }
+              });
+              
+              console.log(`📊 Canvas creado: ${canvas.width}x${canvas.height}`);
+              
+              if (canvas.width > 0 && canvas.height > 0) {
+                const imgData = canvas.toDataURL('image/png', 1.0);
+                const imgWidth = 170;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                // Verificar si el gráfico cabe en la página actual
+                if (yPosition + imgHeight > pageHeight - 20) {
+                  pdf.addPage();
+                  yPosition = 20;
+                }
+                
+                pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
+                yPosition += imgHeight + 15;
+                
+                console.log(`✅ Gráfico ${i + 1} agregado al PDF`);
+              } else {
+                console.warn(`⚠️ Gráfico ${i + 1} vacío, intentando método alternativo...`);
+                
+                // Método alternativo: capturar solo el canvas
+                const canvasElement = chartContainer.querySelector('canvas');
+                if (canvasElement) {
+                  const imgData = canvasElement.toDataURL('image/png', 1.0);
+                  const imgWidth = 170;
+                  const imgHeight = (canvasElement.height * imgWidth) / canvasElement.width;
+                  
+                  if (yPosition + imgHeight > pageHeight - 20) {
+                    pdf.addPage();
+                    yPosition = 20;
+                  }
+                  
+                  pdf.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
+                  yPosition += imgHeight + 15;
+                  
+                  console.log(`✅ Gráfico ${i + 1} agregado usando canvas directo`);
+                }
+              }
+              
+              } catch (chartError) {
+                console.error(`❌ Error capturando gráfico ${i + 1}:`, chartError);
+                
+                // Fallback: agregar texto indicando error
+                pdf.setFontSize(12);
+                pdf.setTextColor(255, 0, 0);
+                pdf.text(`⚠️ Error al capturar gráfico ${i + 1}`, 20, yPosition);
+                yPosition += 15;
+              }
+            }
+          }
+          
+          console.log('📊 Captura de gráficos completada');
+          
+          // Limpiar estilos temporales
+          const stylesToRemove = document.getElementById('pdf-capture-styles');
+          if (stylesToRemove) {
+            stylesToRemove.remove();
+          }
+        } else {
+          console.warn('⚠️ No se encontró el contenedor de gráficos');
         }
       } catch (chartsError) {
-        console.error('Error procesando gráficos:', chartsError);
+        console.error('❌ Error general procesando gráficos:', chartsError);
+        
+        // Limpiar estilos temporales en caso de error
+        const stylesToClean = document.getElementById('pdf-capture-styles');
+        if (stylesToClean) {
+          stylesToClean.remove();
+        }
       }
 
       // Footer en cada página

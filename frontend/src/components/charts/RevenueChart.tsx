@@ -54,6 +54,9 @@ export default function RevenueChart({ monthlyRevenue }: RevenueChartProps) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+      duration: 0, // Desactivar animaciones para mejor captura
+    },
     plugins: {
       legend: {
         position: 'top' as const,
@@ -117,8 +120,12 @@ export default function RevenueChart({ monthlyRevenue }: RevenueChartProps) {
   };
 
   return (
-    <div className="h-80">
-      <Line data={data} options={options} />
+    <div className="h-80 chart-element" style={{ backgroundColor: '#ffffff' }}>
+      <Line 
+        data={data} 
+        options={options} 
+        key={`revenue-chart-${monthlyRevenue.length}`}
+      />
     </div>
   );
 }

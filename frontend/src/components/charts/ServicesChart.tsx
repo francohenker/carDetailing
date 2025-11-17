@@ -51,6 +51,9 @@ export default function ServicesChart({ popularServices }: ServicesChartProps) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+      duration: 0,
+    },
     plugins: {
       legend: {
         position: 'right' as const,
@@ -99,8 +102,12 @@ export default function ServicesChart({ popularServices }: ServicesChartProps) {
   }
 
   return (
-    <div className="h-80">
-      <Doughnut data={data} options={options} />
+    <div className="h-80 chart-element" style={{ backgroundColor: '#ffffff' }}>
+      <Doughnut 
+        data={data} 
+        options={options} 
+        key={`services-chart-${popularServices.length}`}
+      />
     </div>
   );
 }

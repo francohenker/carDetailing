@@ -29,11 +29,33 @@ import {
     DollarSign,
     Activity,
     TrendingDown,
-    FileText
+    FileText,
+    Star,
+    BarChart3,
+    Filter,
+    Search,
+    RefreshCw
 } from "lucide-react"
 
 import { toast } from "sonner"
 import HeaderDefault from "../header"
+
+// Componentes de gráficos y estadísticas
+import RevenueChart from "@/components/charts/RevenueChart"
+import TurnosChart from "@/components/charts/TurnosChart"
+import ServicesChart from "@/components/charts/ServicesChart"
+import StatusChart from "@/components/charts/StatusChart"
+import DateFilter from "@/components/DateFilter"
+import { useReportGenerator } from "@/hooks/useReportGenerator"
+
+// Componentes de auditoría
+import DataComparison from "@/components/auditoria/DataComparison"
+import UserInfo from "@/components/auditoria/UserInfo"
+import AuditSummary from "@/components/auditoria/AuditSummary"
+import ActivitySummary from "@/components/auditoria/ActivitySummary"
+import HourlyActivity from "@/components/auditoria/HourlyActivity"
+import PaginationControls from "@/components/auditoria/PaginationControls"
+import RecordsSummary from "@/components/auditoria/RecordsSummary"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -253,7 +275,6 @@ export default function AdminPage() {
     const [statisticsLoading, setStatisticsLoading] = useState(false)
 
     // Estados para auditoría
-    const [auditoriaRecords, setAuditoriaRecords] = useState<any[]>([])
     const [auditoriaLoading, setAuditoriaLoading] = useState(false)
     const [auditoriaStats, setAuditoriaStats] = useState<{
         totalRegistros: number
@@ -268,6 +289,92 @@ export default function AdminPage() {
         accionesMasComunes: [],
         entidadesMasAuditadas: []
     })
+
+    // Estados para estadísticas detalladas
+    const [detailedStatistics, setDetailedStatistics] = useState<{
+        monthlyRevenue?: Array<{ month: string; revenue: number }>
+        turnosStatus?: Array<{ estado: string; count: string }>
+        weeklyTurnos?: Array<{ day: string; turnos: number }>
+        dailyTurnos?: Array<{ date: string; day: string; turnos: number }>
+        dailyRevenue?: Array<{ date: string; day: string; revenue: number }>
+        topClients?: Array<{
+            clientName: string
+            clientEmail: string
+            totalSpent: number
+            turnosCount: string
+        }>
+        period?: {
+            startDate: string
+            endDate: string
+            days: number
+        }
+        periodRevenue?: number
+        periodTurnos?: number
+        newUsers?: number
+    } | null>(null)
+    const [isFiltered, setIsFiltered] = useState(false)
+    const [detailedLoading, setDetailedLoading] = useState(false)
+    const { generateReport, isGenerating } = useReportGenerator()
+
+    // Estados para auditoría detallada
+    interface AuditoriaRecord {
+        id: number
+        accion: string
+        entidad: string
+        entidadId?: number
+        descripcion?: string
+        fechaCreacion: string
+        usuario?: {
+            firstname: string
+            lastname: string
+            email: string
+        }
+        ip?: string
+        userAgent?: string
+        datosAnteriores?: any
+        datosNuevos?: any
+    }
+
+    interface DetailedAuditoriaStats {
+        totalRegistros: number
+        registrosHoy: number
+        registrosEstaSemana: number
+        registrosEsteMes: number
+        registrosAyer: number
+        registrosSemanaAnterior: number
+        crecimientoHoy: number
+        crecimientoSemana: number
+        accionesMasComunes: Array<{ accion: string; cantidad: number }>
+        entidadesMasAuditadas: Array<{ entidad: string; cantidad: number }>
+        usuariosMasActivos: Array<{ usuario: string; cantidad: number }>
+        distribucionPorHora: Array<{ hora: number; cantidad: number }>
+    }
+
+    const [detailedAuditoriaRecords, setDetailedAuditoriaRecords] = useState<AuditoriaRecord[]>([])
+    const [detailedAuditoriaStats, setDetailedAuditoriaStats] = useState<DetailedAuditoriaStats>({
+        totalRegistros: 0,
+        registrosHoy: 0,
+        registrosEstaSemana: 0,
+        registrosEsteMes: 0,
+        registrosAyer: 0,
+        registrosSemanaAnterior: 0,
+        crecimientoHoy: 0,
+        crecimientoSemana: 0,
+        accionesMasComunes: [],
+        entidadesMasAuditadas: [],
+        usuariosMasActivos: [],
+        distribucionPorHora: [],
+    })
+    const [auditoriaCurrentPage, setAuditoriaCurrentPage] = useState(1)
+    const [auditoriaTotalPages, setAuditoriaTotalPages] = useState(1)
+    const [auditoriaTotalRecords, setAuditoriaTotalRecords] = useState(0)
+    const [auditoriaFilters, setAuditoriaFilters] = useState({
+        accion: "",
+        entidad: "",
+        usuarioId: "",
+        limit: "50",
+    })
+    const [auditoriaDetailedLoading, setAuditoriaDetailedLoading] = useState(false)
 
     // Estados generales
     const [loading, setLoading] = useState(true)
@@ -300,8 +407,11 @@ export default function AdminPage() {
                 fetchSuppliers(),
                 fetchLowStockProducts(),
                 fetchStatistics(),
+                fetchDetailedStatistics(),
                 fetchAuditoria(),
-                fetchAuditoriaStats()
+                fetchAuditoriaStats(),
+                fetchDetailedAuditoriaRecords(),
+                fetchDetailedAuditoriaStats()
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
@@ -769,6 +879,182 @@ export default function AdminPage() {
         } finally {
             setStatisticsLoading(false)
         }
+    }
+
+    const fetchDetailedStatistics = async () => {
+        try {
+            setDetailedLoading(true)
+            const token = localStorage.getItem('jwt')
+            const response = await fetch('/api/statistics', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+
+            if (!response.ok) {
+                throw new Error('Error al cargar las estadísticas detalladas')
+            }
+
+            const statisticsData = await response.json()
+            setDetailedStatistics(statisticsData)
+            setIsFiltered(false)
+        } catch (err) {
+            console.error('Error fetching detailed statistics:', err)
+            toast.error("Error", {
+                description: "No se pudieron cargar las estadísticas detalladas.",
+            })
+        } finally {
+            setDetailedLoading(false)
+        }
+    }
+
+    const fetchFilteredStatistics = async (startDate: string, endDate: string) => {
+        try {
+            setDetailedLoading(true)
+            const token = localStorage.getItem('jwt')
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/statistics/filtered?startDate=${startDate}&endDate=${endDate}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+
+            if (!response.ok) {
+                throw new Error('Error al cargar las estadísticas filtradas')
+            }
+
+            const filteredData = await response.json()
+            setDetailedStatistics(filteredData)
+            setIsFiltered(true)
+        } catch (err) {
+            console.error('Error fetching filtered statistics:', err)
+            toast.error("Error", {
+                description: "No se pudieron cargar las estadísticas filtradas.",
+            })
+        } finally {
+            setDetailedLoading(false)
+        }
+    }
+
+    const handleGenerateReport = async () => {
+        if (!detailedStatistics) return
+        
+        try {
+            await generateReport(detailedStatistics)
+        } catch (err) {
+            console.error('Error generando informe:', err)
+            toast.error("Error", {
+                description: "No se pudo generar el informe.",
+            })
+        }
+    }
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('es-AR', {
+            style: 'currency',
+            currency: 'ARS',
+        }).format(amount)
+    }
+
+    // ============ AUDITORÍA DETALLADA ============
+    const fetchDetailedAuditoriaRecords = async (page = 1) => {
+        try {
+            setAuditoriaDetailedLoading(true)
+            const params = new URLSearchParams({
+                page: page.toString(),
+                ...auditoriaFilters,
+            })
+
+            const response = await fetch(`/api/auditoria?${params.toString()}`, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+                },
+            })
+
+            if (!response.ok) throw new Error("Error fetching auditoria records")
+
+            const data = await response.json()
+            setDetailedAuditoriaRecords(data.data || [])
+            setAuditoriaCurrentPage(data.page || 1)
+            setAuditoriaTotalPages(data.totalPages || 1)
+            setAuditoriaTotalRecords(data.total || 0)
+        } catch (error) {
+            console.error("Error fetching auditoria records:", error)
+            toast.error("Error", {
+                description: "No se pudieron cargar los registros de auditoría detallados.",
+            })
+        } finally {
+            setAuditoriaDetailedLoading(false)
+        }
+    }
+
+    const fetchDetailedAuditoriaStats = async () => {
+        try {
+            const response = await fetch(`/api/auditoria/estadisticas`, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+                },
+            })
+
+            if (!response.ok) throw new Error("Error fetching auditoria stats")
+
+            const data = await response.json()
+            setDetailedAuditoriaStats(data)
+        } catch (error) {
+            console.error("Error fetching detailed auditoria stats:", error)
+        }
+    }
+
+    const handleAuditoriaFilterChange = (key: string, value: string) => {
+        setAuditoriaFilters((prev) => ({ ...prev, [key]: value }))
+    }
+
+    const applyAuditoriaFilters = () => {
+        setAuditoriaCurrentPage(1)
+        fetchDetailedAuditoriaRecords(1)
+    }
+
+    const clearAuditoriaFilters = () => {
+        setAuditoriaFilters({
+            accion: "",
+            entidad: "",
+            usuarioId: "",
+            limit: "50",
+        })
+        setAuditoriaCurrentPage(1)
+        fetchDetailedAuditoriaRecords(1)
+    }
+
+    const getTrendIcon = (growth: number) => {
+        if (growth > 0) return <TrendingUp className="h-4 w-4 text-green-600" />
+        if (growth < 0) return <TrendingDown className="h-4 w-4 text-red-600" />
+        return <Activity className="h-4 w-4 text-gray-600" />
+    }
+
+    const getTrendColor = (growth: number) => {
+        if (growth > 0) return "text-green-600"
+        if (growth < 0) return "text-red-600"
+        return "text-gray-600"
+    }
+
+    const handleAuditoriaPageChange = (page: number) => {
+        if (page >= 1 && page <= auditoriaTotalPages && page !== auditoriaCurrentPage) {
+            setAuditoriaCurrentPage(page)
+            fetchDetailedAuditoriaRecords(page)
+        }
+    }
+
+    const handleAuditoriaRecordsPerPageChange = (limit: string) => {
+        handleAuditoriaFilterChange("limit", limit)
+        setAuditoriaCurrentPage(1)
+        fetchDetailedAuditoriaRecords(1)
+    }
+
+    const hasActiveAuditoriaFilters = () => {
+        return (
+            auditoriaFilters.accion !== "" ||
+            auditoriaFilters.entidad !== "" ||
+            auditoriaFilters.usuarioId !== ""
+        )
     }
 
     // ============ AUDITORÍA ============
@@ -1951,222 +2237,345 @@ export default function AdminPage() {
 
                         {/* PESTAÑA DE ESTADÍSTICAS */}
                         <TabsContent value="statistics" className="space-y-6">
-                            {/* Métricas generales */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {/* Ingresos del mes */}
-                                <Card>
-                                    <CardContent className="p-6">
+                            {/* Header con filtros */}
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-bold">Dashboard de Estadísticas</h2>
+                                    <p className="text-muted-foreground">Análisis completo de métricas y rendimiento</p>
+                                </div>
+                            </div>
+
+                            {/* Filtros de fecha */}
+                            <DateFilter 
+                                onFilter={fetchFilteredStatistics}
+                                onGenerateReport={handleGenerateReport}
+                                isLoading={detailedLoading}
+                                isGeneratingReport={isGenerating}
+                            />
+
+                            {/* Indicador de período */}
+                            {detailedStatistics?.period && (
+                                <Card className="border-0 shadow-lg bg-blue-50 border-l-4 border-l-blue-500">
+                                    <CardContent className="p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Ingresos este mes</p>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-2xl font-bold">
-                                                        ${statisticsLoading ? '...' : statistics.currentMonthRevenue.toLocaleString()}
-                                                    </p>
-                                                    {!statisticsLoading && statistics.revenueChange !== 0 && (
-                                                        <span className={`text-xs flex items-center gap-1 ${statistics.revenueChange > 0 ? 'text-green-600' : 'text-red-600'
-                                                            }`}>
-                                                            {statistics.revenueChange > 0 ? (
-                                                                <TrendingUp className="h-3 w-3" />
-                                                            ) : (
-                                                                <TrendingDown className="h-3 w-3" />
-                                                            )}
-                                                            {Math.abs(statistics.revenueChange).toFixed(1)}%
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                <h3 className="font-semibold text-blue-900">
+                                                    Período Filtrado: {new Date(detailedStatistics.period.startDate).toLocaleDateString('es-AR')} - {new Date(detailedStatistics.period.endDate).toLocaleDateString('es-AR')}
+                                                </h3>
+                                                <p className="text-blue-700">
+                                                    Mostrando datos de {detailedStatistics.period.days} días
+                                                </p>
                                             </div>
-                                            <DollarSign className="h-8 w-8 text-green-600 bg-green-100 p-1.5 rounded-full" />
+                                            <Button 
+                                                onClick={fetchDetailedStatistics} 
+                                                variant="outline" 
+                                                size="sm"
+                                                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                            >
+                                                Ver Dashboard General
+                                            </Button>
                                         </div>
                                     </CardContent>
                                 </Card>
+                            )}
 
-                                {/* Total de usuarios */}
-                                <Card>
-                                    <CardContent className="p-6">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Total usuarios</p>
-                                                <p className="text-2xl font-bold">
-                                                    {statisticsLoading ? '...' : users.length}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    +{statisticsLoading ? '...' : statistics.newUsersThisMonth} este mes
-                                                </p>
-                                            </div>
-                                            <Users className="h-8 w-8 text-blue-600 bg-blue-100 p-1.5 rounded-full" />
+                            {/* KPI Cards */}
+                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                                {/* Ingresos */}
+                                <Card className="border-0 shadow-lg bg-gradient-to-r from-green-500 to-green-600 text-white">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium text-green-100">
+                                            {detailedStatistics?.period ? 'Ingresos del Período' : 'Ingresos del Mes'}
+                                        </CardTitle>
+                                        <TrendingUp className="h-5 w-5 text-green-100" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-3xl font-bold">
+                                            {detailedLoading ? '...' : formatCurrency(detailedStatistics?.periodRevenue ?? statistics?.currentMonthRevenue ?? 0)}
                                         </div>
+                                        {statistics?.revenueChange !== undefined && !detailedStatistics?.period && (
+                                            <div className="flex items-center gap-1 mt-2">
+                                                {statistics.revenueChange >= 0 ? 
+                                                    <TrendingUp className="h-4 w-4 text-green-100" /> : 
+                                                    <TrendingDown className="h-4 w-4 text-green-100" />
+                                                }
+                                                <span className="text-sm text-green-100">
+                                                    {Math.abs(statistics.revenueChange).toFixed(1)}% vs mes anterior
+                                                </span>
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
 
-                                {/* Total de servicios */}
-                                <Card>
-                                    <CardContent className="p-6">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Servicios disponibles</p>
-                                                <p className="text-2xl font-bold">{services.length}</p>
-                                                <p className="text-xs text-muted-foreground">Activos</p>
-                                            </div>
-                                            <Wrench className="h-8 w-8 text-purple-600 bg-purple-100 p-1.5 rounded-full" />
+                                {/* Turnos */}
+                                <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium text-blue-100">
+                                            {detailedStatistics?.period ? 'Turnos del Período' : 'Turnos del Mes'}
+                                        </CardTitle>
+                                        <Calendar className="h-5 w-5 text-blue-100" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-3xl font-bold">
+                                            {detailedLoading ? '...' : (detailedStatistics?.periodTurnos ?? statistics?.currentMonthTurnos ?? 0)}
                                         </div>
+                                        <p className="text-sm text-blue-100 mt-2">Turnos programados</p>
                                     </CardContent>
                                 </Card>
 
                                 {/* Turnos completados */}
-                                <Card>
-                                    <CardContent className="p-6">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Turnos completados</p>
-                                                <p className="text-2xl font-bold">
-                                                    {statisticsLoading ? '...' : statistics.completedTurnos}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {statisticsLoading ? '...' : statistics.currentMonthTurnos} este mes
-                                                </p>
-                                            </div>
-                                            <Activity className="h-8 w-8 text-orange-600 bg-orange-100 p-1.5 rounded-full" />
+                                <Card className="border-0 shadow-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium text-emerald-100">Turnos Completados</CardTitle>
+                                        <CheckCircle className="h-5 w-5 text-emerald-100" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-3xl font-bold">
+                                            {detailedLoading ? '...' : (statistics?.completedTurnos ?? 0)}
                                         </div>
+                                        <p className="text-sm text-emerald-100 mt-2">
+                                            {detailedStatistics?.period ? 'En el período' : 'Total histórico'}
+                                        </p>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Nuevos usuarios */}
+                                <Card className="border-0 shadow-lg bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium text-purple-100">Nuevos Usuarios</CardTitle>
+                                        <Users className="h-5 w-5 text-purple-100" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-3xl font-bold">
+                                            {detailedLoading ? '...' : (detailedStatistics?.newUsers ?? statistics?.newUsersThisMonth ?? 0)}
+                                        </div>
+                                        <p className="text-sm text-purple-100 mt-2">
+                                            {detailedStatistics?.period ? 'En el período' : 'Este mes'}
+                                        </p>
                                     </CardContent>
                                 </Card>
                             </div>
 
-                            {/* Servicios más populares */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <TrendingUp className="h-5 w-5" />
-                                        Servicios Más Populares
-                                    </CardTitle>
-                                    <CardDescription>Top 3 servicios más solicitados</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {statisticsLoading ? (
-                                        <div className="flex items-center justify-center py-8">
-                                            <span className="loading loading-spinner loading-lg"></span>
-                                        </div>
-                                    ) : statistics.popularServices.length === 0 ? (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                            No hay datos de servicios disponibles.
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {statistics.popularServices.map((service, index) => (
-                                                <div key={service.name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${index === 0 ? 'bg-yellow-500' :
-                                                                index === 1 ? 'bg-gray-400' :
-                                                                    'bg-orange-500'
-                                                            }`}>
-                                                            {index + 1}
-                                                        </div>
-                                                        <span className="font-medium">{service.name}</span>
-                                                    </div>
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {service.count} {service.count === 1 ? 'vez' : 'veces'}
-                                                    </span>
+                            {/* Charts Section */}
+                            {!detailedLoading && detailedStatistics ? (
+                                <div id="charts-container" className="grid gap-8">
+                                    {/* Revenue Chart */}
+                                    <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
+                                        <CardContent className="p-6">
+                                            {detailedStatistics?.monthlyRevenue ? (
+                                                <RevenueChart monthlyRevenue={detailedStatistics.monthlyRevenue} />
+                                            ) : detailedStatistics?.dailyRevenue ? (
+                                                <RevenueChart monthlyRevenue={detailedStatistics.dailyRevenue.map(d => ({ month: d.day, revenue: d.revenue }))} />
+                                            ) : (
+                                                <div className="h-80 flex items-center justify-center">
+                                                    <p className="text-muted-foreground">No hay datos de ingresos disponibles</p>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                                            )}
+                                        </CardContent>
+                                    </Card>
 
-                            {/* Dashboard completo */}
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <div>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <TrendingUp className="h-6 w-6 text-primary" />
-                                            Dashboard Completo de Estadísticas
-                                        </CardTitle>
-                                        <CardDescription>
-                                            Accede al dashboard completo para ver análisis detallados y gráficos avanzados.
-                                        </CardDescription>
+                                    {/* Row with 3 charts */}
+                                    <div className="grid gap-6 lg:grid-cols-3">
+                                        {/* Turnos Chart */}
+                                        <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
+                                            <CardContent className="p-6">
+                                                {detailedStatistics?.weeklyTurnos ? (
+                                                    <TurnosChart weeklyTurnos={detailedStatistics.weeklyTurnos} />
+                                                ) : detailedStatistics?.dailyTurnos ? (
+                                                    <TurnosChart weeklyTurnos={detailedStatistics.dailyTurnos.map(d => ({ day: d.day, turnos: d.turnos }))} />
+                                                ) : (
+                                                    <div className="h-80 flex items-center justify-center">
+                                                        <p className="text-muted-foreground">No hay datos de turnos disponibles</p>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+
+                                        {/* Services Chart */}
+                                        <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
+                                            <CardContent className="p-6">
+                                                <ServicesChart popularServices={statistics?.popularServices?.map(s => ({ name: s.name, count: s.count.toString() })) || []} />
+                                            </CardContent>
+                                        </Card>
+
+                                        {/* Status Chart */}
+                                        <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
+                                            <CardContent className="p-6">
+                                                <StatusChart turnosStatus={detailedStatistics?.turnosStatus || []} />
+                                            </CardContent>
+                                        </Card>
                                     </div>
-                                    <Link href="/admin/statistics">
-                                        <Button className="bg-blue-600 hover:bg-blue-700">
-                                            <TrendingUp className="h-4 w-4 mr-2" />
-                                            Ver Dashboard Completo
-                                        </Button>
-                                    </Link>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-center py-4">
-                                        <p className="text-muted-foreground mb-4">
-                                            El dashboard completo incluye gráficos detallados, análisis de tendencias, comparaciones mensuales y métricas avanzadas para una mejor toma de decisiones.
-                                        </p>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            <div className="bg-blue-50 p-4 rounded-lg">
-                                                <div className="text-blue-600 font-bold text-sm">📊 Gráficos interactivos</div>
-                                                <div className="text-xs text-blue-700">Visualización de datos</div>
+
+                                    {/* Top Clients (solo para datos filtrados) */}
+                                    {detailedStatistics?.topClients && detailedStatistics.topClients.length > 0 && (
+                                        <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center gap-2">
+                                                    <Users className="h-5 w-5 text-purple-500" />
+                                                    Top Clientes del Período
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="space-y-4">
+                                                    {detailedStatistics.topClients.slice(0, 10).map((client, index) => (
+                                                        <div key={`${client.clientEmail}-${index}`} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                                                                    index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                                                                    index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
+                                                                    index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
+                                                                    'bg-gradient-to-r from-blue-400 to-blue-600'
+                                                                }`}>
+                                                                    {index + 1}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-semibold text-gray-900">{client.clientName}</p>
+                                                                    <p className="text-sm text-gray-600">{client.clientEmail}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="font-bold text-green-600">{formatCurrency(client.totalSpent)}</p>
+                                                                <p className="text-sm text-gray-500">{client.turnosCount} turnos</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+
+                                    {/* Services List - Enhanced */}
+                                    <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <TrendingUp className="h-5 w-5 text-yellow-500" />
+                                                Ranking de Servicios Más Solicitados
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-4">
+                                                {statistics?.popularServices && statistics.popularServices.length > 0 ? (
+                                                    statistics.popularServices.map((service, index) => (
+                                                        <div key={service.name} className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-100">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                                                                    index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                                                                    index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
+                                                                    index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
+                                                                    'bg-gradient-to-r from-blue-400 to-blue-600'
+                                                                }`}>
+                                                                    {index + 1}
+                                                                </div>
+                                                                <div>
+                                                                    <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                                                                    <p className="text-sm text-gray-600">Servicio popular</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <span className="text-2xl font-bold text-orange-600">{service.count}</span>
+                                                                <p className="text-sm text-gray-500">solicitudes</p>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="text-center py-8">
+                                                        <p className="text-muted-foreground">No hay datos de servicios disponibles</p>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="bg-green-50 p-4 rounded-lg">
-                                                <div className="text-green-600 font-bold text-sm">📈 Análisis de tendencias</div>
-                                                <div className="text-xs text-green-700">Comparaciones temporales</div>
-                                            </div>
-                                            <div className="bg-purple-50 p-4 rounded-lg">
-                                                <div className="text-purple-600 font-bold text-sm">📋 Reportes detallados</div>
-                                                <div className="text-xs text-purple-700">Métricas avanzadas</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center py-12">
+                                    <span className="loading loading-spinner loading-lg"></span>
+                                </div>
+                            )}
                         </TabsContent>
 
                         {/* PESTAÑA DE AUDITORÍA */}
                         <TabsContent value="auditoria" className="space-y-6">
+                            {/* Header */}
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-bold">Auditoría del Sistema</h2>
+                                    <p className="text-muted-foreground">Monitoreo completo de actividades y cambios</p>
+                                </div>
+                            </div>
+
+                            {/* Resumen de Actividad */}
+                            <ActivitySummary
+                                registrosHoy={detailedAuditoriaStats.registrosHoy}
+                                registrosAyer={detailedAuditoriaStats.registrosAyer}
+                                registrosEstaSemana={detailedAuditoriaStats.registrosEstaSemana}
+                                registrosSemanaAnterior={detailedAuditoriaStats.registrosSemanaAnterior}
+                                crecimientoHoy={detailedAuditoriaStats.crecimientoHoy}
+                                crecimientoSemana={detailedAuditoriaStats.crecimientoSemana}
+                                usuariosMasActivos={detailedAuditoriaStats.usuariosMasActivos}
+                            />
+
                             {/* Estadísticas de auditoría */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <Card>
+                                <Card className="border-l-4 border-l-blue-500">
                                     <CardContent className="p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-muted-foreground">Total Registros</p>
-                                                <p className="text-2xl font-bold">{auditoriaStats.totalRegistros}</p>
+                                                <p className="text-2xl font-bold">
+                                                    {detailedAuditoriaStats.totalRegistros.toLocaleString()}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">Histórico completo</p>
                                             </div>
                                             <FileText className="h-8 w-8 text-blue-600 bg-blue-100 p-1.5 rounded-full" />
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                <Card>
+                                <Card className="border-l-4 border-l-green-500">
                                     <CardContent className="p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-muted-foreground">Registros Hoy</p>
-                                                <p className="text-2xl font-bold">{auditoriaStats.registrosHoy}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-2xl font-bold">{detailedAuditoriaStats.registrosHoy}</p>
+                                                    {getTrendIcon(detailedAuditoriaStats.crecimientoHoy)}
+                                                </div>
+                                                <p className={`text-xs ${getTrendColor(detailedAuditoriaStats.crecimientoHoy)}`}>
+                                                    {detailedAuditoriaStats.crecimientoHoy > 0 ? "+" : ""}
+                                                    {detailedAuditoriaStats.crecimientoHoy}% vs ayer ({detailedAuditoriaStats.registrosAyer})
+                                                </p>
                                             </div>
                                             <Calendar className="h-8 w-8 text-green-600 bg-green-100 p-1.5 rounded-full" />
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                <Card>
+                                <Card className="border-l-4 border-l-purple-500">
                                     <CardContent className="p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-muted-foreground">Esta Semana</p>
-                                                <p className="text-2xl font-bold">{auditoriaStats.registrosEstaSemana}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-2xl font-bold">{detailedAuditoriaStats.registrosEstaSemana}</p>
+                                                    {getTrendIcon(detailedAuditoriaStats.crecimientoSemana)}
+                                                </div>
+                                                <p className={`text-xs ${getTrendColor(detailedAuditoriaStats.crecimientoSemana)}`}>
+                                                    {detailedAuditoriaStats.crecimientoSemana > 0 ? "+" : ""}
+                                                    {detailedAuditoriaStats.crecimientoSemana}% vs semana anterior ({detailedAuditoriaStats.registrosSemanaAnterior})
+                                                </p>
                                             </div>
                                             <Activity className="h-8 w-8 text-purple-600 bg-purple-100 p-1.5 rounded-full" />
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                <Card>
+                                <Card className="border-l-4 border-l-orange-500">
                                     <CardContent className="p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-sm font-medium text-muted-foreground">Acciones Más Comunes</p>
-                                                <p className="text-lg font-bold">
-                                                    {auditoriaStats.accionesMasComunes[0]?.accion || 'N/A'}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {auditoriaStats.accionesMasComunes[0]?.cantidad || 0} veces
-                                                </p>
+                                                <p className="text-sm font-medium text-muted-foreground">Este Mes</p>
+                                                <p className="text-2xl font-bold">{detailedAuditoriaStats.registrosEsteMes}</p>
+                                                <p className="text-xs text-muted-foreground">Actividad mensual</p>
                                             </div>
                                             <TrendingUp className="h-8 w-8 text-orange-600 bg-orange-100 p-1.5 rounded-full" />
                                         </div>
@@ -2174,70 +2583,213 @@ export default function AdminPage() {
                                 </Card>
                             </div>
 
-                            {/* Registros recientes */}
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <div className="">
-                                        <CardTitle className="flex items-center gap-2 mb-2">
-                                            <FileText className="h-5 w-5" />
-                                            Registros de Auditoría Recientes
+                            {/* Estadísticas Adicionales */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">Acciones Más Comunes</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-2">
+                                            {detailedAuditoriaStats.accionesMasComunes.slice(0, 5).map((accion, index) => (
+                                                <div key={accion.accion} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium text-blue-600">#{index + 1}</span>
+                                                        <span className="text-sm">{accion.accion}</span>
+                                                    </div>
+                                                    <span className="text-sm font-bold">{accion.cantidad}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">Entidades Más Auditadas</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-2">
+                                            {detailedAuditoriaStats.entidadesMasAuditadas.slice(0, 5).map((entidad, index) => (
+                                                <div key={entidad.entidad} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium text-green-600">#{index + 1}</span>
+                                                        <span className="text-sm">{entidad.entidad}</span>
+                                                    </div>
+                                                    <span className="text-sm font-bold">{entidad.cantidad}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <Users className="h-4 w-4" />
+                                            Usuarios Más Activos
                                         </CardTitle>
-                                        <CardDescription>Últimas 10 acciones realizadas en el sistema</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-2">
+                                            {detailedAuditoriaStats.usuariosMasActivos.slice(0, 5).map((usuario, index) => (
+                                                <div key={usuario.usuario} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium text-purple-600">#{index + 1}</span>
+                                                        <span className="text-sm truncate max-w-[120px]" title={usuario.usuario}>
+                                                            {usuario.usuario}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-sm font-bold">{usuario.cantidad}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Actividad por Horas */}
+                            <div className="mb-6">
+                                <HourlyActivity distribucionPorHora={detailedAuditoriaStats.distribucionPorHora} />
+                            </div>
+
+                            {/* Filtros */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Filter className="h-5 w-5" />
+                                        Filtros de Búsqueda
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <div className="text-sm font-medium mb-1">Acción</div>
+                                            <Select
+                                                value={auditoriaFilters.accion}
+                                                onValueChange={(value) => handleAuditoriaFilterChange("accion", value)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Todas las acciones" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="ALL">Todas las acciones</SelectItem>
+                                                    <SelectItem value="CREAR">CREAR</SelectItem>
+                                                    <SelectItem value="ACTUALIZAR">ACTUALIZAR</SelectItem>
+                                                    <SelectItem value="ELIMINAR">ELIMINAR</SelectItem>
+                                                    <SelectItem value="LOGIN">LOGIN</SelectItem>
+                                                    <SelectItem value="LOGOUT">LOGOUT</SelectItem>
+                                                    <SelectItem value="MARCAR_COMPLETADO">MARCAR_COMPLETADO</SelectItem>
+                                                    <SelectItem value="MARCAR_PAGADO">MARCAR_PAGADO</SelectItem>
+                                                    <SelectItem value="CANCELAR">CANCELAR</SelectItem>
+                                                    <SelectItem value="MODIFICAR_ROL">MODIFICAR_ROL</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div>
+                                            <div className="text-sm font-medium mb-1">Entidad</div>
+                                            <Select
+                                                value={auditoriaFilters.entidad}
+                                                onValueChange={(value) => handleAuditoriaFilterChange("entidad", value)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Todas las entidades" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="ALL">Todas las entidades</SelectItem>
+                                                    <SelectItem value="USUARIO">USUARIO</SelectItem>
+                                                    <SelectItem value="TURNO">TURNO</SelectItem>
+                                                    <SelectItem value="SERVICIO">SERVICIO</SelectItem>
+                                                    <SelectItem value="PRODUCTO">PRODUCTO</SelectItem>
+                                                    <SelectItem value="PROVEEDOR">PROVEEDOR</SelectItem>
+                                                    <SelectItem value="PAGO">PAGO</SelectItem>
+                                                    <SelectItem value="CAR">CAR</SelectItem>
+                                                    <SelectItem value="SISTEMA">SISTEMA</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div>
+                                            <div className="text-sm font-medium mb-1">Límite</div>
+                                            <Select
+                                                value={auditoriaFilters.limit}
+                                                onValueChange={(value) => handleAuditoriaFilterChange("limit", value)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="5">5 registros</SelectItem>
+                                                    <SelectItem value="10">10 registros</SelectItem>
+                                                    <SelectItem value="25">25 registros</SelectItem>
+                                                    <SelectItem value="50">50 registros</SelectItem>
+                                                    <SelectItem value="100">100 registros</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="flex gap-2 items-end">
+                                            <Button onClick={applyAuditoriaFilters} className="flex-1">
+                                                <Search className="h-4 w-4 mr-2" />
+                                                Buscar
+                                            </Button>
+                                            <Button variant="outline" onClick={clearAuditoriaFilters}>
+                                                <RefreshCw className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <Link href="/admin/auditoria">
-                                        <Button className="bg-blue-600 hover:bg-blue-700">
-                                            <FileText className="h-4 w-4 mr-2" />
-                                            Ver Todos los Registros
-                                        </Button>
-                                    </Link>
+                                </CardContent>
+                            </Card>
+
+                            {/* Resumen de registros */}
+                            <RecordsSummary
+                                totalRecords={detailedAuditoriaStats.totalRegistros}
+                                currentPage={auditoriaCurrentPage}
+                                recordsPerPage={parseInt(auditoriaFilters.limit)}
+                                filteredRecords={auditoriaTotalRecords}
+                                hasFilters={hasActiveAuditoriaFilters()}
+                            />
+
+                            {/* Registros */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Registros de Auditoría</CardTitle>
+                                    <CardDescription>
+                                        {auditoriaTotalRecords > 0 ? (
+                                            <>Página {auditoriaCurrentPage} de {auditoriaTotalPages}</>
+                                        ) : (
+                                            "No hay registros para mostrar"
+                                        )}
+                                    </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     {auditoriaLoading ? (
                                         <div className="flex items-center justify-center py-8">
                                             <span className="loading loading-spinner loading-lg"></span>
                                         </div>
-                                    ) : auditoriaRecords.length === 0 ? (
+                                    ) : detailedAuditoriaRecords.length === 0 ? (
                                         <div className="text-center py-8 text-muted-foreground">
                                             No hay registros de auditoría disponibles.
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
-                                            {auditoriaRecords.slice(0, 10).map((record) => (
-                                                <div key={record.id} className="border rounded-lg p-4 space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${record.accion === 'CREAR' ? 'bg-green-100 text-green-700' :
-                                                                    record.accion === 'ACTUALIZAR' ? 'bg-blue-100 text-blue-700' :
-                                                                        record.accion === 'ELIMINAR' ? 'bg-red-100 text-red-700' :
-                                                                            record.accion === 'LOGIN' ? 'bg-yellow-100 text-yellow-700' :
-                                                                                'bg-gray-100 text-gray-700'
-                                                                }`}>
-                                                                {record.accion}
-                                                            </span>
-                                                            <span className="text-sm font-medium">{record.entidad}</span>
-                                                            {/*{record.entidadId && (
-                                                                <span className="text-xs text-muted-foreground">ID: {record.entidadId}</span>
-                                                            )}*/}
-                                                        </div>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {new Date(record.fechaCreacion).toLocaleString()}
-                                                        </span>
-                                                    </div>
-
-                                                    {record.descripcion && (
-                                                        <p className="text-sm text-muted-foreground">{record.descripcion}</p>
-                                                    )}
-
-                                                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                                        {record.usuario && (
-                                                            <span>Usuario: {record.usuario.firstname} {record.usuario.lastname}</span>
-                                                        )}
-                                                        {record.ip && (
-                                                            <span>IP: {record.ip}</span>
-                                                        )}
+                                            {detailedAuditoriaRecords.map((record) => (
+                                                <div key={record.id} className="border rounded-lg p-4 space-y-4">
+                                                    <AuditSummary record={record} />
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <UserInfo record={record} />
+                                                        <DataComparison record={record} />
                                                     </div>
                                                 </div>
                                             ))}
+                                            
+                                            <PaginationControls
+                                                currentPage={auditoriaCurrentPage}
+                                                totalPages={auditoriaTotalPages}
+                                                onPageChange={setAuditoriaCurrentPage}
+                                            />
                                         </div>
                                     )}
                                 </CardContent>

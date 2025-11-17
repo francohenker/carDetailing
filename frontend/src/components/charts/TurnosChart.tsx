@@ -46,6 +46,9 @@ export default function TurnosChart({ weeklyTurnos }: TurnosChartProps) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+      duration: 0,
+    },
     plugins: {
       legend: {
         position: 'top' as const,
@@ -107,8 +110,12 @@ export default function TurnosChart({ weeklyTurnos }: TurnosChartProps) {
   };
 
   return (
-    <div className="h-80">
-      <Bar data={data} options={options} />
+    <div className="h-80 chart-element" style={{ backgroundColor: '#ffffff' }}>
+      <Bar 
+        data={data} 
+        options={options} 
+        key={`turnos-chart-${weeklyTurnos.length}`}
+      />
     </div>
   );
 }
