@@ -175,7 +175,7 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
       {/* Navegación rápida */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Ir a página:</span>
+          <span className="text-muted-foreground">Página:</span>
           <input
             type="number"
             min="1"
@@ -201,7 +201,7 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Registros por página:</span>
           <select
             value={recordsPerPage}
@@ -214,7 +214,7 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
             <option value={100}>100</option>
             <option value={200}>200</option>
           </select>
-        </div>
+        </div> */}
       </div>
 
       {/* Indicador de carga */}

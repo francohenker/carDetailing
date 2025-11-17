@@ -26,12 +26,9 @@ import {
     Mail,
     Send,
     TrendingUp,
-    DollarSign,
     Activity,
     TrendingDown,
     FileText,
-    Star,
-    BarChart3,
     Filter,
     Search,
     RefreshCw
@@ -272,10 +269,8 @@ export default function AdminPage() {
         newUsersThisMonth: 0,
         popularServices: []
     })
-    const [statisticsLoading, setStatisticsLoading] = useState(false)
 
     // Estados para auditoría
-    const [auditoriaLoading, setAuditoriaLoading] = useState(false)
     const [auditoriaStats, setAuditoriaStats] = useState<{
         totalRegistros: number
         registrosHoy: number
@@ -312,7 +307,6 @@ export default function AdminPage() {
         periodTurnos?: number
         newUsers?: number
     } | null>(null)
-    const [isFiltered, setIsFiltered] = useState(false)
     const [detailedLoading, setDetailedLoading] = useState(false)
     const { generateReport, isGenerating } = useReportGenerator()
 
@@ -390,8 +384,64 @@ export default function AdminPage() {
         name: ''
     })
 
-    // Cargar datos iniciales
+    // ============ FUNCIONES DE AUTENTICACIÓN ============
+    const checkTokenValidity = () => {
+        const token = localStorage.getItem('jwt')
+        if (!token) return false
+        
+        try {
+            // Decodificar el token para verificar la expiración
+            const payload = JSON.parse(atob(token.split('.')[1]))
+            const currentTime = Date.now() / 1000
+            
+            // Si el token expira en menos de 5 minutos, considerarlo inválido
+            return payload.exp > (currentTime + 300)
+        } catch (error) {
+            console.error('Error checking token validity:', error)
+            return false
+        }
+    }
+
+    const handleUnauthorizedError = () => {
+        console.warn('Token inválido o expirado, redirigiendo al login...')
+        localStorage.removeItem('jwt')
+        window.location.href = '/auth/login'
+    }
+
+    // Función para hacer fetch con autenticación automática
+    const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+        if (!checkTokenValidity()) {
+            handleUnauthorizedError()
+            return null
+        }
+
+        const token = localStorage.getItem('jwt')
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...options.headers,
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        })
+
+        if (response.status === 401) {
+            handleUnauthorizedError()
+            return null
+        }
+
+        return response
+    }
+
+    // Verificar token al cargar la página
     useEffect(() => {
+        const token = localStorage.getItem('jwt')
+        
+        if (!token || !checkTokenValidity()) {
+            handleUnauthorizedError()
+            return
+        }
+
         fetchAllData()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -408,7 +458,6 @@ export default function AdminPage() {
                 fetchLowStockProducts(),
                 fetchStatistics(),
                 fetchDetailedStatistics(),
-                fetchAuditoria(),
                 fetchAuditoriaStats(),
                 fetchDetailedAuditoriaRecords(),
                 fetchDetailedAuditoriaStats()
@@ -865,7 +914,6 @@ export default function AdminPage() {
     // ============ ESTADÍSTICAS ============
     const fetchStatistics = async () => {
         try {
-            setStatisticsLoading(true)
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/statistics`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('jwt')}`
@@ -876,32 +924,26 @@ export default function AdminPage() {
             setStatistics(data)
         } catch (error) {
             console.error('Error fetching statistics:', error)
-        } finally {
-            setStatisticsLoading(false)
         }
     }
 
     const fetchDetailedStatistics = async () => {
         try {
             setDetailedLoading(true)
-            const token = localStorage.getItem('jwt')
-            const response = await fetch('/api/statistics', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            })
+            
+            const response = await fetchWithAuth('/api/statistics')
+            if (!response) return // Token inválido, ya manejado
 
             if (!response.ok) {
-                throw new Error('Error al cargar las estadísticas detalladas')
+                throw new Error(`Error ${response.status}: ${response.statusText}`)
             }
 
             const statisticsData = await response.json()
             setDetailedStatistics(statisticsData)
-            setIsFiltered(false)
         } catch (err) {
             console.error('Error fetching detailed statistics:', err)
             toast.error("Error", {
-                description: "No se pudieron cargar las estadísticas detalladas.",
+                description: "No se pudieron cargar las estadísticas detalladas. Verifica tu conexión.",
             })
         } finally {
             setDetailedLoading(false)
@@ -911,24 +953,20 @@ export default function AdminPage() {
     const fetchFilteredStatistics = async (startDate: string, endDate: string) => {
         try {
             setDetailedLoading(true)
-            const token = localStorage.getItem('jwt')
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/statistics/filtered?startDate=${startDate}&endDate=${endDate}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            })
+            
+            const response = await fetchWithAuth(`${process.env.NEXT_PUBLIC_BACKEND_URL}/statistics/filtered?startDate=${startDate}&endDate=${endDate}`)
+            if (!response) return // Token inválido, ya manejado
 
             if (!response.ok) {
-                throw new Error('Error al cargar las estadísticas filtradas')
+                throw new Error(`Error ${response.status}: ${response.statusText}`)
             }
 
             const filteredData = await response.json()
             setDetailedStatistics(filteredData)
-            setIsFiltered(true)
         } catch (err) {
             console.error('Error fetching filtered statistics:', err)
             toast.error("Error", {
-                description: "No se pudieron cargar las estadísticas filtradas.",
+                description: "No se pudieron cargar las estadísticas filtradas. Verifica tu conexión.",
             })
         } finally {
             setDetailedLoading(false)
@@ -964,13 +1002,12 @@ export default function AdminPage() {
                 ...auditoriaFilters,
             })
 
-            const response = await fetch(`/api/auditoria?${params.toString()}`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("jwt")}`,
-                },
-            })
+            const response = await fetchWithAuth(`/api/auditoria?${params.toString()}`)
+            if (!response) return // Token inválido, ya manejado
 
-            if (!response.ok) throw new Error("Error fetching auditoria records")
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`)
+            }
 
             const data = await response.json()
             setDetailedAuditoriaRecords(data.data || [])
@@ -980,7 +1017,7 @@ export default function AdminPage() {
         } catch (error) {
             console.error("Error fetching auditoria records:", error)
             toast.error("Error", {
-                description: "No se pudieron cargar los registros de auditoría detallados.",
+                description: "No se pudieron cargar los registros de auditoría. Verifica tu conexión.",
             })
         } finally {
             setAuditoriaDetailedLoading(false)
@@ -989,18 +1026,20 @@ export default function AdminPage() {
 
     const fetchDetailedAuditoriaStats = async () => {
         try {
-            const response = await fetch(`/api/auditoria/estadisticas`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("jwt")}`,
-                },
-            })
+            const response = await fetchWithAuth(`/api/auditoria/estadisticas`)
+            if (!response) return // Token inválido, ya manejado
 
-            if (!response.ok) throw new Error("Error fetching auditoria stats")
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`)
+            }
 
             const data = await response.json()
             setDetailedAuditoriaStats(data)
         } catch (error) {
             console.error("Error fetching detailed auditoria stats:", error)
+            toast.error("Error", {
+                description: "No se pudieron cargar las estadísticas de auditoría.",
+            })
         }
     }
 
@@ -1058,23 +1097,7 @@ export default function AdminPage() {
     }
 
     // ============ AUDITORÍA ============
-    const fetchAuditoria = async () => {
-        try {
-            setAuditoriaLoading(true)
-            const response = await fetch(`/api/auditoria?limit=20`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-                }
-            })
-            if (!response.ok) throw new Error('Error fetching auditoria')
-            const data = await response.json()
-            setAuditoriaRecords(data.data || [])
-        } catch (error) {
-            console.error('Error fetching auditoria:', error)
-        } finally {
-            setAuditoriaLoading(false)
-        }
-    }
+
 
     const fetchAuditoriaStats = async () => {
         try {
@@ -2714,7 +2737,7 @@ export default function AdminPage() {
                                             <div className="text-sm font-medium mb-1">Límite</div>
                                             <Select
                                                 value={auditoriaFilters.limit}
-                                                onValueChange={(value) => handleAuditoriaFilterChange("limit", value)}
+                                                onValueChange={(value) => handleAuditoriaRecordsPerPageChange(value)}
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue />
@@ -2764,7 +2787,7 @@ export default function AdminPage() {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    {auditoriaLoading ? (
+                                    {auditoriaDetailedLoading ? (
                                         <div className="flex items-center justify-center py-8">
                                             <span className="loading loading-spinner loading-lg"></span>
                                         </div>
@@ -2776,11 +2799,26 @@ export default function AdminPage() {
                                         <div className="space-y-4">
                                             {detailedAuditoriaRecords.map((record) => (
                                                 <div key={record.id} className="border rounded-lg p-4 space-y-4">
-                                                    <AuditSummary record={record} />
+                                                    <AuditSummary 
+                                                        accion={record.accion}
+                                                        entidad={record.entidad}
+                                                        entidadId={record.entidadId}
+                                                        descripcion={record.descripcion}
+                                                        datosAnteriores={record.datosAnteriores}
+                                                        datosNuevos={record.datosNuevos}
+                                                    />
                                                     
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <UserInfo record={record} />
-                                                        <DataComparison record={record} />
+                                                        <UserInfo 
+                                                            usuario={record.usuario}
+                                                            ip={record.ip}
+                                                            fechaCreacion={record.fechaCreacion}
+                                                        />
+                                                        <DataComparison 
+                                                            datosAnteriores={record.datosAnteriores}
+                                                            datosNuevos={record.datosNuevos}
+                                                            accion={record.accion}
+                                                        />
                                                     </div>
                                                 </div>
                                             ))}
@@ -2788,7 +2826,11 @@ export default function AdminPage() {
                                             <PaginationControls
                                                 currentPage={auditoriaCurrentPage}
                                                 totalPages={auditoriaTotalPages}
-                                                onPageChange={setAuditoriaCurrentPage}
+                                                totalRecords={auditoriaTotalRecords}
+                                                recordsPerPage={parseInt(auditoriaFilters.limit)}
+                                                onPageChange={handleAuditoriaPageChange}
+                                                onRecordsPerPageChange={handleAuditoriaRecordsPerPageChange}
+                                                loading={auditoriaDetailedLoading}
                                             />
                                         </div>
                                     )}

@@ -3,22 +3,31 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')
-    
-    if (!token) {
-      return NextResponse.json({ error: 'Token no proporcionado' }, { status: 401 })
+    // Verificar que el token esté presente
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Token de autorización requerido' },
+        { status: 401 }
+      )
     }
 
     const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/statistics`, {
         method: 'GET',
         headers: {
-        'Authorization': token,
-        'Content-Type': 'application/json',
-      },
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
     })
 
     if (!response.ok) {
-      throw new Error(`Error del backend: ${response.status}`)
+      if (response.status === 401) {
+        return NextResponse.json(
+          { error: 'Token inválido o expirado' },
+          { status: 401 }
+        )
+      }
+      throw new Error(`Backend error: ${response.status}`)
     }
 
     const data = await response.json()
