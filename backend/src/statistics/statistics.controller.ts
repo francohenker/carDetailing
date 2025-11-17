@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { StatisticsService } from './statistics.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../roles/role.guard';
@@ -14,5 +14,14 @@ export class StatisticsController {
   @Roles(Role.ADMIN)
   async getStatistics() {
     return this.statisticsService.getDashboardStatistics();
+  }
+
+  @Get('filtered')
+  @Roles(Role.ADMIN)
+  async getFilteredStatistics(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    return this.statisticsService.getFilteredStatistics(startDate, endDate);
   }
 }
