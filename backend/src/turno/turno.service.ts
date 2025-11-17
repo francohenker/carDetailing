@@ -10,6 +10,7 @@ import { estado_turno } from '../enums/estado_turno.enum';
 import { Users } from '../users/entities/users.entity';
 import { MailService } from '../mail.services';
 import { ProductoService } from '../producto/producto.service';
+import { empresaInfo } from 'src/config/empresa.config';
 
 @Injectable()
 export class TurnoService {
@@ -534,8 +535,8 @@ export class TurnoService {
             
             <div class="footer">
               <p><strong>¡Gracias por confiar en Car Detailing!</strong></p>
-              <p>📧 info@cardetailing.com | 📞 +54 11 1234-5678</p>
-              <p>📍 Dirección del local - Ciudad, Provincia</p>
+              <p>📧 ${empresaInfo.email} | 📞 ${empresaInfo.telefono}</p>
+              <p>📍${empresaInfo.sucursal.direccion} - ${empresaInfo.sucursal.localidad}, ${empresaInfo.sucursal.provincia}</p>
             </div>
           </div>
         </body>

@@ -1,60 +1,67 @@
-'use client'
-import HeaderDefault from "./header"
-import { CalendarDays, Car, Shield, Sparkles } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar as ShadCalendar } from "@/components/ui/calendar"
-import FooterDefault from "./footer"
-import { WeatherWidget } from "@/components/weatherDisplay"
+"use client";
+import HeaderDefault from "./header";
+import { CalendarDays, Car, Shield, Sparkles } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Calendar22 } from "@/components/ui/calendar22";
+import FooterDefault from "./footer";
+import { WeatherWidget } from "@/components/weatherDisplay";
 // import MyCalendar from "@/components/calendar"
 // import { CalendarDemo } from "@/components/Calendar2"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-
-
-
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function Home() {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date(),
+  );
+
   // Función para manejar la selección de fecha
   const handleDateSelect = (date: Date | undefined) => {
-    setSelectedDate(date)
+    setSelectedDate(date);
     if (date) {
       // Redirigir a la página de turnos con la fecha seleccionada
       // router.push(`/turno?date=${date.toISOString().split('T')[0]}`)
     }
-  }
+  };
 
   return (
-
-    <div className="flex min-h-screen flex-col bg-base-300"  >
-
+    <div className="flex min-h-screen flex-col bg-base-300">
       {/* Header */}
       <HeaderDefault />
 
       {/* Main Content */}
 
-      <main className=" flex-1" >
+      <main className=" flex-1">
         {/* Hero Section */}
         <section className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-red-600/90 to-blue-800/90 z-10" />
-          <div
-            className="h-[500px] bg-cover bg-center"
-          />
+          <div className="h-[500px] bg-cover bg-center" />
           <div className="container absolute inset-0 z-20 flex flex-col items-center justify-center text-center text-white">
-            
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
               Detailing Profesional para tu Vehículo
             </h1>
             <p className="mt-6 max-w-md text-lg ">
-              Reserva tu turno en línea y disfruta del mejor servicio de lavado y detailing para tu auto.
+              Reserva tu turno en línea y disfruta del mejor servicio de lavado
+              y detailing para tu auto.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <button className="btn btn-soft" onClick={() => router.push('/turno')}>
+              <button
+                className="btn btn-soft"
+                onClick={() => router.push("/turno")}
+              >
                 Reservar Ahora
               </button>
-              <button className="btn btn-soft" onClick={() => router.push('/servicios')}>
+              <button
+                className="btn btn-soft"
+                onClick={() => router.push("/servicios")}
+              >
                 Ver Servicios
               </button>
             </div>
@@ -65,9 +72,12 @@ export default function Home() {
         <section id="reservar" className="py-16 btn-soft">
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-base-content">Reserva tu Turno</h2>
+              <h2 className="text-3xl font-bold text-base-content">
+                Reserva tu Turno
+              </h2>
               <p className="mt-4 max-w-md mx-auto text-base-content">
-                Selecciona el día y hora que prefieras para darle a tu vehículo el cuidado que merece.
+                Selecciona el día y hora que prefieras para darle a tu vehículo
+                el cuidado que merece.
               </p>
             </div>
 
@@ -83,8 +93,8 @@ export default function Home() {
                   <p className="text-sm text-muted-foreground mb-4">
                     Elige el día que prefieras para tu servicio de detailing.
                   </p>
-                  
-                  <ShadCalendar
+
+                  <Calendar22
                     mode="single"
                     selected={selectedDate}
                     onSelect={handleDateSelect}
@@ -93,6 +103,8 @@ export default function Home() {
                     captionLayout="dropdown"
                     showOutsideDays={false}
                     className="rounded-md border shadow"
+                    label="Selecciona tu fecha preferida"
+                    placeholder="Elige el día de tu servicio"
                     formatters={{
                       formatWeekdayName: (date: Date) =>
                         date.toLocaleString("es-AR", { weekday: "short" }),
@@ -102,10 +114,10 @@ export default function Home() {
               </Card>
 
               <Card>
-                  <WeatherWidget />
-                  {/* <WeatherDisplay latitude={-27.0005} longitude={-54.4816} /> */}
+                <WeatherWidget />
+                {/* <WeatherDisplay latitude={-27.0005} longitude={-54.4816} /> */}
 
-{/* 
+                {/*
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center">
                     <Clock className="mr-2 h-5 w-5 text-red-600" />
@@ -147,9 +159,12 @@ export default function Home() {
         <section id="servicios" className="py-16">
           <div className="container">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-base-content">Nuestros Servicios</h2>
+              <h2 className="text-3xl font-bold text-base-content">
+                Nuestros Servicios
+              </h2>
               <p className="mt-4 max-w-md mx-auto text-base-content">
-                Ofrecemos una amplia gama de servicios de detailing para mantener tu vehículo en perfectas condiciones.
+                Ofrecemos una amplia gama de servicios de detailing para
+                mantener tu vehículo en perfectas condiciones.
               </p>
             </div>
 
@@ -160,7 +175,10 @@ export default function Home() {
                     <Sparkles className="h-6 w-6 text-red-600" />
                   </div>
                   <CardTitle>Lavado Premium</CardTitle>
-                  <CardDescription>Lavado exterior e interior completo con productos de alta calidad.</CardDescription>
+                  <CardDescription>
+                    Lavado exterior e interior completo con productos de alta
+                    calidad.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 text-sm">
@@ -172,7 +190,12 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
                       </svg>
                       Lavado exterior
                     </li>
@@ -184,7 +207,12 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
                       </svg>
                       Limpieza de llantas y neumáticos
                     </li>
@@ -196,7 +224,12 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
                       </svg>
                       Aspirado y limpieza interior completa
                     </li>
@@ -210,7 +243,9 @@ export default function Home() {
                     <Shield className="h-6 w-6 text-red-600" />
                   </div>
                   <CardTitle>Detailing Completo</CardTitle>
-                  <CardDescription>Tratamiento integral para restaurar y proteger tu vehículo.</CardDescription>
+                  <CardDescription>
+                    Tratamiento integral para restaurar y proteger tu vehículo.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 text-sm">
@@ -222,7 +257,12 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
                       </svg>
                       Pulido de carrocería y eliminación de rayones
                     </li>
@@ -234,7 +274,12 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
                       </svg>
                       Tratamiento cerámico de protección
                     </li>
@@ -246,7 +291,12 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
                       </svg>
                       Limpieza profunda de tapicería y cuero
                     </li>
@@ -260,7 +310,9 @@ export default function Home() {
                     <Car className="h-6 w-6 text-red-600" />
                   </div>
                   <CardTitle>Tratamientos Especiales</CardTitle>
-                  <CardDescription>Servicios específicos para necesidades particulares.</CardDescription>
+                  <CardDescription>
+                    Servicios específicos para necesidades particulares.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 text-sm">
@@ -272,7 +324,12 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
                       </svg>
                       Restauración de faros
                     </li>
@@ -284,7 +341,12 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
                       </svg>
                       Tratamiento de cuero y vinilo
                     </li>
@@ -296,7 +358,12 @@ export default function Home() {
                         viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        ></path>
                       </svg>
                       Eliminación de olores y sanitización
                     </li>
@@ -308,11 +375,10 @@ export default function Home() {
         </section>
 
         {/* Testimonios */}
-
       </main>
 
       {/* Footer */}
       <FooterDefault />
     </div>
-  )
+  );
 }
