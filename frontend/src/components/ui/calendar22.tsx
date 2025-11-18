@@ -1,8 +1,6 @@
 "use client"
-
 import * as React from "react"
 import { ChevronDownIcon } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Label } from "@/components/ui/label"
@@ -23,8 +21,7 @@ interface Calendar22Props {
   className?: string
   formatters?: any
   showOutsideDays?: boolean
-  captionLayout?: "label" | "dropdown" | "dropdown-buttons"
-  mode?: "single" | "multiple" | "range"
+  captionLayout?: "label" | "dropdown" | "dropdown-months" | "dropdown-years"
 }
 
 export function Calendar22({
@@ -39,18 +36,19 @@ export function Calendar22({
   formatters,
   showOutsideDays = false,
   captionLayout = "dropdown",
-  mode = "single",
   ...props
 }: Calendar22Props) {
   const [open, setOpen] = React.useState(false)
 
+  // Función para manejar la selección de fechas
   const handleDateSelect = (date: Date | undefined) => {
-    if (date && onSelect) {
+    if (onSelect) {
       onSelect(date)
     }
-    setOpen(false)
+    setOpen(false) // Cerrar el popover después de seleccionar
   }
 
+  // Formatear fecha para mostrar
   const formatDisplayDate = (date: Date) => {
     return date.toLocaleDateString("es-AR", {
       weekday: "short",
@@ -58,6 +56,11 @@ export function Calendar22({
       month: "short",
       year: "numeric"
     })
+  }
+
+  // Obtener el texto a mostrar
+  const getDisplayText = () => {
+    return selected ? formatDisplayDate(selected) : placeholder
   }
 
   return (
@@ -74,13 +77,13 @@ export function Calendar22({
             id="date"
             className={`w-full justify-between font-normal ${className || ""}`}
           >
-            {selected ? formatDisplayDate(selected) : placeholder}
+            {getDisplayText()}
             <ChevronDownIcon className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto overflow-hidden p-0" align="start">
           <Calendar
-            mode={mode}
+            mode="single"
             selected={selected}
             onSelect={handleDateSelect}
             fromDate={fromDate}

@@ -95,7 +95,7 @@ export default function Home() {
                   </p>
 
                   <Calendar22
-                    mode="single"
+                    //mode="single"
                     selected={selectedDate}
                     onSelect={handleDateSelect}
                     fromDate={new Date()}
