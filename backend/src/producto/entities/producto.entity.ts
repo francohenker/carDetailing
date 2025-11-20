@@ -1,5 +1,6 @@
 import { Servicio } from '../../servicio/entities/servicio.entity';
 import { Supplier } from '../../supplier/entities/supplier.entity';
+import { ProductPriority } from '../../enums/product-priority.enum';
 import {
   Column,
   Entity,
@@ -32,6 +33,14 @@ export class Producto {
       'Cantidad de servicios que se pueden realizar con una unidad del producto',
   })
   servicios_por_producto: number;
+
+  @Column({
+    type: 'enum',
+    enum: ProductPriority,
+    default: ProductPriority.MEDIA,
+    comment: 'Prioridad del producto para reposición de stock',
+  })
+  priority: ProductPriority;
 
   @ManyToMany(() => Servicio, (servicio) => servicio.Producto)
   servicio: Servicio[];

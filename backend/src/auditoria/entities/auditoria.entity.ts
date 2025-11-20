@@ -20,6 +20,10 @@ export enum TipoAccion {
   MODIFICAR_ROL = 'MODIFICAR_ROL',
   MODIFICAR = 'MODIFICAR',
   ACTIVAR_DESACTIVAR = 'ACTIVAR_DESACTIVAR',
+  SELECCIONAR_GANADOR = 'SELECCIONAR_GANADOR',
+  RECHAZAR = 'RECHAZAR',
+  MARCAR_RECIBIDO = 'MARCAR_RECIBIDO',
+  ENVIAR_EMAIL = 'ENVIAR_EMAIL',
 }
 
 export enum TipoEntidad {
@@ -31,6 +35,8 @@ export enum TipoEntidad {
   PAGO = 'PAGO',
   CAR = 'CAR',
   SISTEMA = 'SISTEMA',
+  COTIZACION = 'COTIZACION',
+  STOCK = 'STOCK',
 }
 
 @Entity('auditoria')

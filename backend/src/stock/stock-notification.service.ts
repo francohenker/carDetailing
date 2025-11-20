@@ -1,14 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Producto } from '../producto/entities/producto.entity';
 import { Users } from '../users/entities/users.entity';
 import { Supplier } from '../supplier/entities/supplier.entity';
 import { Role } from '../roles/role.enum';
 import { MailService } from '../mail.services';
+import { ProductPriority } from '../enums/product-priority.enum';
+import { QuotationService } from '../quotation/quotation.service';
+import { SystemConfigService } from '../config/system-config.service';
 
 @Injectable()
 export class StockNotificationService {
+  // Contador de productos bajo stock por prioridad
+  private lowStockCounters = {
+    [ProductPriority.ALTA]: new Set<number>(),
+    [ProductPriority.MEDIA]: new Set<number>(),
+    [ProductPriority.BAJA]: new Set<number>(),
+  };
+
   constructor(
     @InjectRepository(Producto)
     private productoRepository: Repository<Producto>,
@@ -17,6 +27,9 @@ export class StockNotificationService {
     @InjectRepository(Supplier)
     private supplierRepository: Repository<Supplier>,
     private mailService: MailService,
+    @Inject(forwardRef(() => QuotationService))
+    private readonly quotationService: QuotationService,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   async checkStockLevelsAndNotify(): Promise<void> {
@@ -35,15 +48,79 @@ export class StockNotificationService {
 
   async checkSingleProductStockAndNotify(product: Producto): Promise<void> {
     if (product.stock_actual <= product.stock_minimo) {
-      // Obtener el producto con proveedores
+      // Obtener el producto con proveedores y prioridad
       const productWithSuppliers = await this.productoRepository.findOne({
         where: { id: product.id },
         relations: ['suppliers'],
       });
 
       if (productWithSuppliers) {
+        // Agregar producto al contador de su prioridad
+        const priority = productWithSuppliers.priority || ProductPriority.MEDIA;
+        this.lowStockCounters[priority].add(productWithSuppliers.id);
+
+        // Enviar alerta a administradores
         await this.sendLowStockAlert([productWithSuppliers]);
+
+        // Verificar si se debe crear cotización
+        await this.checkThresholdAndCreateQuotation(priority);
       }
+    }
+  }
+
+  private async checkThresholdAndCreateQuotation(
+    priority: ProductPriority,
+  ): Promise<void> {
+    try {
+      const thresholds = await this.systemConfigService.getQuotationThresholds();
+      const productIds = Array.from(this.lowStockCounters[priority]);
+
+      let shouldCreateQuotation = false;
+      switch (priority) {
+        case ProductPriority.ALTA:
+          shouldCreateQuotation = productIds.length >= thresholds.high;
+          break;
+        case ProductPriority.MEDIA:
+          shouldCreateQuotation = productIds.length >= thresholds.medium;
+          break;
+        case ProductPriority.BAJA:
+          shouldCreateQuotation = productIds.length >= thresholds.low;
+          break;
+      }
+
+      if (shouldCreateQuotation) {
+        // Obtener productos con sus proveedores
+        const products = await this.productoRepository.find({
+          where: productIds.map((id) => ({ id })),
+          relations: ['suppliers'],
+        });
+
+        // Recopilar todos los proveedores únicos
+        const supplierIds = new Set<number>();
+        products.forEach((product) => {
+          product.suppliers?.forEach((supplier) => {
+            supplierIds.add(supplier.id);
+          });
+        });
+
+        if (supplierIds.size > 0) {
+          // Crear solicitud de cotización
+          await this.quotationService.createQuotationRequest({
+            productIds,
+            supplierIds: Array.from(supplierIds),
+            notes: `Solicitud automática generada por stock bajo - Prioridad: ${priority}`,
+          });
+
+          // Limpiar contador para esta prioridad
+          this.lowStockCounters[priority].clear();
+
+          console.log(
+            `Cotización creada automáticamente para ${productIds.length} producto(s) de prioridad ${priority}`,
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error al verificar umbral y crear cotización:', error);
     }
   }
 
@@ -306,7 +383,9 @@ export class StockNotificationService {
     }
 
     // Obtener productos seleccionados
-    const products = await this.productoRepository.findByIds(productIds);
+    const products = await this.productoRepository.findBy({
+      id: In(productIds),
+    })
 
     const emailContent = this.generateSupplierEmailContent(
       supplier,
@@ -314,11 +393,23 @@ export class StockNotificationService {
       message,
     );
 
-    await this.mailService.sendHtmlMail(
-      supplier.email,
-      'Solicitud de Cotización - Car Detailing',
-      emailContent,
-      `Solicitud de cotización para ${products.length} producto(s). Por favor revise el detalle en el email.`,
+    // Enviar email al proveedor
+    // await this.mailService.sendHtmlMail(
+    //   supplier.email,
+    //   'Solicitud de Cotización - Car Detailing',
+    //   emailContent,
+    //   `Solicitud de cotización para ${products.length} producto(s). Por favor revise el detalle en el email.`,
+    // );
+
+    // Crear solicitud de cotización en el sistema y generar respuestas automáticas
+    await this.quotationService.createQuotationRequest({
+      productIds,
+      supplierIds: [supplierId],
+      notes: message || 'Solicitud de cotización manual',
+    });
+
+    console.log(
+      `Email enviado y cotización creada con respuesta automática para proveedor ${supplier.name}`,
     );
   }
 

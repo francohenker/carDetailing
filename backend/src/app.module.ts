@@ -22,6 +22,8 @@ import { StockModule } from './stock/stock.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { WeatherModule } from './weather/weather.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { QuotationModule } from './quotation/quotation.module';
+import { SystemConfigModule } from './config/system-config.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { StatisticsModule } from './statistics/statistics.module';
     StockModule,
     WeatherModule,
     StatisticsModule,
+    QuotationModule,
+    SystemConfigModule,
   ],
   controllers: [AppController],
   providers: [

@@ -5,6 +5,8 @@ import { RolesGuard } from '../roles/role.guard';
 import { Roles } from '../roles/role.decorator';
 import { Role } from '../roles/role.enum';
 import { SendSupplierEmailDto } from './dto/send-supplier-email.dto';
+import { Auditar } from '../auditoria/decorators/auditar.decorator';
+import { TipoAccion, TipoEntidad } from '../auditoria/entities/auditoria.entity';
 
 @Controller('stock')
 @UseGuards(AuthGuard, RolesGuard)
@@ -25,6 +27,11 @@ export class StockController {
     return { message: 'Stock levels checked and notifications sent if needed' };
   }
 
+  @Auditar({
+    accion: TipoAccion.ENVIAR_EMAIL,
+    entidad: TipoEntidad.STOCK,
+    descripcion: 'Envío de email a proveedor para solicitud de cotización',
+  })
   @Post('send-supplier-email')
   async sendSupplierEmail(@Body() sendEmailDto: SendSupplierEmailDto) {
     await this.stockNotificationService.sendSupplierEmail(

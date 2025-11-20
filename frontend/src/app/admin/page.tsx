@@ -110,6 +110,7 @@ interface Product {
     stock_actual: number
     stock_minimo: number
     servicios_por_producto?: number
+    priority?: 'ALTA' | 'MEDIA' | 'BAJA'
     suppliers?: Supplier[]
 }
 
@@ -168,6 +169,41 @@ interface Supplier {
     updatedAt: string
 }
 
+interface QuotationRequest {
+    id: number
+    products: Product[]
+    suppliers: Supplier[]
+    status: 'PENDING' | 'COMPLETED' | 'CANCELLED'
+    sentAt: string
+    notes?: string
+    responses?: QuotationResponse[]
+}
+
+interface QuotationResponse {
+    id: number
+    quotationRequestId: number
+    supplier: Supplier
+    productQuotes: Array<{
+        productId: number
+        productName: string
+        unitPrice: number
+        quantity: number
+        availability: string
+    }>
+    totalAmount: number
+    deliveryDays: number
+    paymentTerms: string
+    status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
+    isWinner: boolean
+    receivedAt: string
+}
+
+interface QuotationThresholds {
+    high: number
+    medium: number
+    low: number
+}
+
 export default function AdminPage() {
     // const router = useRouter()
 
@@ -196,6 +232,7 @@ export default function AdminPage() {
         stock_actual: 0,
         stock_minimo: 0,
         servicios_por_producto: 1,
+        priority: 'MEDIA' as 'ALTA' | 'MEDIA' | 'BAJA',
         supplierIds: [] as number[]
     })
 
@@ -248,10 +285,27 @@ export default function AdminPage() {
     const [emailForm, setEmailForm] = useState({
         supplierId: 0,
         subject: '',
-        message: ''
+        productIds: [] as number[],
+        message: '',
+
     })
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
     const [selectedProducts, setSelectedProducts] = useState<number[]>([])  // IDs de productos seleccionados
+
+    // Estados para cotizaciones
+    const [quotationRequests, setQuotationRequests] = useState<QuotationRequest[]>([])
+    const [selectedQuotationRequest, setSelectedQuotationRequest] = useState<QuotationRequest | null>(null)
+    const [quotationResponses, setQuotationResponses] = useState<QuotationResponse[]>([])
+    const [quotationFilter, setQuotationFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all')
+    const [isReceivedConfirmDialogOpen, setIsReceivedConfirmDialogOpen] = useState(false)
+    const [quotationToMarkReceived, setQuotationToMarkReceived] = useState<number | null>(null)
+
+    // Estados para configuración
+    const [quotationThresholds, setQuotationThresholds] = useState<QuotationThresholds>({
+        high: 1,
+        medium: 2,
+        low: 3
+    })
 
     // Estados para estadísticas
     const [statistics, setStatistics] = useState<{
@@ -388,12 +442,12 @@ export default function AdminPage() {
     const checkTokenValidity = () => {
         const token = localStorage.getItem('jwt')
         if (!token) return false
-        
+
         try {
             // Decodificar el token para verificar la expiración
             const payload = JSON.parse(atob(token.split('.')[1]))
             const currentTime = Date.now() / 1000
-            
+
             // Si el token expira en menos de 5 minutos, considerarlo inválido
             return payload.exp > (currentTime + 300)
         } catch (error) {
@@ -436,7 +490,7 @@ export default function AdminPage() {
     // Verificar token al cargar la página
     useEffect(() => {
         const token = localStorage.getItem('jwt')
-        
+
         if (!token || !checkTokenValidity()) {
             handleUnauthorizedError()
             return
@@ -460,7 +514,9 @@ export default function AdminPage() {
                 fetchDetailedStatistics(),
                 fetchAuditoriaStats(),
                 fetchDetailedAuditoriaRecords(),
-                fetchDetailedAuditoriaStats()
+                fetchDetailedAuditoriaStats(),
+                fetchQuotationRequests(),
+                fetchQuotationThresholds()
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
@@ -652,6 +708,7 @@ export default function AdminPage() {
             stock_actual: product.stock_actual,
             stock_minimo: product.stock_minimo,
             servicios_por_producto: product.servicios_por_producto || 1,
+            priority: product.priority || 'MEDIA',
             supplierIds: product.suppliers ? product.suppliers.map(s => s.id) : []
         })
         setOriginalStockValue(product.stock_actual)
@@ -701,6 +758,7 @@ export default function AdminPage() {
             stock_actual: 0,
             stock_minimo: 0,
             servicios_por_producto: 1,
+            priority: 'MEDIA',
             supplierIds: []
         })
         setEditingProduct(null)
@@ -911,6 +969,151 @@ export default function AdminPage() {
         setEditingSupplier(null)
     }
 
+    // ============ COTIZACIONES ============
+    const fetchQuotationRequests = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/requests`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching quotation requests')
+            const data = await response.json()
+            setQuotationRequests(data)
+        } catch (error) {
+            console.error('Error fetching quotation requests:', error)
+        }
+    }
+
+    const fetchQuotationResponses = async (requestId: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/requests/${requestId}/responses`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching quotation responses')
+            const data = await response.json()
+            setQuotationResponses(data)
+        } catch (error) {
+            console.error('Error fetching quotation responses:', error)
+        }
+    }
+
+    const handleSelectWinner = async (requestId: number, responseId: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/requests/${requestId}/select-winner`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify({ responseId })
+            })
+
+            if (!response.ok) throw new Error('Error selecting winner')
+
+            toast.success("Éxito", {
+                description: "Proveedor seleccionado correctamente.",
+            })
+
+            await fetchQuotationRequests()
+            if (selectedQuotationRequest) {
+                await fetchQuotationResponses(selectedQuotationRequest.id)
+            }
+        } catch (error) {
+            console.error('Error selecting winner:', error)
+            toast.error("Error", {
+                description: "No se pudo seleccionar el proveedor.",
+            })
+        }
+    }
+
+    const handleMarkAsReceived = async () => {
+        if (!quotationToMarkReceived) return
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/requests/${quotationToMarkReceived}/mark-received`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (!response.ok) throw new Error('Error marking as received')
+
+            toast.success("Éxito", {
+                description: "Stock actualizado correctamente.",
+            })
+
+            setIsReceivedConfirmDialogOpen(false)
+            setQuotationToMarkReceived(null)
+            await fetchQuotationRequests()
+            await fetchProducts() // Actualizar productos para ver el nuevo stock
+        } catch (error) {
+            console.error('Error marking as received:', error)
+            toast.error("Error", {
+                description: "No se pudo actualizar el stock.",
+            })
+        }
+    }
+
+    const getFilteredQuotations = () => {
+        switch (quotationFilter) {
+            case 'pending':
+                return quotationRequests.filter(q => q.status === 'PENDING')
+            case 'completed':
+                return quotationRequests.filter(q => q.status === 'COMPLETED')
+            case 'cancelled':
+                return quotationRequests.filter(q => q.status === 'CANCELLED')
+            default:
+                return quotationRequests
+        }
+    }
+
+    // ============ CONFIGURACIÓN ============
+    const fetchQuotationThresholds = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/quotation-thresholds`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching quotation thresholds')
+            const data = await response.json()
+            setQuotationThresholds(data)
+        } catch (error) {
+            console.error('Error fetching quotation thresholds:', error)
+        }
+    }
+
+    const handleUpdateQuotationThresholds = async (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/quotation-thresholds`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify(quotationThresholds)
+            })
+
+            if (!response.ok) throw new Error('Error updating quotation thresholds')
+
+            toast.success("Éxito", {
+                description: "Umbrales de cotización actualizados correctamente.",
+            })
+
+            await fetchQuotationThresholds()
+        } catch (error) {
+            console.error('Error updating quotation thresholds:', error)
+            toast.error("Error", {
+                description: "No se pudieron actualizar los umbrales.",
+            })
+        }
+    }
+
     // ============ ESTADÍSTICAS ============
     const fetchStatistics = async () => {
         try {
@@ -930,7 +1133,7 @@ export default function AdminPage() {
     const fetchDetailedStatistics = async () => {
         try {
             setDetailedLoading(true)
-            
+
             const response = await fetchWithAuth('/api/statistics')
             if (!response) return // Token inválido, ya manejado
 
@@ -953,7 +1156,7 @@ export default function AdminPage() {
     const fetchFilteredStatistics = async (startDate: string, endDate: string) => {
         try {
             setDetailedLoading(true)
-            
+
             const response = await fetchWithAuth(`${process.env.NEXT_PUBLIC_BACKEND_URL}/statistics/filtered?startDate=${startDate}&endDate=${endDate}`)
             if (!response) return // Token inválido, ya manejado
 
@@ -975,7 +1178,7 @@ export default function AdminPage() {
 
     const handleGenerateReport = async () => {
         if (!detailedStatistics) return
-        
+
         try {
             await generateReport(detailedStatistics)
         } catch (err) {
@@ -1203,6 +1406,7 @@ export default function AdminPage() {
         setEmailForm({
             supplierId: supplier.id,
             subject: `Solicitud de reposición de stock - ${new Date().toLocaleDateString()}`,
+            productIds: supplierProducts.map(p => p.id),
             message: generateInitialMessage(supplierProducts)
         })
         setIsEmailDialogOpen(true)
@@ -1238,6 +1442,10 @@ export default function AdminPage() {
             : selectedProducts.filter(id => id !== productId);
 
         setSelectedProducts(newSelection);
+        setEmailForm(prev => ({
+            ...prev,
+            productIds: newSelection
+        }));
         updateEmailMessage(newSelection);
     }
 
@@ -1245,6 +1453,7 @@ export default function AdminPage() {
         setEmailForm({
             supplierId: 0,
             subject: '',
+            productIds: [],
             message: ''
         })
         setSelectedSupplier(null)
@@ -1478,7 +1687,7 @@ export default function AdminPage() {
                     </div>
 
                     <Tabs defaultValue="services" className="space-y-6">
-                        <TabsList className="grid w-full grid-cols-8">
+                        <TabsList className="grid w-full grid-cols-10">
                             <TabsTrigger value="services" className="flex items-center gap-2">
                                 <Wrench className="h-4 w-4" />
                                 Servicios
@@ -1490,6 +1699,10 @@ export default function AdminPage() {
                             <TabsTrigger value="suppliers" className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4" />
                                 Proveedores
+                            </TabsTrigger>
+                            <TabsTrigger value="quotations" className="flex items-center gap-2">
+                                <FileText className="h-4 w-4" />
+                                Cotizaciones
                             </TabsTrigger>
                             <TabsTrigger value="stock" className="flex items-center gap-2">
                                 <AlertTriangle className="h-4 w-4" />
@@ -1506,6 +1719,10 @@ export default function AdminPage() {
                             <TabsTrigger value="statistics" className="flex items-center gap-2">
                                 <TrendingUp className="h-4 w-4" />
                                 Estadísticas
+                            </TabsTrigger>
+                            <TabsTrigger value="config" className="flex items-center gap-2">
+                                <Settings className="h-4 w-4" />
+                                Configuración
                             </TabsTrigger>
                             <TabsTrigger value="auditoria" className="flex items-center gap-2">
                                 <FileText className="h-4 w-4" />
@@ -1882,6 +2099,23 @@ export default function AdminPage() {
                                                                     <span className="text-xs text-blue-600 font-medium uppercase tracking-wide">Consumo por Servicio</span>
                                                                     <span className="text-sm font-semibold text-blue-700">{product.servicios_por_producto || 1} unidades</span>
                                                                 </div>
+                                                                {product.priority && (
+                                                                    <div className="flex flex-col mt-2">
+                                                                        <span className="text-xs text-gray-600 font-medium uppercase tracking-wide">Prioridad</span>
+                                                                        <Badge
+                                                                            variant={
+                                                                                product.priority === 'ALTA' ? 'destructive' :
+                                                                                    product.priority === 'MEDIA' ? 'default' :
+                                                                                        'secondary'
+                                                                            }
+                                                                            className={
+                                                                                product.priority === 'MEDIA' ? 'bg-yellow-500' : ''
+                                                                            }
+                                                                        >
+                                                                            {product.priority}
+                                                                        </Badge>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <div className="flex flex-col items-end gap-2">
                                                                 <Badge variant="destructive" className="animate-pulse">
@@ -2269,7 +2503,7 @@ export default function AdminPage() {
                             </div>
 
                             {/* Filtros de fecha */}
-                            <DateFilter 
+                            <DateFilter
                                 onFilter={fetchFilteredStatistics}
                                 onGenerateReport={handleGenerateReport}
                                 isLoading={detailedLoading}
@@ -2289,9 +2523,9 @@ export default function AdminPage() {
                                                     Mostrando datos de {detailedStatistics.period.days} días
                                                 </p>
                                             </div>
-                                            <Button 
-                                                onClick={fetchDetailedStatistics} 
-                                                variant="outline" 
+                                            <Button
+                                                onClick={fetchDetailedStatistics}
+                                                variant="outline"
                                                 size="sm"
                                                 className="border-blue-300 text-blue-700 hover:bg-blue-100"
                                             >
@@ -2318,8 +2552,8 @@ export default function AdminPage() {
                                         </div>
                                         {statistics?.revenueChange !== undefined && !detailedStatistics?.period && (
                                             <div className="flex items-center gap-1 mt-2">
-                                                {statistics.revenueChange >= 0 ? 
-                                                    <TrendingUp className="h-4 w-4 text-green-100" /> : 
+                                                {statistics.revenueChange >= 0 ?
+                                                    <TrendingUp className="h-4 w-4 text-green-100" /> :
                                                     <TrendingDown className="h-4 w-4 text-green-100" />
                                                 }
                                                 <span className="text-sm text-green-100">
@@ -2443,12 +2677,11 @@ export default function AdminPage() {
                                                     {detailedStatistics.topClients.slice(0, 10).map((client, index) => (
                                                         <div key={`${client.clientEmail}-${index}`} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
                                                             <div className="flex items-center gap-3">
-                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                                                                    index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
                                                                     index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
-                                                                    index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
-                                                                    'bg-gradient-to-r from-blue-400 to-blue-600'
-                                                                }`}>
+                                                                        index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
+                                                                            'bg-gradient-to-r from-blue-400 to-blue-600'
+                                                                    }`}>
                                                                     {index + 1}
                                                                 </div>
                                                                 <div>
@@ -2481,12 +2714,11 @@ export default function AdminPage() {
                                                     statistics.popularServices.map((service, index) => (
                                                         <div key={service.name} className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-100">
                                                             <div className="flex items-center gap-3">
-                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                                                                    index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
                                                                     index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
-                                                                    index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
-                                                                    'bg-gradient-to-r from-blue-400 to-blue-600'
-                                                                }`}>
+                                                                        index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
+                                                                            'bg-gradient-to-r from-blue-400 to-blue-600'
+                                                                    }`}>
                                                                     {index + 1}
                                                                 </div>
                                                                 <div>
@@ -2516,18 +2748,427 @@ export default function AdminPage() {
                             )}
                         </TabsContent>
 
+                        {/* PESTAÑA DE COTIZACIONES */}
+                        <TabsContent value="quotations" className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <FileText className="h-5 w-5 text-primary" />
+                                        Solicitudes de Cotización
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Gestiona las solicitudes de cotización automáticas y compara respuestas de proveedores
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {/* Filtros */}
+                                    <div className="flex gap-2 mb-6">
+                                        <Button
+                                            variant={quotationFilter === 'all' ? 'default' : 'outline'}
+                                            onClick={() => setQuotationFilter('all')}
+                                            size="sm"
+                                        >
+                                            Todas ({quotationRequests.length})
+                                        </Button>
+                                        <Button
+                                            variant={quotationFilter === 'pending' ? 'default' : 'outline'}
+                                            onClick={() => setQuotationFilter('pending')}
+                                            size="sm"
+                                        >
+                                            Pendientes ({quotationRequests.filter(q => q.status === 'PENDING').length})
+                                        </Button>
+                                        <Button
+                                            variant={quotationFilter === 'completed' ? 'default' : 'outline'}
+                                            onClick={() => setQuotationFilter('completed')}
+                                            size="sm"
+                                        >
+                                            Aceptadas ({quotationRequests.filter(q => q.status === 'COMPLETED').length})
+                                        </Button>
+                                        <Button
+                                            variant={quotationFilter === 'cancelled' ? 'default' : 'outline'}
+                                            onClick={() => setQuotationFilter('cancelled')}
+                                            size="sm"
+                                        >
+                                            Canceladas ({quotationRequests.filter(q => q.status === 'CANCELLED').length})
+                                        </Button>
+                                    </div>
+
+                                    {getFilteredQuotations().length === 0 ? (
+                                        <div className="text-center py-12 text-muted-foreground">
+                                            <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                                            <p className="text-lg font-medium">
+                                                {quotationFilter === 'all'
+                                                    ? 'No hay solicitudes de cotización'
+                                                    : `No hay cotizaciones ${quotationFilter === 'pending' ? 'pendientes' : quotationFilter === 'completed' ? 'aceptadas' : 'canceladas'}`
+                                                }
+                                            </p>
+                                            <p className="text-sm">
+                                                {quotationFilter === 'all' && 'Las solicitudes se generan automáticamente cuando los productos llegan al stock mínimo'}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {getFilteredQuotations().map((request) => (
+                                                <Card key={request.id} className="border-2">
+                                                    <CardHeader>
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <CardTitle className="text-lg">Solicitud #{request.id}</CardTitle>
+                                                                <CardDescription>
+                                                                    {new Date(request.sentAt).toLocaleDateString('es-AR', {
+                                                                        year: 'numeric',
+                                                                        month: 'long',
+                                                                        day: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </CardDescription>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <Badge variant={
+                                                                    request.status === 'COMPLETED' ? 'default' :
+                                                                        request.status === 'PENDING' ? 'secondary' :
+                                                                            'destructive'
+                                                                }>
+                                                                    {request.status === 'COMPLETED' ? 'Completada' :
+                                                                        request.status === 'PENDING' ? 'Pendiente' :
+                                                                            'Cancelada'}
+                                                                </Badge>
+                                                                {request.status === 'PENDING' && (
+                                                                    <Button
+                                                                        variant="destructive"
+                                                                        size="sm"
+                                                                        onClick={async () => {
+                                                                            try {
+                                                                                const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/requests/${request.id}/reject`, {
+                                                                                    method: 'POST',
+                                                                                    headers: {
+                                                                                        'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                                                                                    }
+                                                                                })
+                                                                                if (!response.ok) throw new Error('Error rejecting quotation')
+                                                                                toast.success("Éxito", {
+                                                                                    description: "Cotización cancelada correctamente.",
+                                                                                })
+                                                                                await fetchQuotationRequests()
+                                                                            } catch (error) {
+                                                                                console.error('Error rejecting quotation:', error)
+                                                                                toast.error("Error", {
+                                                                                    description: "No se pudo cancelar la cotización.",
+                                                                                })
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <X className="h-4 w-4 mr-1" />
+                                                                        Cancelar
+                                                                    </Button>
+                                                                )}
+                                                                {request.status === 'COMPLETED' && (
+                                                                    <Button
+                                                                        variant="default"
+                                                                        size="sm"
+                                                                        className="bg-green-600 hover:bg-green-700"
+                                                                        onClick={() => {
+                                                                            setQuotationToMarkReceived(request.id)
+                                                                            setIsReceivedConfirmDialogOpen(true)
+                                                                        }}
+                                                                    >
+                                                                        <CheckCircle className="h-4 w-4 mr-1" />
+                                                                        Marcar como Recibido
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </CardHeader>
+                                                    <CardContent className="space-y-4">
+                                                        <div>
+                                                            <h4 className="font-semibold mb-2">Productos solicitados:</h4>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {request.products.map((product) => (
+                                                                    <Badge key={product.id} variant="outline">
+                                                                        {product.name}
+                                                                    </Badge>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <h4 className="font-semibold mb-2">Proveedores consultados:</h4>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {request.suppliers.map((supplier) => (
+                                                                    <Badge key={supplier.id} variant="secondary">
+                                                                        {supplier.name}
+                                                                    </Badge>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        {request.notes && (
+                                                            <div className="bg-muted p-3 rounded-lg">
+                                                                <p className="text-sm text-muted-foreground">{request.notes}</p>
+                                                            </div>
+                                                        )}
+
+                                                        <Button
+                                                            onClick={() => {
+                                                                if (selectedQuotationRequest?.id === request.id) {
+                                                                    setSelectedQuotationRequest(null)
+                                                                    setQuotationResponses([])
+                                                                } else {
+                                                                    setSelectedQuotationRequest(request)
+                                                                    fetchQuotationResponses(request.id)
+                                                                }
+                                                            }}
+                                                            className="w-full"
+                                                            variant={selectedQuotationRequest?.id === request.id ? "secondary" : "default"}
+                                                        >
+                                                            {selectedQuotationRequest?.id === request.id ? 'Ocultar' : 'Ver'} Cotizaciones ({request.responses?.length || 0})
+                                                        </Button>
+
+                                                        {/* Mostrar cotizaciones inline debajo de cada solicitud */}
+                                                        {selectedQuotationRequest?.id === request.id && quotationResponses.length > 0 && (
+                                                            <div className="mt-4 border-t pt-4 space-y-4">
+                                                                <h4 className="font-semibold text-lg">Comparación de Cotizaciones</h4>
+
+                                                                <Table>
+                                                                    <TableHeader>
+                                                                        <TableRow>
+                                                                            <TableHead>Proveedor</TableHead>
+                                                                            <TableHead>Monto Total</TableHead>
+                                                                            <TableHead>Días de Entrega</TableHead>
+                                                                            <TableHead>Condiciones de Pago</TableHead>
+                                                                            <TableHead>Estado</TableHead>
+                                                                            <TableHead>Acción</TableHead>
+                                                                        </TableRow>
+                                                                    </TableHeader>
+                                                                    <TableBody>
+                                                                        {quotationResponses.map((response) => (
+                                                                            <TableRow key={response.id} className={response.isWinner ? 'bg-green-50' : ''}>
+                                                                                <TableCell className="font-medium">
+                                                                                    {response.supplier.name}
+                                                                                    {response.isWinner && (
+                                                                                        <Badge variant="default" className="ml-2 bg-green-600">
+                                                                                            Ganador
+                                                                                        </Badge>
+                                                                                    )}
+                                                                                </TableCell>
+                                                                                <TableCell className="font-bold text-lg">
+                                                                                    ${response.totalAmount.toLocaleString('es-AR')}
+                                                                                </TableCell>
+                                                                                <TableCell>{response.deliveryDays} días</TableCell>
+                                                                                <TableCell>{response.paymentTerms}</TableCell>
+                                                                                <TableCell>
+                                                                                    <Badge variant={
+                                                                                        response.status === 'ACCEPTED' ? 'default' :
+                                                                                            response.status === 'REJECTED' ? 'destructive' :
+                                                                                                'secondary'
+                                                                                    }>
+                                                                                        {response.status === 'ACCEPTED' ? 'Aceptada' :
+                                                                                            response.status === 'REJECTED' ? 'Rechazada' :
+                                                                                                'Pendiente'}
+                                                                                    </Badge>
+                                                                                </TableCell>
+                                                                                <TableCell>
+                                                                                    {!response.isWinner && request.status === 'PENDING' && (
+                                                                                        <Button
+                                                                                            size="sm"
+                                                                                            onClick={() => handleSelectWinner(request.id, response.id)}
+                                                                                        >
+                                                                                            Seleccionar
+                                                                                        </Button>
+                                                                                    )}
+                                                                                </TableCell>
+                                                                            </TableRow>
+                                                                        ))}
+                                                                    </TableBody>
+                                                                </Table>
+
+                                                                {/* Desglose por producto */}
+                                                                <div className="mt-6">
+                                                                    <h4 className="font-semibold mb-4">Desglose por Producto</h4>
+                                                                    {quotationResponses.map((response) => (
+                                                                        <Card key={response.id} className="mb-4">
+                                                                            <CardHeader>
+                                                                                <CardTitle className="text-md">{response.supplier.name}</CardTitle>
+                                                                                {response.notes && (
+                                                                                    <CardDescription>{response.notes}</CardDescription>
+                                                                                )}
+                                                                            </CardHeader>
+                                                                            <CardContent>
+                                                                                <Table>
+                                                                                    <TableHeader>
+                                                                                        <TableRow>
+                                                                                            <TableHead>Producto</TableHead>
+                                                                                            <TableHead>Precio Unitario</TableHead>
+                                                                                            <TableHead>Cantidad</TableHead>
+                                                                                            <TableHead>Disponibilidad</TableHead>
+                                                                                            <TableHead>Subtotal</TableHead>
+                                                                                        </TableRow>
+                                                                                    </TableHeader>
+                                                                                    <TableBody>
+                                                                                        {response.productQuotes.map((quote, idx) => (
+                                                                                            <TableRow key={idx}>
+                                                                                                <TableCell>{quote.productName}</TableCell>
+                                                                                                <TableCell>${quote.unitPrice.toLocaleString('es-AR')}</TableCell>
+                                                                                                <TableCell>{quote.quantity}</TableCell>
+                                                                                                <TableCell>
+                                                                                                    <Badge variant={quote.availability.includes('inmediato') ? 'default' : 'secondary'}>
+                                                                                                        {quote.availability}
+                                                                                                    </Badge>
+                                                                                                </TableCell>
+                                                                                                <TableCell className="font-semibold">
+                                                                                                    ${(quote.unitPrice * quote.quantity).toLocaleString('es-AR')}
+                                                                                                </TableCell>
+                                                                                            </TableRow>
+                                                                                        ))}
+                                                                                    </TableBody>
+                                                                                </Table>
+                                                                            </CardContent>
+                                                                        </Card>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        {/* PESTAÑA DE CONFIGURACIÓN */}
+                        <TabsContent value="config" className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Settings className="h-5 w-5 text-primary" />
+                                        Configuración de Cotizaciones
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Configura los umbrales para el envío automático de solicitudes de cotización
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <form onSubmit={handleUpdateQuotationThresholds} className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <Card className="border-2 border-red-200 bg-red-50">
+                                                <CardHeader>
+                                                    <CardTitle className="text-lg flex items-center gap-2">
+                                                        <Badge variant="destructive">ALTA</Badge>
+                                                        Prioridad Alta
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    <div>
+                                                        <Label htmlFor="threshold-high">Número de productos</Label>
+                                                        <Input
+                                                            id="threshold-high"
+                                                            type="number"
+                                                            min="1"
+                                                            value={quotationThresholds.high}
+                                                            onChange={(e) => setQuotationThresholds({
+                                                                ...quotationThresholds,
+                                                                high: Number(e.target.value)
+                                                            })}
+                                                            required
+                                                        />
+                                                        <p className="text-xs text-muted-foreground mt-2">
+                                                            Enviar cotización cuando <strong>{quotationThresholds.high}</strong> producto(s) de prioridad alta lleguen al stock mínimo
+                                                        </p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+
+                                            <Card className="border-2 border-yellow-200 bg-yellow-50">
+                                                <CardHeader>
+                                                    <CardTitle className="text-lg flex items-center gap-2">
+                                                        <Badge className="bg-yellow-500">MEDIA</Badge>
+                                                        Prioridad Media
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    <div>
+                                                        <Label htmlFor="threshold-medium">Número de productos</Label>
+                                                        <Input
+                                                            id="threshold-medium"
+                                                            type="number"
+                                                            min="1"
+                                                            value={quotationThresholds.medium}
+                                                            onChange={(e) => setQuotationThresholds({
+                                                                ...quotationThresholds,
+                                                                medium: Number(e.target.value)
+                                                            })}
+                                                            required
+                                                        />
+                                                        <p className="text-xs text-muted-foreground mt-2">
+                                                            Enviar cotización cuando <strong>{quotationThresholds.medium}</strong> producto(s) de prioridad media lleguen al stock mínimo
+                                                        </p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+
+                                            <Card className="border-2 border-gray-200 bg-gray-50">
+                                                <CardHeader>
+                                                    <CardTitle className="text-lg flex items-center gap-2">
+                                                        <Badge variant="secondary">BAJA</Badge>
+                                                        Prioridad Baja
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    <div>
+                                                        <Label htmlFor="threshold-low">Número de productos</Label>
+                                                        <Input
+                                                            id="threshold-low"
+                                                            type="number"
+                                                            min="1"
+                                                            value={quotationThresholds.low}
+                                                            onChange={(e) => setQuotationThresholds({
+                                                                ...quotationThresholds,
+                                                                low: Number(e.target.value)
+                                                            })}
+                                                            required
+                                                        />
+                                                        <p className="text-xs text-muted-foreground mt-2">
+                                                            Enviar cotización cuando <strong>{quotationThresholds.low}</strong> producto(s) de prioridad baja lleguen al stock mínimo
+                                                        </p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+
+                                        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                                            <h4 className="font-semibold text-blue-900 mb-2">ℹ️ Cómo funciona</h4>
+                                            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                                                <li>El sistema agrupa productos por prioridad cuando llegan al stock mínimo</li>
+                                                <li>Cuando se alcanza el umbral configurado, se envía automáticamente una solicitud de cotización</li>
+                                                <li>Los proveedores asignados a esos productos reciben el email de cotización</li>
+                                                <li>Las respuestas se generan automáticamente con datos de prueba para demostración</li>
+                                            </ul>
+                                        </div>
+
+                                        <Button type="submit" className="w-full" size="lg">
+                                            <Save className="h-4 w-4 mr-2" />
+                                            Guardar Configuración
+                                        </Button>
+                                    </form>
+                                </CardContent>
+                            </Card>
+                        </TabsContent >
+
                         {/* PESTAÑA DE AUDITORÍA */}
-                        <TabsContent value="auditoria" className="space-y-6">
+                        < TabsContent value="auditoria" className="space-y-6" >
                             {/* Header */}
-                            <div className="flex items-center justify-between">
+                            < div className="flex items-center justify-between" >
                                 <div>
                                     <h2 className="text-2xl font-bold">Auditoría del Sistema</h2>
                                     <p className="text-muted-foreground">Monitoreo completo de actividades y cambios</p>
                                 </div>
-                            </div>
+                            </div >
 
                             {/* Resumen de Actividad */}
-                            <ActivitySummary
+                            < ActivitySummary
                                 registrosHoy={detailedAuditoriaStats.registrosHoy}
                                 registrosAyer={detailedAuditoriaStats.registrosAyer}
                                 registrosEstaSemana={detailedAuditoriaStats.registrosEstaSemana}
@@ -2538,7 +3179,7 @@ export default function AdminPage() {
                             />
 
                             {/* Estadísticas de auditoría */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            < div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" >
                                 <Card className="border-l-4 border-l-blue-500">
                                     <CardContent className="p-6">
                                         <div className="flex items-center justify-between">
@@ -2604,10 +3245,10 @@ export default function AdminPage() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            </div>
+                            </div >
 
                             {/* Estadísticas Adicionales */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            < div className="grid grid-cols-1 md:grid-cols-3 gap-4" >
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="text-lg">Acciones Más Comunes</CardTitle>
@@ -2669,15 +3310,15 @@ export default function AdminPage() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            </div>
+                            </div >
 
                             {/* Actividad por Horas */}
-                            <div className="mb-6">
+                            < div className="mb-6" >
                                 <HourlyActivity distribucionPorHora={detailedAuditoriaStats.distribucionPorHora} />
-                            </div>
+                            </div >
 
                             {/* Filtros */}
-                            <Card>
+                            < Card >
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Filter className="h-5 w-5" />
@@ -2763,10 +3404,10 @@ export default function AdminPage() {
                                         </div>
                                     </div>
                                 </CardContent>
-                            </Card>
+                            </Card >
 
                             {/* Resumen de registros */}
-                            <RecordsSummary
+                            < RecordsSummary
                                 totalRecords={detailedAuditoriaStats.totalRegistros}
                                 currentPage={auditoriaCurrentPage}
                                 recordsPerPage={parseInt(auditoriaFilters.limit)}
@@ -2775,7 +3416,7 @@ export default function AdminPage() {
                             />
 
                             {/* Registros */}
-                            <Card>
+                            < Card >
                                 <CardHeader>
                                     <CardTitle>Registros de Auditoría</CardTitle>
                                     <CardDescription>
@@ -2799,7 +3440,7 @@ export default function AdminPage() {
                                         <div className="space-y-4">
                                             {detailedAuditoriaRecords.map((record) => (
                                                 <div key={record.id} className="border rounded-lg p-4 space-y-4">
-                                                    <AuditSummary 
+                                                    <AuditSummary
                                                         accion={record.accion}
                                                         entidad={record.entidad}
                                                         entidadId={record.entidadId}
@@ -2807,14 +3448,14 @@ export default function AdminPage() {
                                                         datosAnteriores={record.datosAnteriores}
                                                         datosNuevos={record.datosNuevos}
                                                     />
-                                                    
+
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <UserInfo 
+                                                        <UserInfo
                                                             usuario={record.usuario}
                                                             ip={record.ip}
                                                             fechaCreacion={record.fechaCreacion}
                                                         />
-                                                        <DataComparison 
+                                                        <DataComparison
                                                             datosAnteriores={record.datosAnteriores}
                                                             datosNuevos={record.datosNuevos}
                                                             accion={record.accion}
@@ -2822,7 +3463,7 @@ export default function AdminPage() {
                                                     </div>
                                                 </div>
                                             ))}
-                                            
+
                                             <PaginationControls
                                                 currentPage={auditoriaCurrentPage}
                                                 totalPages={auditoriaTotalPages}
@@ -2835,10 +3476,10 @@ export default function AdminPage() {
                                         </div>
                                     )}
                                 </CardContent>
-                            </Card>
+                            </Card >
 
                             {/* Análisis de acciones y entidades */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            < div className="grid grid-cols-1 md:grid-cols-2 gap-6" >
                                 <Card>
                                     <CardHeader>
                                         <CardTitle>Acciones Más Frecuentes</CardTitle>
@@ -2850,9 +3491,9 @@ export default function AdminPage() {
                                                 <div key={accion.accion} className="flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${index === 0 ? 'bg-yellow-500' :
-                                                                index === 1 ? 'bg-gray-400' :
-                                                                    index === 2 ? 'bg-orange-500' :
-                                                                        'bg-gray-300'
+                                                            index === 1 ? 'bg-gray-400' :
+                                                                index === 2 ? 'bg-orange-500' :
+                                                                    'bg-gray-300'
                                                             }`}>
                                                             {index + 1}
                                                         </div>
@@ -2876,9 +3517,9 @@ export default function AdminPage() {
                                                 <div key={entidad.entidad} className="flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${index === 0 ? 'bg-blue-500' :
-                                                                index === 1 ? 'bg-green-500' :
-                                                                    index === 2 ? 'bg-purple-500' :
-                                                                        'bg-gray-300'
+                                                            index === 1 ? 'bg-green-500' :
+                                                                index === 2 ? 'bg-purple-500' :
+                                                                    'bg-gray-300'
                                                             }`}>
                                                             {index + 1}
                                                         </div>
@@ -2890,15 +3531,15 @@ export default function AdminPage() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            </div>
-                        </TabsContent>
+                            </div >
+                        </TabsContent >
 
 
-                    </Tabs>
-                </main>
+                    </Tabs >
+                </main >
 
                 {/* DIALOG PARA SERVICIOS */}
-                <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
+                < Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen} >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>
@@ -3032,10 +3673,10 @@ export default function AdminPage() {
                             </div>
                         </form>
                     </DialogContent>
-                </Dialog>
+                </Dialog >
 
                 {/* DIALOG PARA PRODUCTOS */}
-                <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                < Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen} >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>
@@ -3140,6 +3781,46 @@ export default function AdminPage() {
                                             ¿Cuántos servicios se pueden realizar con 1 unidad de este producto?
                                         </p>
                                     </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="product-priority" className="flex items-center gap-2">
+                                            <AlertTriangle className="h-4 w-4 text-orange-500" />
+                                            Prioridad de Reposición
+                                        </Label>
+                                        <Select
+                                            value={productForm.priority}
+                                            onValueChange={(value: 'ALTA' | 'MEDIA' | 'BAJA') =>
+                                                setProductForm({ ...productForm, priority: value })
+                                            }
+                                        >
+                                            <SelectTrigger id="product-priority">
+                                                <SelectValue placeholder="Seleccionar prioridad" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="ALTA">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="destructive" className="text-xs">ALTA</Badge>
+                                                        <span className="text-xs text-muted-foreground">- Cotización inmediata</span>
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem value="MEDIA">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className="bg-yellow-500 text-xs">MEDIA</Badge>
+                                                        <span className="text-xs text-muted-foreground">- Cotización con 2 productos</span>
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem value="BAJA">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="secondary" className="text-xs">BAJA</Badge>
+                                                        <span className="text-xs text-muted-foreground">- Cotización con 3 productos</span>
+                                                    </div>
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-xs text-muted-foreground">
+                                            Determina cuándo se envía automáticamente la solicitud de cotización
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -3200,10 +3881,10 @@ export default function AdminPage() {
                             </DialogFooter>
                         </form>
                     </DialogContent>
-                </Dialog>
+                </Dialog >
 
                 {/* DIALOG PARA PROVEEDORES */}
-                <Dialog open={isSupplierDialogOpen} onOpenChange={setIsSupplierDialogOpen}>
+                < Dialog open={isSupplierDialogOpen} onOpenChange={setIsSupplierDialogOpen} >
                     <DialogContent className="max-w-2xl">
                         <DialogHeader>
                             <DialogTitle>
@@ -3324,10 +4005,10 @@ export default function AdminPage() {
                             </DialogFooter>
                         </form>
                     </DialogContent>
-                </Dialog>
+                </Dialog >
 
                 {/* DIALOG PARA USUARIOS */}
-                <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+                < Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen} >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Crear Nuevo Usuario</DialogTitle>
@@ -3425,10 +4106,10 @@ export default function AdminPage() {
                             </DialogFooter>
                         </form>
                     </DialogContent>
-                </Dialog>
+                </Dialog >
 
                 {/* DIALOG DE CONFIRMACIÓN DE ELIMINACIÓN */}
-                <Dialog open={deleteConfirmDialog.isOpen} onOpenChange={(open) =>
+                < Dialog open={deleteConfirmDialog.isOpen} onOpenChange={(open) =>
                     setDeleteConfirmDialog({ ...deleteConfirmDialog, isOpen: open })
                 }>
                     <DialogContent>
@@ -3455,10 +4136,10 @@ export default function AdminPage() {
                             </Button>
                         </DialogFooter>
                     </DialogContent>
-                </Dialog>
+                </Dialog >
 
                 {/* Modal de Confirmación de Cambio de Stock */}
-                <Dialog open={isStockConfirmDialogOpen} onOpenChange={setIsStockConfirmDialogOpen}>
+                < Dialog open={isStockConfirmDialogOpen} onOpenChange={setIsStockConfirmDialogOpen} >
                     <DialogContent className="max-w-md">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2 text-warning">
@@ -3518,10 +4199,10 @@ export default function AdminPage() {
                             </Button>
                         </DialogFooter>
                     </DialogContent>
-                </Dialog>
+                </Dialog >
 
                 {/* DIALOG PARA ENVIAR EMAIL A PROVEEDORES */}
-                <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+                < Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen} >
                     <DialogContent className="max-w-2xl">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
@@ -3674,8 +4355,56 @@ export default function AdminPage() {
                     </DialogContent>
                 </Dialog>
 
-
-            </div>
-        </ProtectedRoute>
+                {/* Modal de Confirmación de Cotización Recibida */}
+                <Dialog open={isReceivedConfirmDialogOpen} onOpenChange={setIsReceivedConfirmDialogOpen}>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-green-600">
+                                <CheckCircle className="h-5 w-5" />
+                                Confirmar Recepción de Productos
+                            </DialogTitle>
+                            <DialogDescription>
+                                ¿Confirmas que los productos de esta cotización han sido recibidos?
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="bg-green-50 border border-green-200 p-4 rounded-lg space-y-2">
+                                <p className="text-sm text-green-800 font-medium">
+                                    Al confirmar, se actualizará automáticamente el stock de los productos según las cantidades cotizadas.
+                                </p>
+                                <div className="flex items-start gap-2 mt-3">
+                                    <AlertTriangle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                    <p className="text-xs text-green-700">
+                                        Esta acción sumará las cantidades al stock actual de cada producto.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setIsReceivedConfirmDialogOpen(false)
+                                    setQuotationToMarkReceived(null)
+                                }}
+                            >
+                                <X className="h-4 w-4 mr-2" />
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="default"
+                                onClick={handleMarkAsReceived}
+                                className="bg-green-600 hover:bg-green-700"
+                            >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Confirmar Recepción
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div >
+        </ProtectedRoute >
     )
 }

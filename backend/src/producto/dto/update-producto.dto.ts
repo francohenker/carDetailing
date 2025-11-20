@@ -1,4 +1,5 @@
-import { IsNumber, IsString, IsArray, IsOptional } from 'class-validator';
+import { IsNumber, IsString, IsArray, IsOptional, IsEnum } from 'class-validator';
+import { ProductPriority } from '../../enums/product-priority.enum';
 
 export class UpdateProductoDto {
   @IsOptional()
@@ -20,6 +21,10 @@ export class UpdateProductoDto {
   @IsOptional()
   @IsNumber()
   servicios_por_producto?: number;
+
+  @IsOptional()
+  @IsEnum(ProductPriority)
+  priority?: ProductPriority;
 
   @IsOptional()
   @IsArray()
