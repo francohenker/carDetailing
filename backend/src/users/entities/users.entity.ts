@@ -21,7 +21,7 @@ export class Users {
   @Column({ type: 'varchar', length: 50 })
   firstname: string;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   lastname: string;
 
   @Exclude()
