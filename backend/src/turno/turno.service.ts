@@ -10,7 +10,7 @@ import { estado_turno } from '../enums/estado_turno.enum';
 import { Users } from '../users/entities/users.entity';
 import { MailService } from '../mail.services';
 import { ProductoService } from '../producto/producto.service';
-import { empresaInfo } from 'src/config/empresa.config';
+import { empresaInfo } from '../config/empresa.config';
 
 @Injectable()
 export class TurnoService {
