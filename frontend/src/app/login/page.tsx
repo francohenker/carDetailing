@@ -8,14 +8,23 @@ import { useState } from "react"
 import { useUserStore } from "../store/useUserStore"
 import { useRouter } from "next/navigation"
 import Alert from "@/components/Alert"
+import { toast } from "sonner"
 
 export default function Login() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const router = useRouter();
-    const [error, setError] = useState<string | null>(null) // Nuevo estado
+    const [isLoading, setIsLoading] = useState(false)
 
     const handlerLogin = async () => {
+        if (isLoading) return;
+
+        setIsLoading(true);
+        if (password.trim() === '' || email.trim() === '') {
+            toast.error('Por favor completa todos los campos.');
+            setIsLoading(false);
+            return;
+        }
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/login`, {
                 method: 'POST',
@@ -24,11 +33,13 @@ export default function Login() {
                 },
                 body: JSON.stringify({ email: email.toLowerCase(), password })
             })
+
             if (!response.ok) {
-                setError('Error al iniciar sesión');
-                setTimeout(() => setError(null), 5000); // Limpiar el error después de 3 segundos
+                // const errorData = await response.json().catch(() => ({ message: 'Error al iniciar sesión' }));
+                toast.error('Credenciales inválidas');
                 return;
             }
+
             const data = await response.json();
             localStorage.setItem('jwt', data.access_token);
 
@@ -39,9 +50,16 @@ export default function Login() {
             router.push('/');
 
         } catch (error) {
-            setError('Error al iniciar sesión: ' + error);
-            setTimeout(() => setError(null), 5000);
+            console.error('Login error:', error);
+            toast.error('Error al iniciar sesión. Por favor intenta nuevamente.');
+        } finally {
+            setIsLoading(false);
         }
+    }
+
+    const handleGoogleLogin = () => {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+        window.location.href = `${backendUrl}/auth/google`;
     }
 
 
@@ -59,7 +77,7 @@ export default function Login() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {error && <Alert type="error" message={error} />}
+                        {/* {error && <Alert type="error" message={error} />} */}
                         <div className="space-y-2">
                             <Label htmlFor="email">Correo electrónico</Label>
                             <Input
@@ -80,12 +98,23 @@ export default function Login() {
                     </CardContent>
                     <CardFooter className="flex flex-col gap-2">
 
-                        <button onClick={handlerLogin} className="w-full btn btn-neutral ">Iniciar Sesión</button>
+                        <button
+                            onClick={handlerLogin}
+                            disabled={isLoading}
+                            className="w-full btn btn-neutral"
+                        >
+                            {isLoading ? (
+                                <span className="loading loading-spinner loading-sm"></span>
+                            ) : (
+                                'Iniciar Sesión'
+                            )}
+                        </button>
 
                         <div className="divider text-sm text-base-content/50">O continúa con</div>
 
                         <button
-                            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/google`}
+                            onClick={handleGoogleLogin}
+                            disabled={isLoading}
                             className="w-full btn btn-outline gap-2"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">

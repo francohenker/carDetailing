@@ -68,12 +68,11 @@ export class AuthService {
     return this.userRepository.findOne({ where: { id: decode.userId } });
   }
 
-
-    async validateGoogleLogin(profile: any) {
+  async validateGoogleLogin(profile: any) {
     const { email, firstName, lastName } = profile;
-    
+
     let user = await this.userRepository.findOne({ where: { email } });
-    
+
     if (!user) {
       // Create new user without password for OAuth users
       // Using a random phone number since it's required in the schema
@@ -87,7 +86,7 @@ export class AuthService {
       });
       await this.userRepository.save(user);
     }
-    
+
     return user;
   }
 
@@ -98,21 +97,29 @@ export class AuthService {
 
   async googleLoginCallback(req: any) {
     const user = req.user;
-    
+
     if (!user) {
       throw new UnauthorizedException('No user from Google');
     }
 
-    // Validate and get/create user in database
-    const dbUser = await this.validateGoogleLogin(user);
-    
-    // Generate JWT token
-    const tokenData = await this.generateAccessToken(dbUser);
-    
-    // Redirect to frontend with token
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    return {
-      url: `${frontendUrl}/auth/callback?token=${tokenData.access_token}&name=${encodeURIComponent(tokenData.name)}&role=${tokenData.role}`,
-    };
+    try {
+      // Validate and get/create user in database
+      const dbUser = await this.validateGoogleLogin(user);
+
+      // Generate JWT token
+      const tokenData = await this.generateAccessToken(dbUser);
+
+      // Redirect to frontend with token
+      const frontendUrl = process.env.FRONTEND_URL;
+      return {
+        url: `${frontendUrl}/auth/callback?token=${tokenData.access_token}&name=${encodeURIComponent(tokenData.name)}&role=${tokenData.role}`,
+      };
+    } catch (error) {
+      console.error('Error in Google OAuth callback:', error);
+      const frontendUrl = process.env.FRONTEND_URL;
+      return {
+        url: `${frontendUrl}/login?error=oauth_failed`,
+      };
+    }
   }
 }

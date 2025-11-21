@@ -22,4 +22,3 @@ export class AuthController {
     return res.redirect(result.url);
   }
 }
-    
