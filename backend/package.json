@@ -36,6 +36,8 @@
     "dotenv": "^16.4.7",
     "nodemailer": "^7.0.9",
     "openmeteo": "^1.2.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.17.2",
     "pg": "^8.13.1",

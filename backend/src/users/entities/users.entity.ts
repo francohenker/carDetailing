@@ -25,7 +25,7 @@ export class Users {
   lastname: string;
 
   @Exclude()
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   password: string;
 
   @Column({ type: 'enum', enum: Role, default: Role.USER })
@@ -34,7 +34,7 @@ export class Users {
   @Column({ type: 'varchar', length: 100, unique: true })
   email: string;
 
-  @Column({ type: 'varchar', length: 15, unique: true })
+  @Column({ type: 'varchar', length: 15, unique: true, nullable: true })
   phone: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })

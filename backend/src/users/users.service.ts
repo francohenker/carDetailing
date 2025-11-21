@@ -16,6 +16,9 @@ export class UserService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<any> {
+    if(createUserDto.password === null){
+      throw new HttpException('Password is required', 400);
+    }
     const existingUser = await this.userRepository.findOneBy({
       email: createUserDto.email,
     });
