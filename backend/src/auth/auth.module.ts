@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { Users } from '../users/entities/users.entity';
 import { TypeOrmModule } from '@nestjs/typeorm/dist/typeorm.module';
 import { GoogleStrategy } from './google/google.strategy';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { GoogleStrategy } from './google/google.strategy';
     }),
     TypeOrmModule.forFeature([Users]),
   ],
-  providers: [AuthService, GoogleStrategy],
+  providers: [AuthService, GoogleStrategy, ConfigService],
   controllers: [AuthController],
   exports: [AuthService, JwtModule],
 })
