@@ -9,10 +9,15 @@ import { ProductoController } from './producto.controller';
 import { StockNotificationService } from '../stock/stock-notification.service';
 import { MailService } from '../mail.services';
 import { QuotationModule } from '../quotation/quotation.module';
-import { SystemConfigModule } from 'src/config/system-config.module';
+import { SystemConfigModule } from '../config/system-config.module';
 
 @Module({
-  imports: [AuthModule, QuotationModule, SystemConfigModule, TypeOrmModule.forFeature([Producto, Supplier, Users])],
+  imports: [
+    AuthModule,
+    QuotationModule,
+    SystemConfigModule,
+    TypeOrmModule.forFeature([Producto, Supplier, Users]),
+  ],
   providers: [ProductoService, StockNotificationService, MailService],
   controllers: [ProductoController],
   exports: [ProductoService, StockNotificationService, TypeOrmModule],

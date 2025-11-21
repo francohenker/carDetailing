@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SystemConfigController } from './system-config.controller';
 import { SystemConfigService } from './system-config.service';
 import { SystemConfig } from './entities/system-config.entity';
-import { AuthModule } from 'src/auth/auth.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [AuthModule, TypeOrmModule.forFeature([SystemConfig])],
