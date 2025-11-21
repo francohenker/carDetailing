@@ -58,7 +58,7 @@ export default function Login() {
     }
 
     const handleGoogleLogin = () => {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
         window.location.href = `${backendUrl}/auth/google`;
     }
 

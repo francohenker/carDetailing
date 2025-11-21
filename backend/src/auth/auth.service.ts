@@ -110,13 +110,13 @@ export class AuthService {
       const tokenData = await this.generateAccessToken(dbUser);
 
       // Redirect to frontend with token
-      const frontendUrl = process.env.FRONTEND_URL;
+      const frontendUrl = process.env.URL_FRONTEND;
       return {
         url: `${frontendUrl}/auth/callback?token=${tokenData.access_token}&name=${encodeURIComponent(tokenData.name)}&role=${tokenData.role}`,
       };
     } catch (error) {
       console.error('Error in Google OAuth callback:', error);
-      const frontendUrl = process.env.FRONTEND_URL;
+      const frontendUrl = process.env.URL_FRONTEND;
       return {
         url: `${frontendUrl}/login?error=oauth_failed`,
       };
