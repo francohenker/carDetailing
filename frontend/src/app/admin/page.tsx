@@ -196,6 +196,7 @@ interface QuotationResponse {
     status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
     isWinner: boolean
     receivedAt: string
+    notes?: string
 }
 
 interface QuotationThresholds {
@@ -1851,7 +1852,7 @@ export default function AdminPage() {
                                             Administra el inventario de productos disponibles.
                                         </CardDescription>
                                     </div>
-                                    <Button onClick={() => setIsProductDialogOpen(true)}>
+                                    <Button onClick={() => { resetProductForm(); setIsProductDialogOpen(true); }}>
                                         <Plus className="h-4 w-4 mr-2" />
                                         Nuevo Producto
                                     </Button>
