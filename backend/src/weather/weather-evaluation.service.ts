@@ -21,6 +21,7 @@ interface TurnoWeatherEvaluation {
   daysUntilTurno: number;
   weatherForecasts: WeatherForecast[];
   turnoDayForecast?: WeatherForecast; // Pronóstico específico para el día del turno
+  suggestedDate?: Date; // Fecha sugerida para reprogramación
 }
 
 @Injectable()
@@ -162,6 +163,10 @@ export class WeatherEvaluationService {
           (f) => f.date.toDateString() === turnoDate.toDateString(),
         ) || mockWeatherForecasts[0];
 
+      // Simular una fecha sugerida (3 días después del turno)
+      const suggestedDate = new Date(turnoDate);
+      suggestedDate.setDate(suggestedDate.getDate() + 3);
+
       const mockEvaluation: TurnoWeatherEvaluation = {
         turno,
         badWeatherDays: mockWeatherForecasts.filter((f) =>
@@ -171,6 +176,7 @@ export class WeatherEvaluationService {
         daysUntilTurno,
         weatherForecasts: mockWeatherForecasts,
         turnoDayForecast,
+        suggestedDate, // Agregar fecha sugerida simulada
       };
 
       // Enviar el correo de prueba
@@ -341,6 +347,12 @@ export class WeatherEvaluationService {
       }
     }
 
+    // Buscar fecha alternativa si hay mal clima
+    let suggestedDate: Date | undefined;
+    if (badWeatherDays > 0 || (turnoDayForecast && this.isBadWeatherForCarDetailing(turnoDayForecast))) {
+      suggestedDate = this.findBestAlternativeDate(forecasts, turnoDate);
+    }
+
     return {
       turno,
       badWeatherDays,
@@ -348,16 +360,59 @@ export class WeatherEvaluationService {
       daysUntilTurno,
       weatherForecasts: relevantForecasts,
       turnoDayForecast, // Agregamos el pronóstico específico del día del turno
+      suggestedDate,
     };
+  }
+
+  private findBestAlternativeDate(
+    forecasts: WeatherForecast[],
+    turnoDate: Date,
+  ): Date | undefined {
+    // 1. Buscar la fecha más cercana con buen clima en los próximos 15 días (posterior al turno)
+    for (const forecast of forecasts) {
+      const forecastDate = new Date(forecast.date);
+      // Solo buscar fechas futuras respecto al turno original
+      if (forecastDate <= turnoDate) continue;
+
+      if (!this.isBadWeatherForCarDetailing(forecast)) {
+        return forecastDate;
+      }
+    }
+
+    // 2. Si no hay buen clima, buscar desde día 7 la fecha con menor probabilidad de lluvia (<= 10mm)
+    // Solo si el turno es cercano (para dar tiempo)
+    const today = new Date();
+    const daysUntilTurno = Math.ceil(
+      (turnoDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    // Si faltan menos de 7 días, buscamos en el rango extendido (7-15 días desde hoy)
+    const fallbackStartIndex = 7;
+    if (forecasts.length > fallbackStartIndex) {
+      const fallbackForecasts = forecasts.slice(fallbackStartIndex);
+      
+      // Buscar el mejor día (menor precipitación) que cumpla con el criterio relajado (<= 10mm)
+      const validFallbackDays = fallbackForecasts.filter(
+        (f) => f.precipitation <= 10.0,
+      );
+
+      if (validFallbackDays.length > 0) {
+        // Ordenar por precipitación ascendente
+        validFallbackDays.sort((a, b) => a.precipitation - b.precipitation);
+        return validFallbackDays[0].date;
+      }
+    }
+
+    return undefined;
   }
 
   private isBadWeatherForCarDetailing(forecast: WeatherForecast): boolean {
     // Códigos de clima malo para car detailing:
     // 51-99: Diferentes tipos de lluvia, llovizna, nieve
-    // Precipitación > 1mm
+    // Precipitación > 10mm (actualizado según requerimiento)
     return (
       (forecast.weatherCode >= 51 && forecast.weatherCode <= 99) ||
-      forecast.precipitation > 1.0
+      forecast.precipitation > 10.0
     );
   }
 
@@ -429,7 +484,7 @@ export class WeatherEvaluationService {
     evaluation: TurnoWeatherEvaluation,
     type: 'advance' | 'urgent',
   ): string {
-    const { turno, daysUntilTurno, turnoDayForecast, weatherForecasts } =
+    const { turno, daysUntilTurno, turnoDayForecast, weatherForecasts, suggestedDate } =
       evaluation;
 
     const isAdvance = type === 'advance';
@@ -444,6 +499,31 @@ export class WeatherEvaluationService {
           temperature: turnoDayForecast.temperature,
         }
       : null;
+
+    // Información de la fecha sugerida
+    let suggestedDateInfo = null;
+    if (suggestedDate) {
+      const suggestedForecast = weatherForecasts.find(
+        (f) => f.date.toDateString() === suggestedDate.toDateString(),
+      ) || 
+      // Si no está en weatherForecasts (porque puede ser posterior), buscar en el array original si lo tuviéramos
+      // O simplemente no mostrar info detallada si no tenemos el forecast a mano.
+      // En evaluateTurnoWeather pasamos relevantForecasts que son hasta el día del turno.
+      // Necesitamos buscar en todos los forecasts disponibles.
+      // FIX: evaluateTurnoWeather devuelve relevantForecasts en weatherForecasts property.
+      // Deberíamos pasar el forecast de la fecha sugerida en la evaluación también o buscarlo de nuevo.
+      // Para simplificar, vamos a asumir que el forecast de la fecha sugerida no está en 'weatherForecasts' (que es relevantForecasts)
+      // y por lo tanto solo mostraremos la fecha.
+      // MEJORA: Modificar TurnoWeatherEvaluation para incluir el forecast de la fecha sugerida.
+      null;
+      
+      // Como no tenemos el forecast de la fecha sugerida en 'weatherForecasts' (porque está filtrado),
+      // vamos a formatear solo la fecha por ahora.
+      // Si quisiéramos el forecast, tendríamos que haberlo guardado en la evaluación.
+    }
+    
+    // URL para modificar turno con fecha sugerida
+    const modifyUrl = `${process.env.URL_FRONTEND}/user/profile?tab=turnos&modify=${turno.id}${suggestedDate ? `&suggestedDate=${suggestedDate.toISOString()}` : ''}`;
 
     return `
       <!DOCTYPE html>
@@ -627,6 +707,23 @@ export class WeatherEvaluationService {
                 : ''
             }
 
+            ${
+              suggestedDate
+                ? `
+            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h4 style="margin-top: 0; color: #059669;">📅 Fecha Sugerida con Buen Clima</h4>
+              <p style="margin: 5px 0;">Hemos encontrado una fecha cercana con mejores condiciones:</p>
+              <p style="font-size: 18px; font-weight: bold; color: #047857; margin: 10px 0;">
+                ${suggestedDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <p style="margin: 5px 0; font-size: 14px;">
+                Al hacer clic en "Modificar mi Turno", esta fecha estará pre-seleccionada para tu comodidad.
+              </p>
+            </div>
+            `
+                : ''
+            }
+
             <div class="weather-forecast">
               <h4 style="margin-top: 0; color: #374151;">🌤️ Pronóstico del Tiempo</h4>
               ${weatherSummary}
@@ -640,8 +737,8 @@ export class WeatherEvaluationService {
                 <p>Te sugerimos reprogramar tu turno para garantizar los mejores resultados. Tenés tiempo suficiente para elegir una fecha con mejores condiciones climáticas.</p>
                 <p><strong>¿Querés reprogramar tu turno?</strong></p>
                 <div style="text-align: center; margin: 25px 0;">
-                  <a href="${process.env.URL_FRONTEND}/user/profile?tab=turnos&modify=${turno.id}" class="btn btn-primary" style="font-size: 16px; padding: 15px 30px;">
-                    🔧 Modificar mi Turno
+                  <a href="${modifyUrl}" class="btn btn-primary" style="font-size: 16px; padding: 15px 30px;">
+                    🔧 Modificar mi Turno ${suggestedDate ? '(Fecha Sugerida)' : ''}
                   </a>
                 </div>
                 <p>O contactanos para coordinar una nueva fecha:</p>
@@ -654,8 +751,8 @@ export class WeatherEvaluationService {
                 <h4 style="margin-top: 0; color: #d97706;">⚠️ Aviso Importante</h4>
                 <p>Tu turno está próximo y las condiciones climáticas no son ideales. Te contactaremos para evaluar las opciones disponibles.</p>
                 <div style="text-align: center; margin: 25px 0;">
-                  <a href="${process.env.URL_FRONTEND}/user/profile?tab=turnos&modify=${turno.id}" class="btn btn-warning" style="font-size: 16px; padding: 15px 30px;">
-                    ⚡ Modificar Turno Urgente
+                  <a href="${modifyUrl}" class="btn btn-warning" style="font-size: 16px; padding: 15px 30px;">
+                    ⚡ Modificar Turno Urgente ${suggestedDate ? '(Fecha Sugerida)' : ''}
                   </a>
                 </div>
                 <p>O si querés contactarnos directamente:</p>

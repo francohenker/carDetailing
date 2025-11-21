@@ -173,7 +173,7 @@ interface QuotationRequest {
     id: number
     products: Product[]
     suppliers: Supplier[]
-    status: 'PENDING' | 'COMPLETED' | 'CANCELLED'
+    status: 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'FINISHED'
     sentAt: string
     notes?: string
     responses?: QuotationResponse[]
@@ -196,7 +196,7 @@ interface QuotationResponse {
     status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
     isWinner: boolean
     receivedAt: string
-    notes?: string
+    notes?: string,
 }
 
 interface QuotationThresholds {
@@ -1064,6 +1064,7 @@ export default function AdminPage() {
             case 'pending':
                 return quotationRequests.filter(q => q.status === 'PENDING')
             case 'completed':
+                console.log(quotationRequests)    
                 return quotationRequests.filter(q => q.status === 'COMPLETED')
             case 'cancelled':
                 return quotationRequests.filter(q => q.status === 'CANCELLED')
@@ -2864,7 +2865,7 @@ export default function AdminPage() {
                                                                         Cancelar
                                                                     </Button>
                                                                 )}
-                                                                {request.status === 'COMPLETED' && (
+                                                                {request.status === 'FINISHED' && (
                                                                     <Button
                                                                         variant="default"
                                                                         size="sm"

@@ -359,23 +359,35 @@ export default function UserTurnos() {
     fetchTurnos();
   }, [itemsPerPageHistorial, paginateHistorial]);
 
+  // Estado para fecha sugerida (desde URL)
+  const [suggestedDate, setSuggestedDate] = useState<Date | null>(null);
+
   // Detectar parámetro 'modify' en la URL para abrir automáticamente el modal
   useEffect(() => {
     const modifyTurnoId = searchParams.get('modify');
+    const suggestedDateParam = searchParams.get('suggestedDate');
+
     if (modifyTurnoId && turnos.length > 0) {
       const turnoToModify = turnos.find(t => t.id.toString() === modifyTurnoId);
       if (turnoToModify && canModifyTurno(turnoToModify)) {
         setSelectedTurno(turnoToModify);
         setModifyTurnoOpen(true);
-        
+
+        if (suggestedDateParam) {
+          const date = new Date(suggestedDateParam);
+          if (!isNaN(date.getTime())) {
+            setSuggestedDate(date);
+          }
+        }
+
         // Limpiar el parámetro de la URL después de abrir el modal
         const url = new URL(window.location.href);
         url.searchParams.delete('modify');
+        if (suggestedDateParam) {
+          url.searchParams.delete('suggestedDate');
+        }
         window.history.replaceState({}, '', url.toString());
-        
-        // toast.success("Modal abierto", {
-        //   description: "Se ha abierto automáticamente el modal para modificar tu turno."
-        // });
+
       } else if (turnoToModify && !canModifyTurno(turnoToModify)) {
         toast.error("No se puede modificar", {
           description: "Este turno ya no se puede modificar debido a restricciones de tiempo o estado."
@@ -659,6 +671,7 @@ export default function UserTurnos() {
         isOpen={modifyTurnoOpen}
         onClose={handleCloseModifyModal}
         onSuccess={handleModifySuccess}
+        suggestedDate={suggestedDate}
       />
     </div>
   );

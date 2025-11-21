@@ -6,18 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar as ShadCalendar } from "@/components/ui/calendar"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { 
-    CalendarIcon, 
-    Clock, 
-    Car, 
-    Wrench, 
+import {
+    CalendarIcon,
+    Clock,
+    Car,
+    Wrench,
     CheckCircle,
     X,
     Edit2,
     Save
 } from "lucide-react"
 import { DateWeatherWidget } from "@/components/DateWeatherWidget"
-import { 
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -61,6 +61,7 @@ interface ModifyTurnoProps {
     isOpen: boolean
     onClose: () => void
     onSuccess: () => void
+    suggestedDate?: Date | null
 }
 
 // Utilidades de fecha
@@ -94,7 +95,7 @@ const endOfDay = (date: Date): Date => {
     return result
 }
 
-export default function ModifyTurno({ turno, isOpen, onClose, onSuccess }: ModifyTurnoProps) {
+export default function ModifyTurno({ turno, isOpen, onClose, onSuccess, suggestedDate }: ModifyTurnoProps) {
     const [services, setServices] = useState<Service[]>([])
     const [selectedServices, setSelectedServices] = useState<Service[]>([])
     const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -125,12 +126,12 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess }: Modif
     // Obtener horarios disponibles
     const fetchAvailableSlots = useCallback(async (date: Date, duration: number = 60): Promise<void> => {
         try {
-            if(duration === 0){
+            if (duration === 0) {
                 setAvailableSlots([])
                 return
             }
             setSlotsLoading(true)
-            
+
             const dateString = date.toISOString().split('T')[0]
 
             const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/available-slots?date=${dateString}&duration=${duration}`
@@ -211,32 +212,41 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess }: Modif
     useEffect(() => {
         if (turno && services.length > 0) {
             // Setear servicios seleccionados basados en el turno
-            const turnoServices = services.filter(service => 
+            const turnoServices = services.filter(service =>
                 turno.servicio.some(ts => ts.id === service.id)
             )
             setSelectedServices(turnoServices)
 
-            // Setear fecha del turno
+            // Setear fecha del turno o fecha sugerida
             const turnoDate = new Date(turno.fechaHora)
-            setSelectedDate(turnoDate)
+            const initialDate = suggestedDate || turnoDate
+            setSelectedDate(initialDate)
 
             // Calcular precio y duración
             const carType = turno.car.type
             const price = turnoServices.reduce((sum, s) => sum + getPriceForCarType(s, carType), 0)
             const duration = turnoServices.reduce((sum, s) => sum + s.duration, 0)
-            
+
             setTotalPrice(price)
             setTotalDuration(duration)
 
-            // Cargar horarios para la fecha actual del turno
-            fetchAvailableSlots(turnoDate, duration)
+            // Cargar horarios para la fecha seleccionada
+            fetchAvailableSlots(initialDate, duration)
+
+            // Si hay fecha sugerida, mostrar toast informativo
+            if (suggestedDate) {
+                toast.info("Fecha sugerida seleccionada", {
+                    description: "Hemos seleccionado automáticamente la fecha con mejor pronóstico del tiempo.",
+                    duration: 5000,
+                })
+            }
         }
-    }, [turno, services, getPriceForCarType, fetchAvailableSlots])
+    }, [turno, services, getPriceForCarType, fetchAvailableSlots, suggestedDate])
 
     // Manejar selección de servicios
     const handleServiceToggle = (service: Service) => {
         const isSelected = selectedServices.some(s => s.id === service.id)
-        
+
         let updatedServices: Service[]
         if (isSelected) {
             updatedServices = selectedServices.filter(s => s.id !== service.id)
@@ -248,7 +258,7 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess }: Modif
         const carType = turno?.car.type || 'AUTO'
         const price = updatedServices.reduce((sum, s) => sum + getPriceForCarType(s, carType), 0)
         const duration = updatedServices.reduce((sum, s) => sum + s.duration, 0)
-        
+
         // Actualizar estados
         setSelectedServices(updatedServices)
         setTotalPrice(price)
@@ -422,9 +432,8 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess }: Modif
                                         return (
                                             <div
                                                 key={service.id}
-                                                className={`p-3 border rounded cursor-pointer transition-colors ${
-                                                    isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-gray-50'
-                                                }`}
+                                                className={`p-3 border rounded cursor-pointer transition-colors ${isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-gray-50'
+                                                    }`}
                                                 onClick={() => handleServiceToggle(service)}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter' || e.key === ' ') {
@@ -471,6 +480,11 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess }: Modif
                             <CardTitle className="flex items-center gap-2">
                                 <CalendarIcon className="h-5 w-5" />
                                 Nueva Fecha y Hora
+                                {suggestedDate && selectedDate?.getTime() === suggestedDate.getTime() && (
+                                    <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 hover:bg-green-200 border-green-200">
+                                        ☀️ Fecha Sugerida
+                                    </Badge>
+                                )}
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -583,8 +597,8 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess }: Modif
                         <X className="h-4 w-4 mr-2" />
                         Cancelar
                     </Button>
-                    <Button 
-                        onClick={handleConfirmModification} 
+                    <Button
+                        onClick={handleConfirmModification}
                         disabled={!canConfirmChanges()}
                         className="bg-green-600 hover:bg-green-700"
                     >

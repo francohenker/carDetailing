@@ -248,6 +248,8 @@ export class QuotationService {
       throw new Error('No winning response found for this quotation');
     }
 
+    
+
     // Actualizar stock de cada producto según las cantidades cotizadas
     for (const quote of winningResponse.productQuotes) {
       const product = await this.productoRepository.findOne({
@@ -255,14 +257,18 @@ export class QuotationService {
       });
 
       if (product) {
-        product.stock_actual += quote.quantity;
+        product.stock_actual = Number(product.stock_actual) + Number(quote.quantity);
         await this.productoRepository.save(product);
       }
     }
 
-    // Marcar la solicitud como recibida (podrías agregar un campo receivedAt si lo necesitas)
+
+    // Marcar la solicitud como finalizada (stock recibido)
+    request.status = QuotationRequestStatus.FINISHED;
+    await this.quotationRequestRepository.save(request);
+
     console.log(
-      `Stock actualizado para cotización #${requestId} - ${winningResponse.productQuotes.length} productos`,
+      `Stock actualizado y cotización #${requestId} finalizada`,
     );
   }
 }
