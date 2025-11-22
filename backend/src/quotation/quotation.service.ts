@@ -220,7 +220,49 @@ export class QuotationService {
     request.status = QuotationRequestStatus.COMPLETED;
     await this.quotationRequestRepository.save(request);
 
+    // Cancelar automáticamente otras cotizaciones pendientes con productos superpuestos
+    await this.cancelOverlappingQuotations(request);
+
     return response;
+  }
+
+  /**
+   * Cancela automáticamente todas las solicitudes de cotización PENDIENTES
+   * que comparten al menos un producto con la solicitud aceptada.
+   */
+  private async cancelOverlappingQuotations(
+    acceptedRequest: QuotationRequest,
+  ): Promise<void> {
+    const acceptedProductIds = acceptedRequest.products.map((p) => p.id);
+
+    // Buscar todas las solicitudes PENDIENTES
+    const pendingRequests = await this.quotationRequestRepository.find({
+      where: { status: QuotationRequestStatus.PENDING },
+      relations: ['products'],
+    });
+
+    // Filtrar solicitudes que comparten productos
+    const overlappingRequests = pendingRequests.filter(
+      (req) =>
+        req.id !== acceptedRequest.id &&
+        req.products.some((p) => acceptedProductIds.includes(p.id)),
+    );
+
+    // Cancelar solicitudes superpuestas
+    for (const req of overlappingRequests) {
+      req.status = QuotationRequestStatus.CANCELLED;
+      await this.quotationRequestRepository.save(req);
+
+      console.log(
+        `Cotización #${req.id} auto-cancelada por superposición de productos con cotización #${acceptedRequest.id}`,
+      );
+    }
+
+    if (overlappingRequests.length > 0) {
+      console.log(
+        `Se cancelaron ${overlappingRequests.length} cotización(es) pendiente(s) con productos superpuestos`,
+      );
+    }
   }
 
   async rejectQuotation(requestId: number): Promise<void> {
@@ -266,9 +308,5 @@ export class QuotationService {
     // Marcar la solicitud como finalizada (stock recibido)
     request.status = QuotationRequestStatus.FINISHED;
     await this.quotationRequestRepository.save(request);
-
-    console.log(
-      `Stock actualizado y cotización #${requestId} finalizada`,
-    );
   }
 }

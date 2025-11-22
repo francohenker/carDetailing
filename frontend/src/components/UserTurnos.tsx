@@ -172,12 +172,14 @@ export default function UserTurnos() {
   const handleModifyTurno = (turno: Turno) => {
     setSelectedTurno(turno);
     setModifyTurnoOpen(true);
+    setSuggestedDate(null); // Resetear fecha sugerida al abrir manualmente
   };
 
   // Función para cerrar modal de modificación
   const handleCloseModifyModal = () => {
     setModifyTurnoOpen(false);
     setSelectedTurno(null);
+    setSuggestedDate(null); // Resetear fecha sugerida al cerrar
   };
 
   // Función para refrescar turnos después de modificar

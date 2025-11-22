@@ -129,18 +129,27 @@ export class WeatherEvaluationService {
         throw new Error(`Turno con ID ${turnoId} no encontrado`);
       }
 
-      // Crear datos de pronóstico simulados para prueba
+      // Generar pronósticos simulados para los próximos 15 días
       const mockWeatherForecasts: WeatherForecast[] = [];
-      const startDate = new Date();
+      const today = new Date();
 
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + i);
+      for (let i = 0; i < 15; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
 
-        // Simular mal tiempo para el día del turno y algunos días adicionales
+        // Simular mal tiempo para el día del turno
         const isTurnoDay =
           new Date(turno.fechaHora).toDateString() === date.toDateString();
-        const isBadWeather = isTurnoDay || Math.random() > 0.6;
+
+        // Lógica mejorada: mal tiempo los primeros 3 días, luego buen tiempo
+        const daysSinceTurno = Math.floor(
+          (date.getTime() - new Date(turno.fechaHora).getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
+
+        // Día del turno y 2 días después: mal tiempo
+        // Días 3-15: buen tiempo (para que haya opciones disponibles)
+        const isBadWeather = isTurnoDay || (daysSinceTurno >= 0 && daysSinceTurno < 3);
 
         mockWeatherForecasts.push({
           date,
@@ -152,7 +161,6 @@ export class WeatherEvaluationService {
 
       // Crear evaluación simulada
       const turnoDate = new Date(turno.fechaHora);
-      const today = new Date();
       const daysUntilTurno = Math.ceil(
         (turnoDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
       );
@@ -163,9 +171,12 @@ export class WeatherEvaluationService {
           (f) => f.date.toDateString() === turnoDate.toDateString(),
         ) || mockWeatherForecasts[0];
 
-      // Simular una fecha sugerida (3 días después del turno)
-      const suggestedDate = new Date(turnoDate);
-      suggestedDate.setDate(suggestedDate.getDate() + 3);
+      // Encontrar una fecha sugerida con buen clima Y horarios disponibles
+      const suggestedDate = await this.findDateWithGoodWeatherAndAvailability(
+        mockWeatherForecasts,
+        turnoDate,
+        turno.duration,
+      );
 
       const mockEvaluation: TurnoWeatherEvaluation = {
         turno,
@@ -176,7 +187,7 @@ export class WeatherEvaluationService {
         daysUntilTurno,
         weatherForecasts: mockWeatherForecasts,
         turnoDayForecast,
-        suggestedDate, // Agregar fecha sugerida simulada
+        suggestedDate,
       };
 
       // Enviar el correo de prueba
@@ -405,6 +416,110 @@ export class WeatherEvaluationService {
 
     return undefined;
   }
+
+  /**
+   * Encuentra una fecha con buen clima Y horarios disponibles para el turno.
+   * Busca en los próximos 15 días una fecha que cumpla ambos criterios.
+   */
+  private async findDateWithGoodWeatherAndAvailability(
+    forecasts: WeatherForecast[],
+    originalTurnoDate: Date,
+    duration: number,
+  ): Promise<Date | undefined> {
+    // Buscar fechas con buen clima posteriores al turno original
+    const goodWeatherDates = forecasts.filter(
+      (forecast) =>
+        new Date(forecast.date) > originalTurnoDate &&
+        !this.isBadWeatherForCarDetailing(forecast),
+    );
+
+    // Para cada fecha con buen clima, verificar si hay horarios disponibles
+    for (const forecast of goodWeatherDates) {
+      const dateString = forecast.date.toISOString().split('T')[0];
+
+      // Obtener turnos existentes para ese día
+      const existingTurnos = await this.turnoRepository.find({
+        where: {
+          fechaHora: Between(
+            new Date(dateString + 'T00:00:00'),
+            new Date(dateString + 'T23:59:59'),
+          ),
+          estado: estado_turno.PENDIENTE,
+        },
+      });
+
+      // Verificar si hay al menos un slot disponible
+      const hasAvailableSlot = this.checkIfDateHasAvailableSlots(
+        existingTurnos,
+        duration,
+        forecast.date,
+      );
+
+      if (hasAvailableSlot) {
+        this.logger.log(
+          `✅ Fecha encontrada con buen clima y disponibilidad: ${dateString}`,
+        );
+        return forecast.date;
+      }
+    }
+
+    // Si no se encuentra ninguna fecha con ambos criterios, devolver la primera con buen clima
+    this.logger.warn(
+      '⚠️ No se encontró fecha con buen clima Y disponibilidad. Usando primera fecha con buen clima.',
+    );
+    return goodWeatherDates.length > 0
+      ? goodWeatherDates[0].date
+      : undefined;
+  }
+
+  /**
+   * Verifica si una fecha tiene al menos un horario disponible.
+   */
+  private checkIfDateHasAvailableSlots(
+    existingTurnos: Turno[],
+    duration: number,
+    targetDate: Date,
+  ): boolean {
+    const workStartHour = 8;
+    const workEndHour = 19;
+    const slotInterval = 60;
+
+    // Crear todos los slots posibles
+    const allSlots: Date[] = [];
+    for (let hour = workStartHour; hour < workEndHour; hour++) {
+      for (let minute = 0; minute < 60; minute += slotInterval) {
+        const slotDate = new Date(targetDate);
+        slotDate.setHours(hour, minute, 0, 0);
+        allSlots.push(slotDate);
+      }
+    }
+
+    // Verificar cada slot
+    for (const slot of allSlots) {
+      const slotEnd = new Date(slot);
+      slotEnd.setMinutes(slotEnd.getMinutes() + duration);
+
+      // Verificar si este slot no se solapa con ningún turno existente
+      let hasConflict = false;
+      for (const turno of existingTurnos) {
+        const turnoStart = new Date(turno.fechaHora);
+        const turnoEnd = new Date(turno.fechaHora);
+        turnoEnd.setMinutes(turnoEnd.getMinutes() + (turno.duration || 60));
+
+        if (slot < turnoEnd && slotEnd > turnoStart) {
+          hasConflict = true;
+          break;
+        }
+      }
+
+      if (!hasConflict) {
+        return true; // Encontramos al menos un slot disponible
+      }
+    }
+
+    return false; // No hay slots disponibles
+  }
+
 
   private isBadWeatherForCarDetailing(forecast: WeatherForecast): boolean {
     // Códigos de clima malo para car detailing:

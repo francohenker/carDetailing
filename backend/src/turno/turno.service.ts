@@ -92,8 +92,9 @@ export class TurnoService {
 
   //VERIFICAR!!!!!!!!!!, agregar validaciones con respecto a la fecha (y posiblemente a los demas campos, try no funciona como deberia)
   async modifyTurno(turno: ModifyTurnoDto): Promise<Turno> {
-    const existingTurno = await this.turnoRepository.findOneBy({
-      id: turno.turnoId,
+    const existingTurno = await this.turnoRepository.findOne({
+      where: { id: turno.turnoId },
+      relations: ['car', 'car.user', 'servicio'],
     });
     if (!existingTurno) {
       throw new HttpException('Turno not found', 404);

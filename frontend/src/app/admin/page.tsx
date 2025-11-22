@@ -297,7 +297,7 @@ export default function AdminPage() {
     const [quotationRequests, setQuotationRequests] = useState<QuotationRequest[]>([])
     const [selectedQuotationRequest, setSelectedQuotationRequest] = useState<QuotationRequest | null>(null)
     const [quotationResponses, setQuotationResponses] = useState<QuotationResponse[]>([])
-    const [quotationFilter, setQuotationFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all')
+    const [quotationFilter, setQuotationFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled' | 'finished'>('all')
     const [isReceivedConfirmDialogOpen, setIsReceivedConfirmDialogOpen] = useState(false)
     const [quotationToMarkReceived, setQuotationToMarkReceived] = useState<number | null>(null)
 
@@ -693,6 +693,9 @@ export default function AdminPage() {
             setIsProductDialogOpen(false)
             resetProductForm()
             fetchProducts()
+            // Actualizar auditoría y stock bajo
+            fetchAuditoriaStats()
+            fetchLowStockProducts()
         } catch (error) {
             console.error('Error saving product:', error)
             toast.error("Error", {
@@ -744,6 +747,7 @@ export default function AdminPage() {
             })
 
             fetchProducts()
+            fetchAuditoriaStats()
         } catch (error) {
             console.error('Error deleting product:', error)
             toast.error("Error", {
@@ -1018,7 +1022,11 @@ export default function AdminPage() {
                 description: "Proveedor seleccionado correctamente.",
             })
 
+            // Refrescar cotizaciones para ver las auto-canceladas
             await fetchQuotationRequests()
+            // Refrescar productos por si hay cambios relacionados
+            await fetchProducts()
+            await fetchAuditoriaStats()
             if (selectedQuotationRequest) {
                 await fetchQuotationResponses(selectedQuotationRequest.id)
             }
@@ -1051,6 +1059,7 @@ export default function AdminPage() {
             setQuotationToMarkReceived(null)
             await fetchQuotationRequests()
             await fetchProducts() // Actualizar productos para ver el nuevo stock
+            await fetchAuditoriaStats()
         } catch (error) {
             console.error('Error marking as received:', error)
             toast.error("Error", {
@@ -1064,10 +1073,12 @@ export default function AdminPage() {
             case 'pending':
                 return quotationRequests.filter(q => q.status === 'PENDING')
             case 'completed':
-                console.log(quotationRequests)    
+                console.log(quotationRequests)
                 return quotationRequests.filter(q => q.status === 'COMPLETED')
             case 'cancelled':
                 return quotationRequests.filter(q => q.status === 'CANCELLED')
+            case 'finished':
+                return quotationRequests.filter(q => q.status === 'FINISHED')
             default:
                 return quotationRequests
         }
@@ -2793,6 +2804,13 @@ export default function AdminPage() {
                                         >
                                             Canceladas ({quotationRequests.filter(q => q.status === 'CANCELLED').length})
                                         </Button>
+                                        <Button
+                                            variant={quotationFilter === 'finished' ? 'default' : 'outline'}
+                                            onClick={() => setQuotationFilter('finished')}
+                                            size="sm"
+                                        >
+                                            Finalizadas ({quotationRequests.filter(q => q.status === 'FINISHED').length})
+                                        </Button>
                                     </div>
 
                                     {getFilteredQuotations().length === 0 ? (
@@ -2801,7 +2819,7 @@ export default function AdminPage() {
                                             <p className="text-lg font-medium">
                                                 {quotationFilter === 'all'
                                                     ? 'No hay solicitudes de cotización'
-                                                    : `No hay cotizaciones ${quotationFilter === 'pending' ? 'pendientes' : quotationFilter === 'completed' ? 'aceptadas' : 'canceladas'}`
+                                                    : `No hay cotizaciones ${quotationFilter === 'pending' ? 'pendientes' : quotationFilter === 'completed' ? 'aceptadas' : quotationFilter === 'finished' ? 'finalizadas' : 'canceladas'}`
                                                 }
                                             </p>
                                             <p className="text-sm">
@@ -2829,12 +2847,14 @@ export default function AdminPage() {
                                                             <div className="flex gap-2">
                                                                 <Badge variant={
                                                                     request.status === 'COMPLETED' ? 'default' :
-                                                                        request.status === 'PENDING' ? 'secondary' :
-                                                                            'destructive'
+                                                                        request.status === 'FINISHED' ? 'outline' :
+                                                                            request.status === 'PENDING' ? 'secondary' :
+                                                                                'destructive'
                                                                 }>
                                                                     {request.status === 'COMPLETED' ? 'Completada' :
-                                                                        request.status === 'PENDING' ? 'Pendiente' :
-                                                                            'Cancelada'}
+                                                                        request.status === 'FINISHED' ? 'Finalizada' :
+                                                                            request.status === 'PENDING' ? 'Pendiente' :
+                                                                                'Cancelada'}
                                                                 </Badge>
                                                                 {request.status === 'PENDING' && (
                                                                     <Button
@@ -2853,6 +2873,7 @@ export default function AdminPage() {
                                                                                     description: "Cotización cancelada correctamente.",
                                                                                 })
                                                                                 await fetchQuotationRequests()
+                                                                                await fetchAuditoriaStats()
                                                                             } catch (error) {
                                                                                 console.error('Error rejecting quotation:', error)
                                                                                 toast.error("Error", {
@@ -2865,7 +2886,7 @@ export default function AdminPage() {
                                                                         Cancelar
                                                                     </Button>
                                                                 )}
-                                                                {request.status === 'FINISHED' && (
+                                                                {(request.status !== 'CANCELLED' && request.status !== 'FINISHED') && (
                                                                     <Button
                                                                         variant="default"
                                                                         size="sm"
