@@ -31,7 +31,8 @@ import {
     FileText,
     Filter,
     Search,
-    RefreshCw
+    RefreshCw,
+    CloudRain
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -1611,6 +1612,29 @@ export default function AdminPage() {
         }
     }
 
+    // ============ WEATHER TEST EMAIL ============
+    const handleTestWeatherEmail = async (turnoId: number) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/weather/test-email/${turnoId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (!response.ok) throw new Error('Error sending weather test email')
+
+            toast.success("Éxito", {
+                description: "Email de prueba de clima enviado correctamente.",
+            })
+        } catch (error) {
+            console.error('Error sending weather test email:', error)
+            toast.error("Error", {
+                description: "No se pudo enviar el email de prueba.",
+            })
+        }
+    }
+
     // ============ DESCARGAR FACTURA ============
     const handleDownloadFactura = async (turnoId: number) => {
         try {
@@ -2448,6 +2472,14 @@ export default function AdminPage() {
                                                                         Comprobante
                                                                     </Button>
                                                                 )}
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleTestWeatherEmail(turno.id)}
+                                                                    title="Simular Cronjob Clima"
+                                                                >
+                                                                    <CloudRain className="h-4 w-4" />
+                                                                </Button>
                                                             </div>
                                                         </TableCell>
                                                     </TableRow>
@@ -2886,7 +2918,7 @@ export default function AdminPage() {
                                                                         Cancelar
                                                                     </Button>
                                                                 )}
-                                                                {(request.status !== 'CANCELLED' && request.status !== 'FINISHED') && (
+                                                                {request.status === 'COMPLETED' && (
                                                                     <Button
                                                                         variant="default"
                                                                         size="sm"
@@ -3732,7 +3764,7 @@ export default function AdminPage() {
                                         rows={3}
                                     />
                                 </div> */}
-                                <div className="grid grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="product-price">Precio ($)</Label>
                                         <Input
@@ -3748,7 +3780,7 @@ export default function AdminPage() {
                                             <Package className="h-4 w-4" />
                                             Stock Actual
                                             {editingProduct && (
-                                                <span className="badge badge-warning badge-sm">Editar stock</span>
+                                                <span className="p-2 badge badge-warning badge-sm">Editar stock</span>
                                             )}
                                         </Label>
                                         <Input
