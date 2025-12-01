@@ -258,7 +258,7 @@ export default function AdminPage() {
     // Estados para turnos
     const [turnos, setTurnos] = useState<Turno[]>([])
     const [filteredTurnos, setFilteredTurnos] = useState<Turno[]>([])
-    const [turnoFilter, setTurnoFilter] = useState<'all' | 'pending-payment' | 'paid' | 'pending-service'>('all')
+    const [turnoFilter, setTurnoFilter] = useState<'all' | 'pending-payment' | 'paid' | 'pending-service'>('pending-service')
 
     // Estados para paginación de turnos
     const [currentPageTurnos, setCurrentPageTurnos] = useState(1)
@@ -298,7 +298,7 @@ export default function AdminPage() {
     const [quotationRequests, setQuotationRequests] = useState<QuotationRequest[]>([])
     const [selectedQuotationRequest, setSelectedQuotationRequest] = useState<QuotationRequest | null>(null)
     const [quotationResponses, setQuotationResponses] = useState<QuotationResponse[]>([])
-    const [quotationFilter, setQuotationFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled' | 'finished'>('all')
+    const [quotationFilter, setQuotationFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled' | 'finished'>('pending')
     const [isReceivedConfirmDialogOpen, setIsReceivedConfirmDialogOpen] = useState(false)
     const [quotationToMarkReceived, setQuotationToMarkReceived] = useState<number | null>(null)
 
@@ -428,6 +428,7 @@ export default function AdminPage() {
 
     // Estados generales
     const [loading, setLoading] = useState(true)
+    const [actionLoading, setActionLoading] = useState<string | null>(null)
     const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
         isOpen: boolean
         type: 'service' | 'product' | 'user' | 'supplier'
@@ -548,6 +549,8 @@ export default function AdminPage() {
 
     const handleServiceSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setLoading(true)
+        setActionLoading('service-submit')
         try {
             const url = editingService
                 ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/services/update/${editingService.id}`
@@ -568,7 +571,7 @@ export default function AdminPage() {
                 description: `Servicio ${editingService ? 'actualizado' : 'creado'} correctamente.`,
 
             })
-
+            setLoading(false)
             setIsServiceDialogOpen(false)
             resetServiceForm()
             fetchServices()
@@ -577,6 +580,9 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo guardar el servicio.",
             })
+        } finally {
+            setLoading(false)
+            setActionLoading(null)
         }
     }
 
@@ -603,6 +609,7 @@ export default function AdminPage() {
     }
 
     const handleDeleteService = async (id: number) => {
+        setActionLoading(`delete-service-${id}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/delete/${id}`, {
                 method: 'DELETE',
@@ -623,6 +630,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo eliminar el servicio.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
@@ -671,6 +680,7 @@ export default function AdminPage() {
     }
 
     const submitProduct = async () => {
+        setLoading(true)
         try {
             const url = editingProduct
                 ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/update/${editingProduct.id}`
@@ -702,6 +712,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo guardar el producto.",
             })
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -733,6 +745,7 @@ export default function AdminPage() {
     }
 
     const handleDeleteProduct = async (id: number) => {
+        setActionLoading(`delete-product-${id}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/delete/${id}`, {
                 method: 'DELETE',
@@ -754,6 +767,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo eliminar el producto.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
@@ -788,6 +803,7 @@ export default function AdminPage() {
 
     const handleUserSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setLoading(true)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/register`, {
                 method: 'POST',
@@ -809,6 +825,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo crear el usuario."
             })
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -824,6 +842,7 @@ export default function AdminPage() {
     }
 
     const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') => {
+        setActionLoading(`change-role-${userId}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/change-role/${userId}`, {
                 method: 'PUT',
@@ -846,6 +865,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo actualizar el rol del usuario.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
@@ -867,6 +888,7 @@ export default function AdminPage() {
 
     const handleSupplierSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setLoading(true)
         try {
             const url = editingSupplier
                 ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/supplier/update/${editingSupplier.id}`
@@ -895,6 +917,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo guardar el proveedor.",
             })
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -914,6 +938,7 @@ export default function AdminPage() {
     }
 
     const handleDeleteSupplier = async (id: number) => {
+        setActionLoading(`delete-supplier-${id}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/supplier/delete/${id}`, {
                 method: 'DELETE',
@@ -934,10 +959,13 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo eliminar el proveedor.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
     const handleToggleSupplierActive = async (id: number) => {
+        setActionLoading(`toggle-supplier-${id}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/supplier/toggle-active/${id}`, {
                 method: 'POST',
@@ -958,6 +986,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo actualizar el estado del proveedor.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
@@ -1007,6 +1037,7 @@ export default function AdminPage() {
     }
 
     const handleSelectWinner = async (requestId: number, responseId: number) => {
+        setActionLoading(`select-winner-${requestId}-${responseId}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/requests/${requestId}/select-winner`, {
                 method: 'POST',
@@ -1036,12 +1067,15 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo seleccionar el proveedor.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
     const handleMarkAsReceived = async () => {
         if (!quotationToMarkReceived) return
 
+        setLoading(true)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/requests/${quotationToMarkReceived}/mark-received`, {
                 method: 'POST',
@@ -1066,6 +1100,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo actualizar el stock.",
             })
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -1103,6 +1139,7 @@ export default function AdminPage() {
 
     const handleUpdateQuotationThresholds = async (e: React.FormEvent) => {
         e.preventDefault()
+        setActionLoading('update-thresholds')
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/quotation-thresholds`, {
                 method: 'PUT',
@@ -1125,6 +1162,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudieron actualizar los umbrales.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
@@ -1366,6 +1405,7 @@ export default function AdminPage() {
 
     const handleSendSupplierEmail = async (e: React.FormEvent) => {
         e.preventDefault()
+        setLoading(true)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/stock/send-supplier-email`, {
                 method: 'POST',
@@ -1389,6 +1429,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo enviar el email.",
             })
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -1550,6 +1592,7 @@ export default function AdminPage() {
     }
 
     const handleMarkAsPaid = async (turnoId: number) => {
+        setActionLoading(`mark-paid-${turnoId}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/pago/mark-paid/${turnoId}`, {
                 method: 'POST',
@@ -1575,10 +1618,13 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo marcar el turno como pagado.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
     const handleMarkAsCompleted = async (turnoId: number) => {
+        setActionLoading(`mark-completed-${turnoId}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/admin/mark-completed/${turnoId}`, {
                 method: 'POST',
@@ -1609,11 +1655,14 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo marcar el turno como finalizado.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
     // ============ WEATHER TEST EMAIL ============
     const handleTestWeatherEmail = async (turnoId: number) => {
+        setActionLoading(`test-weather-${turnoId}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/weather/test-email/${turnoId}`, {
                 method: 'POST',
@@ -1632,11 +1681,14 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo enviar el email de prueba.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
     // ============ DESCARGAR FACTURA ============
     const handleDownloadFactura = async (turnoId: number) => {
+        setActionLoading(`download-factura-${turnoId}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/factura/download/${turnoId}`, {
                 method: 'GET',
@@ -1668,6 +1720,8 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudo generar la factura. Verifica que el turno tenga un pago completado.",
             })
+        } finally {
+            setActionLoading(null)
         }
     }
 
@@ -1682,6 +1736,7 @@ export default function AdminPage() {
     }
 
     const handleConfirmDelete = async () => {
+        setLoading(true)
         const { type, id } = deleteConfirmDialog
 
         switch (type) {
@@ -1695,16 +1750,8 @@ export default function AdminPage() {
                 await handleDeleteSupplier(id)
                 break
         }
-
+        setLoading(false)
         setDeleteConfirmDialog({ isOpen: false, type: 'service', id: 0, name: '' })
-    }
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-base-100 flex items-center justify-center">
-                <span className="loading loading-spinner loading-lg"></span>
-            </div>
-        )
     }
 
     return (
@@ -1850,7 +1897,7 @@ export default function AdminPage() {
                                                                 </div>
                                                             )}
                                                         </TableCell>
-                                                        <TableCell>{service.duration} min</TableCell>
+                                                        <TableCell className="">{service.duration} min</TableCell>
                                                         <TableCell>
                                                             <div className="flex gap-2">
                                                                 <Button
@@ -1864,8 +1911,13 @@ export default function AdminPage() {
                                                                     variant="destructive"
                                                                     size="sm"
                                                                     onClick={() => openDeleteConfirm('service', service.id, service.name)}
+                                                                    disabled={actionLoading === `delete-service-${service.id}`}
                                                                 >
-                                                                    <Trash2 className="h-4 w-4" />
+                                                                    {actionLoading === `delete-service-${service.id}` ? (
+                                                                        <span className="loading loading-spinner loading-xs"></span>
+                                                                    ) : (
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    )}
                                                                 </Button>
                                                             </div>
                                                         </TableCell>
@@ -1976,8 +2028,13 @@ export default function AdminPage() {
                                                                 variant="destructive"
                                                                 size="sm"
                                                                 onClick={() => openDeleteConfirm('product', product.id, product.name)}
+                                                                disabled={actionLoading === `delete-product-${product.id}`}
                                                             >
-                                                                <Trash2 className="h-4 w-4" />
+                                                                {actionLoading === `delete-product-${product.id}` ? (
+                                                                    <span className="loading loading-spinner loading-xs"></span>
+                                                                ) : (
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                )}
                                                             </Button>
                                                         </div>
                                                     </TableCell>
@@ -2053,6 +2110,7 @@ export default function AdminPage() {
                                                                 size="sm"
                                                                 onClick={() => handleEditSupplier(supplier)}
                                                             >
+                                                                
                                                                 <Edit2 className="h-4 w-4" />
                                                             </Button>
                                                             <Button
@@ -2060,8 +2118,11 @@ export default function AdminPage() {
                                                                 size="sm"
                                                                 onClick={() => handleToggleSupplierActive(supplier.id)}
                                                                 className={supplier.isActive ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}
+                                                                disabled={actionLoading === `toggle-supplier-${supplier.id}`}
                                                             >
-                                                                {supplier.isActive ? (
+                                                                {actionLoading === `toggle-supplier-${supplier.id}` ? (
+                                                                    <span className="loading loading-spinner loading-xs"></span>
+                                                                ) : supplier.isActive ? (
                                                                     <X className="h-4 w-4" />
                                                                 ) : (
                                                                     <CheckCircle className="h-4 w-4" />
@@ -2219,8 +2280,13 @@ export default function AdminPage() {
                                                                 size="sm"
                                                                 onClick={() => handleOpenEmailDialog(supplier)}
                                                                 className="bg-blue-600 hover:bg-blue-700"
+                                                                disabled={actionLoading === 'send-email'}
                                                             >
-                                                                <Mail className="h-4 w-4 mr-2" />
+                                                                {actionLoading === 'send-email' ? (
+                                                                    <span className="loading loading-spinner loading-xs mr-2"></span>
+                                                                ) : (
+                                                                    <Mail className="h-4 w-4 mr-2" />
+                                                                )}
                                                                 Enviar Email
                                                             </Button>
                                                         </div>
@@ -2362,6 +2428,7 @@ export default function AdminPage() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
+                                                <TableHead>Id</TableHead>
                                                 <TableHead>Cliente</TableHead>
                                                 <TableHead>Vehículo</TableHead>
                                                 <TableHead>Fecha y Hora</TableHead>
@@ -2379,6 +2446,11 @@ export default function AdminPage() {
 
                                                 return (
                                                     <TableRow key={turno.id}>
+                                                        <TableCell className="font-medium">
+                                                            <div className="space-y-1">
+                                                                <div>{turno.id}</div>
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell className="font-medium">
                                                             <div className="space-y-1">
                                                                 <div>{turno.car.user.firstname} {turno.car.user.lastname}</div>
@@ -2399,7 +2471,7 @@ export default function AdminPage() {
                                                             <div className="flex items-center gap-2">
                                                                 <Clock className="h-4 w-4 text-muted-foreground" />
                                                                 <div>
-                                                                    <div>{new Date(turno.fechaHora).toLocaleDateString()}</div>
+                                                                    <div>{new Date(turno.fechaHora).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                                                                     <div className="text-sm text-muted-foreground">
                                                                         {new Date(turno.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                     </div>
@@ -2409,7 +2481,7 @@ export default function AdminPage() {
                                                         <TableCell>
                                                             <div className="space-y-1">
                                                                 {turno.servicio.map((servicio) => (
-                                                                    <div key={servicio.id} className="text-xs bg-base-200 px-2 py-1 rounded">
+                                                                    <div key={servicio.id} className="text-xs bg-base-200 py-1 rounded">
                                                                         {servicio.name}
                                                                     </div>
                                                                 ))}
@@ -2446,9 +2518,14 @@ export default function AdminPage() {
                                                                         size="sm"
                                                                         onClick={() => handleMarkAsPaid(turno.id)}
                                                                         className="bg-green-600 hover:bg-green-700"
+                                                                        disabled={actionLoading === `mark-paid-${turno.id}`}
                                                                     >
-                                                                        <CreditCard className="h-4 w-4 mr-2" />
-                                                                        Marcar como Pagado
+                                                                        {actionLoading === `mark-paid-${turno.id}` ? (
+                                                                            <span className="loading loading-spinner loading-xs mr-2"></span>
+                                                                        ) : (
+                                                                            <CheckCircle className="h-4 w-4 mr-2" />
+                                                                        )}
+                                                                        Marcar Pagado
                                                                     </Button>
                                                                 )}
                                                                 {canMarkAsCompleted(turno) && (
@@ -2456,8 +2533,13 @@ export default function AdminPage() {
                                                                         size="sm"
                                                                         onClick={() => handleMarkAsCompleted(turno.id)}
                                                                         className="bg-blue-600 hover:bg-blue-700"
+                                                                        disabled={actionLoading === `mark-completed-${turno.id}`}
                                                                     >
-                                                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                                                        {actionLoading === `mark-completed-${turno.id}` ? (
+                                                                            <span className="loading loading-spinner loading-xs mr-2"></span>
+                                                                        ) : (
+                                                                            <CheckCircle className="h-4 w-4 mr-2" />
+                                                                        )}
                                                                         Marcar como Finalizado
                                                                     </Button>
                                                                 )}
@@ -2467,8 +2549,13 @@ export default function AdminPage() {
                                                                         variant="outline"
                                                                         onClick={() => handleDownloadFactura(turno.id)}
                                                                         className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                                                                        disabled={actionLoading === `download-factura-${turno.id}`}
                                                                     >
-                                                                        <FileDown className="h-4 w-4 mr-2" />
+                                                                        {actionLoading === `download-factura-${turno.id}` ? (
+                                                                            <span className="loading loading-spinner loading-xs mr-2"></span>
+                                                                        ) : (
+                                                                            <FileDown className="h-4 w-4 mr-2" />
+                                                                        )}
                                                                         Comprobante
                                                                     </Button>
                                                                 )}
@@ -2476,9 +2563,14 @@ export default function AdminPage() {
                                                                     size="sm"
                                                                     variant="outline"
                                                                     onClick={() => handleTestWeatherEmail(turno.id)}
-                                                                    title="Simular Cronjob Clima"
+                                                                    className="bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100"
+                                                                    disabled={actionLoading === `test-weather-${turno.id}`}
                                                                 >
-                                                                    <CloudRain className="h-4 w-4" />
+                                                                    {actionLoading === `test-weather-${turno.id}` ? (
+                                                                        <span className="loading loading-spinner loading-xs mr-2"></span>
+                                                                    ) : (
+                                                                        <CloudRain className="h-4 w-4 mr-2" />
+                                                                    )}
                                                                 </Button>
                                                             </div>
                                                         </TableCell>
@@ -2893,6 +2985,7 @@ export default function AdminPage() {
                                                                         variant="destructive"
                                                                         size="sm"
                                                                         onClick={async () => {
+                                                                            setActionLoading(`reject-quotation-${request.id}`)
                                                                             try {
                                                                                 const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/requests/${request.id}/reject`, {
                                                                                     method: 'POST',
@@ -2911,10 +3004,17 @@ export default function AdminPage() {
                                                                                 toast.error("Error", {
                                                                                     description: "No se pudo cancelar la cotización.",
                                                                                 })
+                                                                            } finally {
+                                                                                setActionLoading(null)
                                                                             }
                                                                         }}
+                                                                        disabled={actionLoading === `reject-quotation-${request.id}`}
                                                                     >
-                                                                        <X className="h-4 w-4 mr-1" />
+                                                                        {actionLoading === `reject-quotation-${request.id}` ? (
+                                                                            <span className="loading loading-spinner loading-xs mr-1"></span>
+                                                                        ) : (
+                                                                            <X className="h-4 w-4 mr-1" />
+                                                                        )}
                                                                         Cancelar
                                                                     </Button>
                                                                 )}
@@ -3723,7 +3823,11 @@ export default function AdminPage() {
                                 </Button>
                                 <Button type="submit">
                                     <Save className="h-4 w-4 mr-2" />
-                                    {editingService ? 'Actualizar' : 'Crear'}
+                                    {loading ? (
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                    ) : (
+                                        editingService ? 'Actualizar' : 'Crear'
+                                    )}
                                 </Button>
                             </div>
                         </form>
@@ -3918,20 +4022,16 @@ export default function AdminPage() {
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        setIsProductDialogOpen(false)
-                                        resetProductForm()
-                                    }}
-                                >
-                                    <X className="h-4 w-4 mr-2" />
+                                <Button type="button" variant="outline" onClick={() => setIsProductDialogOpen(false)}>
                                     Cancelar
                                 </Button>
                                 <Button type="submit">
                                     <Save className="h-4 w-4 mr-2" />
-                                    {editingProduct ? 'Actualizar' : 'Crear'}
+                                    {loading ? (
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                    ) : (
+                                        editingProduct ? 'Actualizar' : 'Crear'
+                                    )}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -4055,7 +4155,12 @@ export default function AdminPage() {
                                 </Button>
                                 <Button type="submit" className="btn btn-neutral">
                                     <Save className="h-4 w-4 mr-2" />
-                                    {editingSupplier ? 'Actualizar' : 'Crear'} Proveedor
+                                    {loading ? (
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                    ) : (
+                                        editingSupplier ? 'Actualizar' : 'Crear'
+                                    )}
+                                    Proveedor
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -4143,20 +4248,16 @@ export default function AdminPage() {
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        setIsUserDialogOpen(false)
-                                        resetUserForm()
-                                    }}
-                                >
-                                    <X className="h-4 w-4 mr-2" />
+                                <Button type="button" variant="outline" onClick={() => setIsUserDialogOpen(false)}>
                                     Cancelar
                                 </Button>
                                 <Button type="submit">
-                                    <Save className="h-4 w-4 mr-2" />
-                                    Crear Usuario
+                                    {/* <UserPlus className="h-4 w-4 mr-2" /> */}
+                                    {loading ? (
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                    ) : (
+                                        "Crear Usuario"
+                                    )}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -4187,7 +4288,11 @@ export default function AdminPage() {
                                 onClick={handleConfirmDelete}
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Eliminar
+                                {loading ? (
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                ) : (
+                                    "Eliminar"
+                                )}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -4403,7 +4508,11 @@ export default function AdminPage() {
                                 </Button>
                                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
                                     <Send className="h-4 w-4 mr-2" />
-                                    Enviar Email
+                                    {loading ? (
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                    ) : (
+                                        "Enviar Email"
+                                    )}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -4454,7 +4563,11 @@ export default function AdminPage() {
                                 className="bg-green-600 hover:bg-green-700"
                             >
                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                Confirmar Recepción
+                                {loading ? (
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                ) : (
+                                    "Confirmar Recepción"
+                                )}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

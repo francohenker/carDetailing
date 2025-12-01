@@ -497,7 +497,7 @@ export default function UserTurnos() {
                       ${turno.totalPrice.toLocaleString("es-AR")}
                     </div>
                     {turno.estado !== "cancelado" && !isTurnoPagado(turno) && (
-                      <div className="text-sm text-muted-foreground font-bold">
+                      <div className="text-sm text-muted-foreground font-bold my-2">
                         Falta pagar:{" "}
                         <span className="text-destructive font-bold">
                           ${getMontoFaltante(turno).toLocaleString("es-AR")}
