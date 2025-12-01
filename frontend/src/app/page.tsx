@@ -116,40 +116,6 @@ export default function Home() {
               <Card>
                 <WeatherWidget />
                 {/* <WeatherDisplay latitude={-27.0005} longitude={-54.4816} /> */}
-
-                {/*
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center">
-                    <Clock className="mr-2 h-5 w-5 text-red-600" />
-                    Horario Disponible
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Selecciona el horario que mejor se adapte a tu agenda.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" className="justify-start">
-                      09:00
-                    </Button>
-                    <Button variant="outline" className="justify-start">
-                      10:30
-                    </Button>
-                    <Button variant="outline" className="justify-start">
-                      12:00
-                    </Button>
-                    <Button variant="outline" className="justify-start">
-                      14:30
-                    </Button>
-                    <Button variant="outline" className="justify-start">
-                      16:00
-                    </Button>
-                    <Button variant="outline" className="justify-start">
-                      17:30
-                    </Button>
-                  </div>
-                  <Button className="w-full mt-4">Confirmar Reserva</Button>
-                </CardContent> */}
               </Card>
             </div>
           </div>

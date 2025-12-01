@@ -126,7 +126,7 @@ export default function Login() {
                             Continuar con Google
                         </button>
 
-                        <button className="w-full btn btn-ghost">Olvide mi contraseña</button>
+                        {/* <button className="w-full btn btn-ghost">Olvide mi contraseña</button> */}
                         <span className="text-center text-sm text-base-content/70">
                             ¿No tienes una cuenta? <a href="/register" className="text-red-500">Registrate</a>
                         </span>

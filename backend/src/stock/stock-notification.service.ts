@@ -405,7 +405,7 @@ export class StockNotificationService {
     await this.quotationService.createQuotationRequest({
       productIds,
       supplierIds: [supplierId],
-      notes: message || 'Solicitud de cotización manual',
+      notes: message || 'Solicitud de cotización manual'
     });
 
     console.log(

@@ -160,15 +160,16 @@ export class TurnoService {
       .getMany();
   }
 
-  async findDate(targetDate?: string): Promise<any> {
+  async findDate(targetDate?: string): Promise<Turno[]> {
     // Si no se proporciona fecha, usar la fecha actual
     const baseDate = targetDate ? new Date(targetDate) : new Date();
 
+    // Inicio del día: 00:00:00.000
     const startDate = new Date(baseDate);
     startDate.setHours(0, 0, 0, 0);
 
+    // Final del día: 23:59:59.999
     const endDate = new Date(baseDate);
-    endDate.setMonth(endDate.getMonth() + 2);
     // endDate.setHours(23, 59, 59, 999);
 
     const turnos = await this.turnoRepository.find({
@@ -182,12 +183,57 @@ export class TurnoService {
     return turnos;
   }
 
+  /**
+   * Encuentra todos los turnos de un día específico dado como objeto Date
+   * Acepta fechas en formato: "Fri Dec 12 2025 00:00:00 GMT-0300"
+   * @param targetDate - Objeto Date con la fecha a buscar
+   * @returns Array de turnos del día especificado
+   */
+  async findTurnosByDate(targetDate: Date): Promise<Turno[]> {
+    // Crear objeto Date asegurando que sea válido
+    const dateObj = new Date(targetDate);
+
+    // Validar que la fecha sea válida
+    if (isNaN(dateObj.getTime())) {
+      throw new HttpException('Fecha inválida proporcionada', 400);
+    }
+
+    // Inicio del día: 00:00:00.000
+    const startDate = new Date(dateObj);
+    startDate.setHours(0, 0, 0, 0);
+
+    // Final del día: 23:59:59.999
+    const endDate = new Date(dateObj);
+    endDate.setHours(23, 59, 59, 999);
+
+    console.log(`🔍 Buscando turnos entre ${startDate} y ${endDate}`);
+
+    const turnos = await this.turnoRepository.find({
+      where: {
+        fechaHora: Between(startDate, endDate),
+        estado: estado_turno.PENDIENTE, // Solo turnos activos que ocupan horarios
+      },
+      relations: ['car', 'car.user', 'servicio'],
+      order: {
+        fechaHora: 'ASC',
+      },
+    });
+
+    console.log(
+      `✅ Encontrados ${turnos.length} turnos para la fecha ${dateObj.toLocaleDateString('es-AR')}`,
+    );
+
+    return turnos;
+  }
+
   async getAvailableTimeSlots(
     targetDate: string,
     duration: number,
   ): Promise<any> {
     // Obtener todos los turnos del día especificado
-    const turnos = await this.findDate(targetDate);
+    const turnos = await this.findTurnosByDate(
+      new Date(targetDate + 'T03:00:00'),
+    );
 
     // Configuración de horarios de trabajo
     const workStartHour = 8; // 8:00 AM

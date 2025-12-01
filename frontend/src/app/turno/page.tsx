@@ -251,6 +251,7 @@ function TurnoPageContent() {
   // Obtener horarios disponibles considerando la duración de los servicios seleccionados
   const fetchAvailableSlots = async (date: Date): Promise<void> => {
     try {
+      console.log("date: ", date)
       setSlotsLoading(true);
 
       // Obtener la duración total de los servicios seleccionados
@@ -389,6 +390,7 @@ function TurnoPageContent() {
       timeSlot: null,
     });
     setAvailableSlots([]);
+    date.setHours(12, 0, 0, 0);
     // Cargar horarios disponibles desde el backend
     fetchAvailableSlots(date);
   };
