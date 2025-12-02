@@ -45,9 +45,6 @@ export class QuotationRequest {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @OneToMany(
-    'QuotationResponse',
-    (response: any) => response.quotationRequest,
-  )
+  @OneToMany('QuotationResponse', (response: any) => response.quotationRequest)
   responses: any[];
 }

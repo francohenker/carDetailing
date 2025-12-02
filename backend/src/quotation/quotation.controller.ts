@@ -15,7 +15,10 @@ import { Roles } from '../roles/role.decorator';
 import { Role } from '../roles/role.enum';
 import { RolesGuard } from '../roles/role.guard';
 import { Auditar } from '../auditoria/decorators/auditar.decorator';
-import { TipoAccion, TipoEntidad } from '../auditoria/entities/auditoria.entity';
+import {
+  TipoAccion,
+  TipoEntidad,
+} from '../auditoria/entities/auditoria.entity';
 
 @Controller('quotation')
 @UseGuards(AuthGuard, RolesGuard)

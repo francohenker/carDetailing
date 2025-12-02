@@ -46,6 +46,23 @@ export class QuotationService {
     return savedRequest;
   }
 
+  extraerCantidadesSimple(text: string): number[] {
+    const cantidades: number[] = [];
+
+    // Buscar todos los números que siguen a "cantidad:"
+    const partes = text.split('cantidad:');
+    for (let i = 1; i < partes.length; i++) {
+      // Tomar la parte después de "cantidad:" y extraer el primer número
+      const numeroMatch = partes[i].match(/\d+/);
+      if (numeroMatch) {
+        const cantidad = parseInt(numeroMatch[0], 10);
+        cantidades.push(cantidad);
+      }
+    }
+
+    return cantidades;
+  }
+
   async generateMockResponses(
     request: QuotationRequest,
     products: Producto[],
@@ -76,29 +93,30 @@ export class QuotationService {
       // Simular diferentes estrategias de pricing por proveedor
       const supplierStrategy = Math.random();
       let priceMultiplier: number;
-      
+
       if (supplierStrategy < 0.33) {
         // Proveedor económico (precios más bajos)
         priceMultiplier = 0.75 + Math.random() * 0.15; // 0.75 - 0.90
       } else if (supplierStrategy < 0.66) {
         // Proveedor medio (precios competitivos)
-        priceMultiplier = 0.90 + Math.random() * 0.20; // 0.90 - 1.10
+        priceMultiplier = 0.9 + Math.random() * 0.2; // 0.90 - 1.10
       } else {
         // Proveedor premium (precios más altos pero mejor servicio)
         priceMultiplier = 1.05 + Math.random() * 0.25; // 1.05 - 1.30
       }
+      const quantity1 = this.extraerCantidadesSimple(request.notes);
 
-      const productQuotes = products.map((product) => {
+      const productQuotes = products.map((product, index) => {
         // Generar precio con la estrategia del proveedor
         const basePrice = product.price * priceMultiplier;
-        const priceVariation = 0.95 + Math.random() * 0.10; // Pequeña variación adicional
+        const priceVariation = 0.95 + Math.random() * 0.1; // Pequeña variación adicional
         const unitPrice = Math.round(basePrice * priceVariation * 100) / 100;
 
         // Calcular cantidad sugerida
-        const quantity = Math.max(
-          product.stock_minimo - product.stock_actual + 5,
-          10,
-        );
+        // const quantity = Math.max(
+        //   product.stock_minimo - product.stock_actual + 5,
+        //   10,
+        // );
 
         // Disponibilidad más realista
         const availabilityRandom = Math.random();
@@ -110,7 +128,7 @@ export class QuotationService {
         } else {
           availability = 'Bajo pedido (5-7 días)';
         }
-
+        const quantity = quantity1[index];
         return {
           productId: product.id,
           productName: product.name,
@@ -155,10 +173,10 @@ export class QuotationService {
       await new Promise((resolve) => setTimeout(resolve, delay));
 
       await this.quotationResponseRepository.save(response);
-      
-      console.log(
-        `Respuesta automática generada para proveedor ${supplier.name} - Total: $${response.totalAmount}`,
-      );
+
+      // console.log(
+      //   `Respuesta automática generada para proveedor ${supplier.name} - Total: $${response.totalAmount}`,
+      // );
     }
   }
 
@@ -253,16 +271,16 @@ export class QuotationService {
       req.status = QuotationRequestStatus.CANCELLED;
       await this.quotationRequestRepository.save(req);
 
-      console.log(
-        `Cotización #${req.id} auto-cancelada por superposición de productos con cotización #${acceptedRequest.id}`,
-      );
+      // console.log(
+      //   `Cotización #${req.id} auto-cancelada por superposición de productos con cotización #${acceptedRequest.id}`,
+      // );
     }
 
-    if (overlappingRequests.length > 0) {
-      console.log(
-        `Se cancelaron ${overlappingRequests.length} cotización(es) pendiente(s) con productos superpuestos`,
-      );
-    }
+    // if (overlappingRequests.length > 0) {
+    //   console.log(
+    //     `Se cancelaron ${overlappingRequests.length} cotización(es) pendiente(s) con productos superpuestos`,
+    //   );
+    // }
   }
 
   async rejectQuotation(requestId: number): Promise<void> {
@@ -290,20 +308,40 @@ export class QuotationService {
       throw new Error('No winning response found for this quotation');
     }
 
-    
+    // Extraer cantidades del campo notes si existen
+    let customQuantities: Record<number, number> = {};
+    if (request.notes) {
+      const quantitiesMatch = request.notes.match(
+        /\[QUANTITIES\](.+?)\[\/QUANTITIES\]/,
+      );
+      if (quantitiesMatch && quantitiesMatch[1]) {
+        try {
+          customQuantities = JSON.parse(quantitiesMatch[1]);
+          // console.log(
+          //   '📦 Cantidades personalizadas encontradas:',
+          //   customQuantities,
+          // );
+        } catch {
+          // console.warn('⚠️ Error parseando cantidades del notes:', error);
+        }
+      }
+    }
 
-    // Actualizar stock de cada producto según las cantidades cotizadas
+    // Actualizar stock de cada producto según las cantidades
     for (const quote of winningResponse.productQuotes) {
       const product = await this.productoRepository.findOne({
         where: { id: quote.productId },
       });
 
       if (product) {
-        product.stock_actual = Number(product.stock_actual) + Number(quote.quantity);
+        // Usar cantidad personalizada si existe, sino usar la de la cotización
+        const quantityToAdd =
+          customQuantities[quote.productId] || quote.quantity;
+        product.stock_actual =
+          Number(product.stock_actual) + Number(quantityToAdd);
         await this.productoRepository.save(product);
       }
     }
-
 
     // Marcar la solicitud como finalizada (stock recibido)
     request.status = QuotationRequestStatus.FINISHED;
