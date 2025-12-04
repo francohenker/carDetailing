@@ -34,11 +34,24 @@ export class StockController {
   })
   @Post('send-supplier-email')
   async sendSupplierEmail(@Body() sendEmailDto: SendSupplierEmailDto) {
+    // Obtener información del proveedor y productos para la auditoría
+    const enrichedData = await this.stockNotificationService.getEmailAuditData(
+      sendEmailDto.supplierId,
+      sendEmailDto.productIds,
+      sendEmailDto.message,
+    );
+
+    // Enviar el email
     await this.stockNotificationService.sendSupplierEmail(
       sendEmailDto.supplierId,
       sendEmailDto.productIds,
       sendEmailDto.message,
     );
-    return { message: 'Email sent to supplier successfully' };
+
+    // Retornar los datos enriquecidos para la auditoría
+    return {
+      message: 'Email sent to supplier successfully',
+      ...enrichedData,
+    };
   }
 }

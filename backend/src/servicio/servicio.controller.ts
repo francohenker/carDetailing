@@ -49,6 +49,12 @@ export class ServicioController {
     return this.servicioService.create(servicio);
   }
 
+  @Auditar({
+    accion: TipoAccion.MODIFICAR,
+    entidad: TipoEntidad.SERVICIO,
+    descripcion: 'Actualización de servicio',
+    capturarDatosAnteriores: true,
+  })
   @Put('update/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
@@ -68,7 +74,19 @@ export class ServicioController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   async deleteServicio(@Body() body, @Param('id') id: number): Promise<any> {
-    return this.servicioService.delete(id);
+    // Obtener datos del servicio antes de eliminarlo
+    const servicios = await this.servicioService.getAll();
+    const servicio = servicios.find(s => s.id === Number(id));
+    
+    await this.servicioService.delete(id);
+    
+    // Retornar información del servicio eliminado
+    return {
+      id: id,
+      name: servicio?.name,
+      description: servicio?.description,
+      message: 'Servicio eliminado correctamente',
+    };
   }
 
   @Get('getAll')

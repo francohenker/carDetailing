@@ -24,7 +24,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
         });
         const data = await response.json();        
         if(data.role !== 'admin'){
-            router.push('/unauthorized');
+            router.push('/login');
         }
     }
 
@@ -34,7 +34,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
         if (!user) {
             router.push('/login')
         } else if (allowedRoles && !allowedRoles.includes(user.role)) {
-            router.push('/unauthorized') // pantalla de acceso denegado
+            router.push('/login') // pantalla de acceso denegado
         }
     }, [user, hasHydrated, router, allowedRoles])
 

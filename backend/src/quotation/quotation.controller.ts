@@ -15,7 +15,10 @@ import { Roles } from '../roles/role.decorator';
 import { Role } from '../roles/role.enum';
 import { RolesGuard } from '../roles/role.guard';
 import { Auditar } from '../auditoria/decorators/auditar.decorator';
-import { TipoAccion, TipoEntidad } from '../auditoria/entities/auditoria.entity';
+import {
+  TipoAccion,
+  TipoEntidad,
+} from '../auditoria/entities/auditoria.entity';
 
 @Controller('quotation')
 @UseGuards(AuthGuard, RolesGuard)
@@ -30,7 +33,16 @@ export class QuotationController {
   })
   @Post('requests')
   async createQuotationRequest(@Body() dto: CreateQuotationRequestDto) {
-    return this.quotationService.createQuotationRequest(dto);
+    const result = await this.quotationService.createQuotationRequest(dto);
+    // Retornar datos enriquecidos para auditoría
+    return {
+      id: result.id,
+      productIds: dto.productIds,
+      products: result.products?.map((p) => ({ id: p.id, name: p.name })),
+      supplierIds: dto.supplierIds,
+      suppliers: result.suppliers?.map((s) => ({ id: s.id, name: s.name })),
+      notes: dto.notes,
+    };
   }
 
   @Get('requests')
@@ -58,7 +70,18 @@ export class QuotationController {
     @Param('id', ParseIntPipe) requestId: number,
     @Body() dto: SelectWinnerDto,
   ) {
-    return this.quotationService.selectWinner(requestId, dto.responseId);
+    const result = await this.quotationService.selectWinner(
+      requestId,
+      dto.responseId,
+    );
+    // Retornar datos enriquecidos para auditoría
+    return {
+      id: requestId,
+      responseId: dto.responseId,
+      supplierName: result.supplier?.name,
+      totalAmount: result.totalAmount,
+      deliveryDays: result.deliveryDays,
+    };
   }
 
   @Auditar({
@@ -79,7 +102,18 @@ export class QuotationController {
   })
   @Post('requests/:id/mark-received')
   async markAsReceived(@Param('id', ParseIntPipe) requestId: number) {
+    const request =
+      await this.quotationService.getQuotationRequestById(requestId);
     await this.quotationService.markAsReceived(requestId);
-    return { message: 'Stock updated successfully' };
+
+    // Retornar datos enriquecidos para auditoría
+    const winningResponse = request.responses.find((r) => r.isWinner);
+    return {
+      message: 'Stock updated successfully',
+      id: requestId,
+      supplierName: winningResponse?.supplier?.name,
+      productNames: request.products.map((p) => p.name),
+      totalAmount: winningResponse?.totalAmount,
+    };
   }
 }

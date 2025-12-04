@@ -368,6 +368,31 @@ export class StockNotificationService {
       .getMany();
   }
 
+  /**
+   * Obtiene datos enriquecidos para la auditoría del envío de email
+   */
+  async getEmailAuditData(
+    supplierId: number,
+    productIds: number[],
+    message: string,
+  ): Promise<any> {
+    const supplier = await this.supplierRepository.findOne({
+      where: { id: supplierId },
+    });
+
+    const products = await this.productoRepository.findBy({
+      id: In(productIds),
+    });
+
+    return {
+      supplierId,
+      supplierName: supplier?.name || 'Desconocido',
+      productIds,
+      productNames: products.map((p) => p.name),
+      message,
+    };
+  }
+
   async sendSupplierEmail(
     supplierId: number,
     productIds: number[],

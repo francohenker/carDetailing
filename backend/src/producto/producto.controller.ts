@@ -63,7 +63,12 @@ export class ProductoController {
     @Param('id') id: number,
     @Body() updateProductoDto: UpdateProductoDto,
   ) {
-    return this.productoService.update(id, updateProductoDto);
+    const result = await this.productoService.update(id, updateProductoDto);
+    // Retornar con nombres de proveedores para auditoría
+    return {
+      ...result,
+      suppliers: result.suppliers?.map(s => ({ id: s.id, name: s.name })),
+    };
   }
 
   @Auditar({

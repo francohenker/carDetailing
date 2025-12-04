@@ -76,13 +76,13 @@ export class QuotationService {
       // Simular diferentes estrategias de pricing por proveedor
       const supplierStrategy = Math.random();
       let priceMultiplier: number;
-      
+
       if (supplierStrategy < 0.33) {
         // Proveedor económico (precios más bajos)
         priceMultiplier = 0.75 + Math.random() * 0.15; // 0.75 - 0.90
       } else if (supplierStrategy < 0.66) {
         // Proveedor medio (precios competitivos)
-        priceMultiplier = 0.90 + Math.random() * 0.20; // 0.90 - 1.10
+        priceMultiplier = 0.9 + Math.random() * 0.2; // 0.90 - 1.10
       } else {
         // Proveedor premium (precios más altos pero mejor servicio)
         priceMultiplier = 1.05 + Math.random() * 0.25; // 1.05 - 1.30
@@ -91,7 +91,7 @@ export class QuotationService {
       const productQuotes = products.map((product) => {
         // Generar precio con la estrategia del proveedor
         const basePrice = product.price * priceMultiplier;
-        const priceVariation = 0.95 + Math.random() * 0.10; // Pequeña variación adicional
+        const priceVariation = 0.95 + Math.random() * 0.1; // Pequeña variación adicional
         const unitPrice = Math.round(basePrice * priceVariation * 100) / 100;
 
         // Calcular cantidad sugerida
@@ -155,7 +155,7 @@ export class QuotationService {
       await new Promise((resolve) => setTimeout(resolve, delay));
 
       await this.quotationResponseRepository.save(response);
-      
+
       console.log(
         `Respuesta automática generada para proveedor ${supplier.name} - Total: $${response.totalAmount}`,
       );
@@ -290,8 +290,6 @@ export class QuotationService {
       throw new Error('No winning response found for this quotation');
     }
 
-    
-
     // Actualizar stock de cada producto según las cantidades cotizadas
     for (const quote of winningResponse.productQuotes) {
       const product = await this.productoRepository.findOne({
@@ -299,11 +297,11 @@ export class QuotationService {
       });
 
       if (product) {
-        product.stock_actual = Number(product.stock_actual) + Number(quote.quantity);
+        product.stock_actual =
+          Number(product.stock_actual) + Number(quote.quantity);
         await this.productoRepository.save(product);
       }
     }
-
 
     // Marcar la solicitud como finalizada (stock recibido)
     request.status = QuotationRequestStatus.FINISHED;
