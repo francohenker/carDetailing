@@ -24,6 +24,7 @@ import {
   AUDITORIA_KEY,
   AuditoriaMetadata,
 } from '../decorators/auditar.decorator';
+import { AuditFormatterHelper } from '../helpers/audit-formatter.helper';
 
 @Injectable()
 export class AuditoriaInterceptor implements NestInterceptor {
@@ -162,6 +163,59 @@ export class AuditoriaInterceptor implements NestInterceptor {
   }
 
   /**
+   * Formatea los datos según el tipo de entidad para mostrarlos de forma legible
+   */
+  private formatearDatosParaAuditoria(datos: any, entidad: string, accion: string): any {
+    if (!datos) return null;
+
+    // Primero limpiar datos sensibles
+    const datosLimpios = this.limpiarDatos(datos);
+
+    // Luego formatear según el tipo de entidad
+    let datosFormateados = datosLimpios;
+
+    switch (entidad) {
+      case 'SERVICIO':
+        datosFormateados = AuditFormatterHelper.formatServicio(datosLimpios);
+        break;
+      case 'PRODUCTO':
+        datosFormateados = AuditFormatterHelper.formatProducto(datosLimpios);
+        break;
+      case 'PROVEEDOR':
+        datosFormateados = AuditFormatterHelper.formatProveedor(datosLimpios);
+        break;
+      case 'TURNO':
+        datosFormateados = AuditFormatterHelper.formatTurno(datosLimpios);
+        break;
+      case 'USUARIO':
+        datosFormateados = AuditFormatterHelper.formatUsuario(datosLimpios);
+        break;
+      case 'CAR':
+        datosFormateados = AuditFormatterHelper.formatCar(datosLimpios);
+        break;
+      case 'COTIZACION':
+        datosFormateados = AuditFormatterHelper.formatCotizacion(datosLimpios, accion);
+        break;
+      case 'PAGO':
+        datosFormateados = AuditFormatterHelper.formatPago(datosLimpios);
+        break;
+      case 'STOCK':
+        if (accion === 'ENVIAR_EMAIL') {
+          datosFormateados = AuditFormatterHelper.formatEmailProveedor(datosLimpios);
+        }
+        break;
+      case 'SISTEMA':
+        datosFormateados = AuditFormatterHelper.formatConfiguracion(datosLimpios);
+        break;
+      default:
+        // Para otros casos, mantener el formato original limpio
+        datosFormateados = datosLimpios;
+    }
+
+    return datosFormateados;
+  }
+
+  /**
    * Reemplazador para evitar referencias circulares
    */
   private getCircularReplacer() {
@@ -263,17 +317,29 @@ export class AuditoriaInterceptor implements NestInterceptor {
           // Obtener datos anteriores (si se capturaron)
           const datosAnteriores = await datosAnterioresPromise;
 
-          // Obtener datos nuevos
+          // Obtener datos nuevos del body o resultado
           let datosNuevos = null;
           if (
             accion === 'CREAR' ||
             accion === 'ACTUALIZAR' ||
             accion === 'MODIFICAR'
           ) {
-            datosNuevos = this.limpiarDatos(request.body);
+            datosNuevos = request.body;
           } else if (result && typeof result === 'object') {
-            datosNuevos = this.limpiarDatos(result);
+            datosNuevos = result;
           }
+
+          // Formatear datos anteriores y nuevos para mostrarlos de forma legible
+          const datosAnterioresFormateados = this.formatearDatosParaAuditoria(
+            datosAnteriores,
+            entidad,
+            accion,
+          );
+          const datosNuevosFormateados = this.formatearDatosParaAuditoria(
+            datosNuevos,
+            entidad,
+            accion,
+          );
 
           // Calcular cambios específicos si hay datos anteriores y nuevos
           let cambios = null;
@@ -281,15 +347,15 @@ export class AuditoriaInterceptor implements NestInterceptor {
             cambios = this.calcularCambios(datosAnteriores, datosNuevos);
           }
 
-          // Registrar la auditoría
+          // Registrar la auditoría con datos formateados
           await this.auditoriaService.registrarAccion(
             accion,
             entidad,
             usuario?.id,
             entidadId,
             descripcion,
-            datosAnteriores,
-            datosNuevos,
+            datosAnterioresFormateados,
+            datosNuevosFormateados,
             ip,
             userAgent,
             cambios,

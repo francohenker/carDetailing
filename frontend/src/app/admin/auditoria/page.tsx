@@ -423,9 +423,9 @@ export default function AuditoriaPage() {
           </div>
 
           {/* Actividad por Horas */}
-          <div className="mb-6">
+          {/* <div className="mb-6">
             <HourlyActivity distribucionPorHora={stats.distribucionPorHora} />
-          </div>
+          </div> */}
 
           {/* Filtros */}
           <Card className="mb-6">

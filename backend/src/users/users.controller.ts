@@ -88,6 +88,12 @@ export class UsersController {
     return this.userService.getAllUsers();
   }
 
+  @Auditar({
+    accion: TipoAccion.MODIFICAR,
+    entidad: TipoEntidad.USUARIO,
+    descripcion: 'Actualización de perfil de usuario',
+    capturarDatosAnteriores: true,
+  })
   @Put('update-profile')
   @UseGuards(AuthGuard)
   async updateProfile(@Req() request, @Body() updateData: UpdateUserDto) {

@@ -13,11 +13,21 @@ import { Role } from '../roles/role.enum';
 import { RolesGuard } from '../roles/role.guard';
 import { AuthGuard } from '../auth/auth.guard';
 import { CreatePagoDto } from './dto/create-pago.dto';
+import { Auditar } from '../auditoria/decorators/auditar.decorator';
+import {
+  TipoAccion,
+  TipoEntidad,
+} from '../auditoria/entities/auditoria.entity';
 
 @Controller('pago')
 export class PagoController {
   constructor(private readonly pagoService: PagoService) {}
 
+  @Auditar({
+    accion: TipoAccion.MARCAR_PAGADO,
+    entidad: TipoEntidad.PAGO,
+    descripcion: 'Marcar turno como pagado',
+  })
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post('mark-paid/:turnoId')

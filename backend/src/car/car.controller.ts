@@ -13,6 +13,11 @@ import { CarService } from './car.service';
 import { modifyCarDto } from './dto/modify-car.dto';
 import { AuthService } from '../auth/auth.service';
 import { Car } from './entities/car.entity';
+import { Auditar } from '../auditoria/decorators/auditar.decorator';
+import {
+  TipoAccion,
+  TipoEntidad,
+} from '../auditoria/entities/auditoria.entity';
 
 @Controller('car')
 export class CarController {
@@ -21,6 +26,11 @@ export class CarController {
     private readonly authService: AuthService,
   ) {}
 
+  @Auditar({
+    accion: TipoAccion.CREAR,
+    entidad: TipoEntidad.CAR,
+    descripcion: 'Creación de vehículo',
+  })
   @Post('create')
   async createCar(@Req() request, @Body() carData: createCarDto): Promise<any> {
     const user = await this.authService.findUserByToken(
@@ -43,6 +53,12 @@ export class CarController {
   }
 
   // only change color
+  @Auditar({
+    accion: TipoAccion.MODIFICAR,
+    entidad: TipoEntidad.CAR,
+    descripcion: 'Modificación de vehículo',
+    capturarDatosAnteriores: true,
+  })
   @Post('modify')
   async modifyCar(@Req() request, @Body() carData: modifyCarDto): Promise<any> {
     const user = await this.authService.findUserByToken(
@@ -53,6 +69,11 @@ export class CarController {
     return { message: 'Car modified successfully' };
   }
 
+  @Auditar({
+    accion: TipoAccion.ELIMINAR,
+    entidad: TipoEntidad.CAR,
+    descripcion: 'Eliminación de vehículo',
+  })
   @Delete('delete/:id')
   async deleteCar(@Req() request, @Param('id') id: number): Promise<any> {
     const user = await this.authService.findUserByToken(

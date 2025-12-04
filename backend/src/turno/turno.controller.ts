@@ -114,12 +114,28 @@ export class TurnoController {
     descripcion: 'Turno marcado como completado por administrador',
     capturarDatosAnteriores: true,
   })
-  async markTurnoAsCompleted(@Req() request): Promise<Turno> {
+  async markTurnoAsCompleted(@Req() request): Promise<any> {
     const turnoId = parseInt(request.params.id, 10);
     if (isNaN(turnoId)) {
       throw new HttpException('Invalid turno ID', 400);
     }
-    return this.turnoService.markAsCompleted(turnoId);
+    const turno = await this.turnoService.markAsCompleted(turnoId);
+
+    // Retornar datos simplificados para auditoría
+    return {
+      id: turno.id,
+      car: {
+        marca: turno.car.marca,
+        model: turno.car.model,
+        patente: turno.car.patente,
+        user: {
+          firstname: turno.car.user.firstname,
+          lastname: turno.car.user.lastname,
+        },
+      },
+      servicio: turno.servicio?.map((s) => ({ id: s.id, name: s.name })),
+      estado: turno.estado,
+    };
   }
 
   @UseGuards(TurnoOwnerGuard)
