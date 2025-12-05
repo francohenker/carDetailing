@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
           'Authorization': authHeader,
           'Content-Type': 'application/json',
         },
+        cache: 'no-store',
       }
     );
 

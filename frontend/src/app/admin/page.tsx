@@ -480,6 +480,7 @@ export default function AdminPage() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
+            cache: 'no-store',
         })
 
         if (response.status === 401) {
@@ -1368,11 +1369,9 @@ export default function AdminPage() {
 
     const fetchAuditoriaStats = async () => {
         try {
-            const response = await fetch(`/api/auditoria/estadisticas`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
-                }
-            })
+            const response = await fetchWithAuth(`/api/auditoria/estadisticas`)
+            if (!response) return
+
             if (!response.ok) throw new Error('Error fetching auditoria stats')
             const data = await response.json()
             setAuditoriaStats(data)
