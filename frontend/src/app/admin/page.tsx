@@ -1987,9 +1987,9 @@ export default function AdminPage() {
                                                             >
                                                                 {product.stock_actual}
                                                             </Badge>
-                                                            {product.stock_actual <= product.stock_minimo && product.stock_actual > 0 && (
+                                                            {/* {product.stock_actual <= product.stock_minimo && product.stock_actual > 0 && (
                                                                 <span className="text-xs text-amber-600 font-medium">Bajo stock</span>
-                                                            )}
+                                                            )} */}
                                                             {product.stock_actual <= 0 && (
                                                                 <span className="text-xs text-red-600 font-medium">Sin stock</span>
                                                             )}
