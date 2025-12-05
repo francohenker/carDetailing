@@ -165,7 +165,11 @@ export class AuditoriaInterceptor implements NestInterceptor {
   /**
    * Formatea los datos según el tipo de entidad para mostrarlos de forma legible
    */
-  private formatearDatosParaAuditoria(datos: any, entidad: string, accion: string): any {
+  private formatearDatosParaAuditoria(
+    datos: any,
+    entidad: string,
+    accion: string,
+  ): any {
     if (!datos) return null;
 
     // Primero limpiar datos sensibles
@@ -194,18 +198,23 @@ export class AuditoriaInterceptor implements NestInterceptor {
         datosFormateados = AuditFormatterHelper.formatCar(datosLimpios);
         break;
       case 'COTIZACION':
-        datosFormateados = AuditFormatterHelper.formatCotizacion(datosLimpios, accion);
+        datosFormateados = AuditFormatterHelper.formatCotizacion(
+          datosLimpios,
+          accion,
+        );
         break;
       case 'PAGO':
         datosFormateados = AuditFormatterHelper.formatPago(datosLimpios);
         break;
       case 'STOCK':
         if (accion === 'ENVIAR_EMAIL') {
-          datosFormateados = AuditFormatterHelper.formatEmailProveedor(datosLimpios);
+          datosFormateados =
+            AuditFormatterHelper.formatEmailProveedor(datosLimpios);
         }
         break;
       case 'SISTEMA':
-        datosFormateados = AuditFormatterHelper.formatConfiguracion(datosLimpios);
+        datosFormateados =
+          AuditFormatterHelper.formatConfiguracion(datosLimpios);
         break;
       default:
         // Para otros casos, mantener el formato original limpio
@@ -324,22 +333,10 @@ export class AuditoriaInterceptor implements NestInterceptor {
             accion === 'ACTUALIZAR' ||
             accion === 'MODIFICAR'
           ) {
-            datosNuevos = request.body;
+            datosNuevos = this.limpiarDatos(request.body);
           } else if (result && typeof result === 'object') {
-            datosNuevos = result;
+            datosNuevos = this.limpiarDatos(result);
           }
-
-          // Formatear datos anteriores y nuevos para mostrarlos de forma legible
-          const datosAnterioresFormateados = this.formatearDatosParaAuditoria(
-            datosAnteriores,
-            entidad,
-            accion,
-          );
-          const datosNuevosFormateados = this.formatearDatosParaAuditoria(
-            datosNuevos,
-            entidad,
-            accion,
-          );
 
           // Calcular cambios específicos si hay datos anteriores y nuevos
           let cambios = null;
@@ -347,15 +344,16 @@ export class AuditoriaInterceptor implements NestInterceptor {
             cambios = this.calcularCambios(datosAnteriores, datosNuevos);
           }
 
-          // Registrar la auditoría con datos formateados
+          // Registrar la auditoría con datos SIN formatear (guardar datos crudos)
+          // El formateo se hará en el frontend al mostrar los datos
           await this.auditoriaService.registrarAccion(
             accion,
             entidad,
             usuario?.id,
             entidadId,
             descripcion,
-            datosAnterioresFormateados,
-            datosNuevosFormateados,
+            datosAnteriores,
+            datosNuevos,
             ip,
             userAgent,
             cambios,

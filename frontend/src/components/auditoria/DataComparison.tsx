@@ -20,11 +20,17 @@ const DataComparison: React.FC<DataComparisonProps> = ({
     return null;
   }
 
+  // Función auxiliar para verificar si el dato es un objeto válido
+  const isValidObject = (data: any): boolean => {
+    return data && typeof data === 'object' && !Array.isArray(data);
+  };
+
   // Función para obtener las diferencias entre objetos
   const getDifferences = (oldData: any, newData: any) => {
     const differences: { [key: string]: { old: any; new: any } } = {};
 
-    if (!oldData || !newData) return differences;
+    // Si alguno de los datos no es un objeto válido, no podemos comparar
+    if (!isValidObject(oldData) || !isValidObject(newData)) return differences;
 
     // Comparar todas las claves del objeto nuevo
     Object.keys(newData).forEach((key) => {
@@ -129,7 +135,9 @@ const DataComparison: React.FC<DataComparisonProps> = ({
                   </div>
                   <div className="bg-red-50 border border-red-200 rounded-md p-3">
                     <pre className="text-xs text-red-800 whitespace-pre-wrap overflow-x-auto max-h-60 overflow-y-auto">
-                      {JSON.stringify(datosAnteriores, null, 2)}
+                      {isValidObject(datosAnteriores) 
+                        ? JSON.stringify(datosAnteriores, null, 2)
+                        : String(datosAnteriores)}
                     </pre>
                   </div>
                 </div>
@@ -145,7 +153,9 @@ const DataComparison: React.FC<DataComparisonProps> = ({
                   </div>
                   <div className="bg-green-50 border border-green-200 rounded-md p-3">
                     <pre className="text-xs text-green-800 whitespace-pre-wrap overflow-x-auto max-h-60 overflow-y-auto">
-                      {JSON.stringify(datosNuevos, null, 2)}
+                      {isValidObject(datosNuevos)
+                        ? JSON.stringify(datosNuevos, null, 2)
+                        : String(datosNuevos)}
                     </pre>
                   </div>
                 </div>
@@ -208,36 +218,48 @@ const DataComparison: React.FC<DataComparisonProps> = ({
                   <div className="text-sm font-medium text-green-700 mb-2">
                     Registro creado con los siguientes datos:
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                    {Object.entries(datosNuevos).map(([key, value]) => (
-                      <div key={key} className="flex">
-                        <span className="font-medium text-green-600 mr-2">
-                          {key}:
-                        </span>
-                        <span className="text-green-800">
-                          {formatValue(value)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {isValidObject(datosNuevos) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                      {Object.entries(datosNuevos).map(([key, value]) => (
+                        <div key={key} className="flex">
+                          <span className="font-medium text-green-600 mr-2">
+                            {key}:
+                          </span>
+                          <span className="text-green-800">
+                            {formatValue(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-green-800">
+                      {String(datosNuevos)}
+                    </div>
+                  )}
                 </div>
               ) : accion === 'ELIMINAR' && datosAnteriores ? (
                 <div className="bg-red-50 border border-red-200 rounded-md p-3">
                   <div className="text-sm font-medium text-red-700 mb-2">
                     Registro eliminado con los siguientes datos:
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                    {Object.entries(datosAnteriores).map(([key, value]) => (
-                      <div key={key} className="flex">
-                        <span className="font-medium text-red-600 mr-2">
-                          {key}:
-                        </span>
-                        <span className="text-red-800">
-                          {formatValue(value)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {isValidObject(datosAnteriores) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                      {Object.entries(datosAnteriores).map(([key, value]) => (
+                        <div key={key} className="flex">
+                          <span className="font-medium text-red-600 mr-2">
+                            {key}:
+                          </span>
+                          <span className="text-red-800">
+                            {formatValue(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-red-800">
+                      {String(datosAnteriores)}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-4 text-gray-500 text-sm">

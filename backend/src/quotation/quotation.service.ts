@@ -174,15 +174,9 @@ export class QuotationService {
 
       await this.quotationResponseRepository.save(response);
 
-<<<<<<< HEAD
-      // console.log(
-      //   `Respuesta automática generada para proveedor ${supplier.name} - Total: $${response.totalAmount}`,
-      // );
-=======
       console.log(
         `Respuesta automática generada para proveedor ${supplier.name} - Total: $${response.totalAmount}`,
       );
->>>>>>> dev
     }
   }
 
@@ -314,46 +308,14 @@ export class QuotationService {
       throw new Error('No winning response found for this quotation');
     }
 
-<<<<<<< HEAD
-    // Extraer cantidades del campo notes si existen
-    let customQuantities: Record<number, number> = {};
-    if (request.notes) {
-      const quantitiesMatch = request.notes.match(
-        /\[QUANTITIES\](.+?)\[\/QUANTITIES\]/,
-      );
-      if (quantitiesMatch && quantitiesMatch[1]) {
-        try {
-          customQuantities = JSON.parse(quantitiesMatch[1]);
-          // console.log(
-          //   '📦 Cantidades personalizadas encontradas:',
-          //   customQuantities,
-          // );
-        } catch {
-          // console.warn('⚠️ Error parseando cantidades del notes:', error);
-        }
-      }
-    }
-
-    // Actualizar stock de cada producto según las cantidades
-=======
-    // Actualizar stock de cada producto según las cantidades cotizadas
->>>>>>> dev
     for (const quote of winningResponse.productQuotes) {
       const product = await this.productoRepository.findOne({
         where: { id: quote.productId },
       });
 
       if (product) {
-<<<<<<< HEAD
-        // Usar cantidad personalizada si existe, sino usar la de la cotización
-        const quantityToAdd =
-          customQuantities[quote.productId] || quote.quantity;
-        product.stock_actual =
-          Number(product.stock_actual) + Number(quantityToAdd);
-=======
         product.stock_actual =
           Number(product.stock_actual) + Number(quote.quantity);
->>>>>>> dev
         await this.productoRepository.save(product);
       }
     }
