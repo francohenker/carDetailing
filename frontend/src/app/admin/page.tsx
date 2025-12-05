@@ -575,6 +575,7 @@ export default function AdminPage() {
             setIsServiceDialogOpen(false)
             resetServiceForm()
             fetchServices()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error saving service:', error)
             toast.error("Error", {
@@ -625,6 +626,7 @@ export default function AdminPage() {
             })
 
             fetchServices()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error deleting service:', error)
             toast.error("Error", {
@@ -707,6 +709,7 @@ export default function AdminPage() {
             // Actualizar auditoría y stock bajo
             fetchAuditoriaStats()
             fetchLowStockProducts()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error saving product:', error)
             toast.error("Error", {
@@ -762,6 +765,7 @@ export default function AdminPage() {
 
             fetchProducts()
             fetchAuditoriaStats()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error deleting product:', error)
             toast.error("Error", {
@@ -820,6 +824,7 @@ export default function AdminPage() {
             setIsUserDialogOpen(false)
             resetUserForm()
             fetchUsers()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error creating user:', error)
             toast.error("Error", {
@@ -860,6 +865,7 @@ export default function AdminPage() {
             })
 
             fetchUsers()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error updating user role:', error)
             toast.error("Error", {
@@ -912,6 +918,7 @@ export default function AdminPage() {
             setIsSupplierDialogOpen(false)
             resetSupplierForm()
             fetchSuppliers()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error saving supplier:', error)
             toast.error("Error", {
@@ -954,6 +961,7 @@ export default function AdminPage() {
             })
 
             fetchSuppliers()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error deleting supplier:', error)
             toast.error("Error", {
@@ -981,6 +989,7 @@ export default function AdminPage() {
             })
 
             fetchSuppliers()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error toggling supplier status:', error)
             toast.error("Error", {
@@ -1059,6 +1068,7 @@ export default function AdminPage() {
             // Refrescar productos por si hay cambios relacionados
             await fetchProducts()
             await fetchAuditoriaStats()
+            await fetchDetailedAuditoriaRecords()
             if (selectedQuotationRequest) {
                 await fetchQuotationResponses(selectedQuotationRequest.id)
             }
@@ -1095,6 +1105,7 @@ export default function AdminPage() {
             await fetchQuotationRequests()
             await fetchProducts() // Actualizar productos para ver el nuevo stock
             await fetchAuditoriaStats()
+            await fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error marking as received:', error)
             toast.error("Error", {
@@ -1110,7 +1121,6 @@ export default function AdminPage() {
             case 'pending':
                 return quotationRequests.filter(q => q.status === 'PENDING')
             case 'completed':
-                console.log(quotationRequests)
                 return quotationRequests.filter(q => q.status === 'COMPLETED')
             case 'cancelled':
                 return quotationRequests.filter(q => q.status === 'CANCELLED')
@@ -1157,6 +1167,7 @@ export default function AdminPage() {
             })
 
             await fetchQuotationThresholds()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error updating quotation thresholds:', error)
             toast.error("Error", {
@@ -1424,6 +1435,7 @@ export default function AdminPage() {
 
             setIsEmailDialogOpen(false)
             resetEmailForm()
+            fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error sending email:', error)
             toast.error("Error", {
