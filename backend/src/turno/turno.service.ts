@@ -254,6 +254,9 @@ export class TurnoService {
 
     for (const turno of turnos) {
       const turnoStart = new Date(turno.fechaHora);
+      // Ajustar a UTC-3 para coincidir con la zona horaria local
+      turnoStart.setHours(turnoStart.getHours() - 3);
+
       const turnoStartTime = `${turnoStart.getHours().toString().padStart(2, '0')}:${turnoStart.getMinutes().toString().padStart(2, '0')}`;
 
       // Marcar como ocupados todos los slots que coinciden con la duración del turno
@@ -306,12 +309,16 @@ export class TurnoService {
       date: targetDate,
       duration: duration,
       slots: availableSlots,
-      occupiedTurnos: turnos.map((t) => ({
-        id: t.id,
-        fechaHora: t.fechaHora,
-        duration: t.duration,
-        servicios: t.servicio.map((s) => s.name),
-      })),
+      occupiedTurnos: turnos.map((t) => {
+        const adjustedDate = new Date(t.fechaHora);
+        adjustedDate.setHours(adjustedDate.getHours() - 3);
+        return {
+          id: t.id,
+          fechaHora: adjustedDate,
+          duration: t.duration,
+          servicios: t.servicio.map((s) => s.name),
+        };
+      }),
     };
   }
 
