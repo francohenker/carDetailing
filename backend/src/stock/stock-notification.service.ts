@@ -55,15 +55,11 @@ export class StockNotificationService {
       });
 
       if (productWithSuppliers) {
-        // Agregar producto al contador de su prioridad
-        const priority = productWithSuppliers.priority || ProductPriority.MEDIA;
-        this.lowStockCounters[priority].add(productWithSuppliers.id);
-
         // Enviar alerta a administradores
         await this.sendLowStockAlert([productWithSuppliers]);
 
-        // Verificar si se debe crear cotización
-        await this.checkThresholdAndCreateQuotation(priority);
+        // Verificar si se debe crear cotización (ahora consulta la BD en lugar de usar contadores en memoria)
+        await this.checkThresholdAndCreateQuotationForAllPriorities();
       }
     }
   }
@@ -72,7 +68,8 @@ export class StockNotificationService {
     priority: ProductPriority,
   ): Promise<void> {
     try {
-      const thresholds = await this.systemConfigService.getQuotationThresholds();
+      const thresholds =
+        await this.systemConfigService.getQuotationThresholds();
       const productIds = Array.from(this.lowStockCounters[priority]);
 
       let shouldCreateQuotation = false;
@@ -121,6 +118,145 @@ export class StockNotificationService {
       }
     } catch (error) {
       console.error('Error al verificar umbral y crear cotización:', error);
+    }
+  }
+
+  /**
+   * Verifica los umbrales y crea cotizaciones para todas las prioridades
+   * Consulta directamente la base de datos en lugar de usar contadores en memoria
+   */
+  private async checkThresholdAndCreateQuotationForAllPriorities(): Promise<void> {
+    try {
+      const thresholds =
+        await this.systemConfigService.getQuotationThresholds();
+
+      // Verificar cada prioridad
+      for (const priority of [
+        ProductPriority.ALTA,
+        ProductPriority.MEDIA,
+        ProductPriority.BAJA,
+      ]) {
+        // Buscar productos con stock bajo de esta prioridad
+        const lowStockProducts = await this.productoRepository.find({
+          where: {
+            isDeleted: false,
+            priority: priority,
+          },
+          relations: ['suppliers'],
+        });
+
+        // Filtrar solo los que están en o bajo el stock mínimo
+        const productsAtMinimum = lowStockProducts.filter(
+          (p) => p.stock_actual <= p.stock_minimo,
+        );
+
+        let shouldCreateQuotation = false;
+        let threshold = 0;
+
+        switch (priority) {
+          case ProductPriority.ALTA:
+            threshold = thresholds.high;
+            shouldCreateQuotation = productsAtMinimum.length >= thresholds.high;
+            break;
+          case ProductPriority.MEDIA:
+            threshold = thresholds.medium;
+            shouldCreateQuotation =
+              productsAtMinimum.length >= thresholds.medium;
+            break;
+          case ProductPriority.BAJA:
+            threshold = thresholds.low;
+            shouldCreateQuotation = productsAtMinimum.length >= thresholds.low;
+            break;
+        }
+
+        if (shouldCreateQuotation) {
+          const productIds = productsAtMinimum.map((p) => p.id);
+
+          // Verificar si ya existe una cotización pendiente para estos productos
+          const hasPendingQuotation =
+            await this.quotationService.hasPendingQuotationForProducts(
+              productIds,
+            );
+
+          if (hasPendingQuotation) {
+            console.log(
+              `ℹ️ Ya existe una cotización pendiente para productos de prioridad ${priority}. Se omite la creación.`,
+            );
+            continue;
+          }
+
+          // Recopilar todos los proveedores únicos
+          const supplierIds = new Set<number>();
+          productsAtMinimum.forEach((product) => {
+            product.suppliers?.forEach((supplier) => {
+              supplierIds.add(supplier.id);
+            });
+          });
+
+          if (supplierIds.size > 0) {
+            // Generar mensaje detallado con cantidades por proveedor
+            const suppliers = await this.supplierRepository.findByIds(
+              Array.from(supplierIds),
+            );
+
+            // Enviar cotización a cada proveedor con sus productos específicos
+            for (const supplier of suppliers) {
+              const supplierProducts = productsAtMinimum.filter((product) =>
+                product.suppliers?.some((s) => s.id === supplier.id),
+              );
+
+              if (supplierProducts.length > 0) {
+                // Generar lista de productos con cantidades
+                const productList = supplierProducts
+                  .map((product) => {
+                    const cantidad = product.stock_minimo * 2;
+                    return `• ${product.name}, cantidad: ${cantidad}`;
+                  })
+                  .join('\n');
+
+                const notes = `Estimado/a ${supplier.contactPerson},
+
+Esperamos que se encuentre bien. Nos ponemos en contacto con usted para solicitar información sobre la disponibilidad y precios de los siguientes productos que requieren reposición:
+
+${productList}
+
+Por favor, envíenos información sobre:
+- Disponibilidad actual
+- Precios unitarios
+- Tiempo de entrega
+- Cantidades mínimas de pedido
+
+Agradecemos su pronta respuesta.
+
+Saludos cordiales,
+Equipo de Car Detailing`;
+
+                // Crear solicitud de cotización automática para este proveedor
+                await this.quotationService.createQuotationRequest({
+                  productIds: supplierProducts.map((p) => p.id),
+                  supplierIds: [supplier.id],
+                  notes: notes,
+                  isAutomatic: true,
+                });
+
+                console.log(
+                  `✅ Cotización creada automáticamente para proveedor ${supplier.name}: ${supplierProducts.length} producto(s) de prioridad ${priority}`,
+                );
+              }
+            }
+          } else {
+            console.warn(
+              `⚠️ No se pudo crear cotización para ${productsAtMinimum.length} producto(s) de prioridad ${priority}: sin proveedores asignados`,
+            );
+          }
+        } else {
+          console.log(
+            `ℹ️ Prioridad ${priority}: ${productsAtMinimum.length}/${threshold} productos en stock mínimo. No se alcanzó el umbral.`,
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error al verificar umbrales y crear cotizaciones:', error);
     }
   }
 
@@ -410,7 +546,7 @@ export class StockNotificationService {
     // Obtener productos seleccionados
     const products = await this.productoRepository.findBy({
       id: In(productIds),
-    })
+    });
 
     const emailContent = this.generateSupplierEmailContent(
       supplier,
@@ -430,7 +566,8 @@ export class StockNotificationService {
     await this.quotationService.createQuotationRequest({
       productIds,
       supplierIds: [supplierId],
-      notes: message || 'Solicitud de cotización manual'
+      notes: message || 'Solicitud de cotización manual',
+      isAutomatic: false,
     });
 
     console.log(

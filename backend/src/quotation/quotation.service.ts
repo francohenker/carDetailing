@@ -35,6 +35,7 @@ export class QuotationService {
       suppliers,
       notes: dto.notes,
       status: QuotationRequestStatus.PENDING,
+      isAutomatic: dto.isAutomatic || false,
     });
 
     const savedRequest =
@@ -44,6 +45,24 @@ export class QuotationService {
     await this.generateMockResponses(savedRequest, products, suppliers);
 
     return savedRequest;
+  }
+
+  /**
+   * Verifica si ya existe una cotización pendiente que incluye alguno de los productos especificados
+   * @param productIds IDs de los productos a verificar
+   * @returns true si existe una cotización pendiente, false en caso contrario
+   */
+  async hasPendingQuotationForProducts(productIds: number[]): Promise<boolean> {
+    const pendingQuotation = await this.quotationRequestRepository
+      .createQueryBuilder('quotation')
+      .innerJoin('quotation.products', 'product')
+      .where('quotation.status = :status', {
+        status: QuotationRequestStatus.PENDING,
+      })
+      .andWhere('product.id IN (:...productIds)', { productIds })
+      .getOne();
+
+    return !!pendingQuotation;
   }
 
   extraerCantidadesSimple(text: string): number[] {

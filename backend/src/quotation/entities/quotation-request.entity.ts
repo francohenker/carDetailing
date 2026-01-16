@@ -45,6 +45,9 @@ export class QuotationRequest {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
+  @Column({ type: 'boolean', default: false })
+  isAutomatic: boolean;
+
   @OneToMany('QuotationResponse', (response: any) => response.quotationRequest)
   responses: any[];
 }

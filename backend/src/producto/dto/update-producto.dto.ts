@@ -1,4 +1,10 @@
-import { IsNumber, IsString, IsArray, IsOptional, IsEnum } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  IsArray,
+  IsOptional,
+  IsEnum,
+} from 'class-validator';
 import { ProductPriority } from '../../enums/product-priority.enum';
 
 export class UpdateProductoDto {

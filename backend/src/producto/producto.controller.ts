@@ -67,7 +67,7 @@ export class ProductoController {
     // Retornar con nombres de proveedores para auditoría
     return {
       ...result,
-      suppliers: result.suppliers?.map(s => ({ id: s.id, name: s.name })),
+      suppliers: result.suppliers?.map((s) => ({ id: s.id, name: s.name })),
     };
   }
 

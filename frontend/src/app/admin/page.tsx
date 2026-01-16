@@ -32,7 +32,8 @@ import {
     Filter,
     Search,
     RefreshCw,
-    CloudRain
+    CloudRain,
+    Zap
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -177,6 +178,7 @@ interface QuotationRequest {
     status: 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'FINISHED'
     sentAt: string
     notes?: string
+    isAutomatic?: boolean
     responses?: QuotationResponse[]
 }
 
@@ -1992,18 +1994,13 @@ export default function AdminPage() {
                                                     <TableCell>${product.price.toLocaleString()}</TableCell>
                                                     <TableCell className="text-center">
                                                         <div className="flex flex-col items-center gap-1">
-                                                            <Badge
-                                                                variant={
-                                                                    product.stock_actual <= 0 ? "destructive" :
-                                                                        product.stock_actual <= product.stock_minimo ? "secondary" :
-                                                                            "default"
-                                                                }
-                                                            >
+                                                            <span className={
+                                                                product.stock_actual <= 0 ? "font-semibold text-red-600" :
+                                                                    product.stock_actual <= product.stock_minimo ? "font-semibold text-amber-600" :
+                                                                        "font-semibold"
+                                                            }>
                                                                 {product.stock_actual}
-                                                            </Badge>
-                                                            {/* {product.stock_actual <= product.stock_minimo && product.stock_actual > 0 && (
-                                                                <span className="text-xs text-amber-600 font-medium">Bajo stock</span>
-                                                            )} */}
+                                                            </span>
                                                             {product.stock_actual <= 0 && (
                                                                 <span className="text-xs text-red-600 font-medium">Sin stock</span>
                                                             )}
@@ -2982,7 +2979,15 @@ export default function AdminPage() {
                                                     <CardHeader>
                                                         <div className="flex justify-between items-start">
                                                             <div>
-                                                                <CardTitle className="text-lg">Solicitud #{request.id}</CardTitle>
+                                                                <div className="flex items-center gap-2">
+                                                                    <CardTitle className="text-lg">Solicitud #{request.id}</CardTitle>
+                                                                    {request.isAutomatic && (
+                                                                        <Badge variant="default" className="bg-blue-600">
+                                                                            <Zap className="h-3 w-3 mr-1" />
+                                                                            Automática
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
                                                                 <CardDescription>
                                                                     {new Date(request.sentAt).toLocaleDateString('es-AR', {
                                                                         year: 'numeric',

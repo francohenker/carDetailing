@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateQuotationRequestDto {
   @IsArray()
@@ -10,4 +10,8 @@ export class CreateQuotationRequestDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isAutomatic?: boolean;
 }

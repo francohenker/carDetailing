@@ -84,6 +84,9 @@ export class ProductoService {
       producto.servicios_por_producto =
         updateProductoDto.servicios_por_producto;
     }
+    if (updateProductoDto.priority !== undefined) {
+      producto.priority = updateProductoDto.priority;
+    }
 
     // Actualizar suppliers si se proporcionan
     if (updateProductoDto.supplierIds !== undefined) {
@@ -102,11 +105,10 @@ export class ProductoService {
 
     const updatedProduct = await this.productoRepository.save(producto);
 
-    // Verificar si el stock cambió y está bajo el mínimo
+    // Verificar si el stock cambió y está en o bajo el mínimo
     if (
       updateProductoDto.stock_actual !== undefined &&
-      updatedProduct.stock_actual <= updatedProduct.stock_minimo &&
-      stockAnterior > updatedProduct.stock_minimo
+      updatedProduct.stock_actual <= updatedProduct.stock_minimo
     ) {
       // Ejecutar verificación de stock de forma asíncrona
       this.stockNotificationService
@@ -138,8 +140,8 @@ export class ProductoService {
 
     const updatedProduct = await this.productoRepository.save(producto);
 
-    // Verificar si el stock cambió y está bajo el mínimo
-    if (stock_actual <= stock_minimo && stockAnterior > stock_minimo) {
+    // Verificar si el stock está en o bajo el mínimo
+    if (stock_actual <= stock_minimo) {
       // Ejecutar verificación de stock de forma asíncrona
       this.stockNotificationService
         .checkSingleProductStockAndNotify(updatedProduct)
@@ -201,11 +203,10 @@ export class ProductoService {
                 await this.productoRepository.save(productoEnBD);
               productosActualizados.push(productoActualizado);
 
-              // Verificar si el stock está bajo el mínimo después del descuento
+              // Verificar si el stock está en o bajo el mínimo después del descuento
               if (
                 productoActualizado.stock_actual <=
-                  productoActualizado.stock_minimo &&
-                stockAnterior > productoActualizado.stock_minimo
+                productoActualizado.stock_minimo
               ) {
                 // Enviar notificación de stock bajo de forma asíncrona
                 this.stockNotificationService
