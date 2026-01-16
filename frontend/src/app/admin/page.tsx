@@ -808,6 +808,13 @@ export default function AdminPage() {
 
     const handleUserSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        
+        // Validar que el teléfono tenga exactamente 10 caracteres
+        if (userForm.phone.length !== 10) {
+            toast.error('El número de teléfono debe tener exactamente 10 caracteres')
+            return
+        }
+        
         setLoading(true)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/register`, {
@@ -895,6 +902,13 @@ export default function AdminPage() {
 
     const handleSupplierSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        
+        // Validar que el teléfono tenga exactamente 10 caracteres
+        if (supplierForm.phone.length !== 10) {
+            toast.error('El número de teléfono debe tener exactamente 10 caracteres')
+            return
+        }
+        
         setLoading(true)
         try {
             const url = editingSupplier
@@ -4050,7 +4064,12 @@ export default function AdminPage() {
                 </Dialog >
 
                 {/* DIALOG PARA PROVEEDORES */}
-                < Dialog open={isSupplierDialogOpen} onOpenChange={setIsSupplierDialogOpen} >
+                < Dialog open={isSupplierDialogOpen} onOpenChange={(open) => {
+                    setIsSupplierDialogOpen(open)
+                    if (!open) {
+                        resetSupplierForm()
+                    }
+                }} >
                     <DialogContent className="max-w-2xl">
                         <DialogHeader>
                             <DialogTitle>
