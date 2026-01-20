@@ -103,6 +103,7 @@ interface Service {
     precio?: Precio[]
     duration: number
     Producto?: Product[]
+    isDeleted?: boolean
 }
 
 interface Product {
@@ -114,6 +115,7 @@ interface Product {
     servicios_por_producto?: number
     priority?: 'ALTA' | 'MEDIA' | 'BAJA'
     suppliers?: Supplier[]
+    isDeleted?: boolean
 }
 
 interface User {
@@ -537,13 +539,14 @@ export default function AdminPage() {
     // ============ SERVICIOS ============
     const fetchServices = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/getAll`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/getAll?includeDeleted=true`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('jwt')}`
                 }
             })
             if (!response.ok) throw new Error('Error fetching services')
             const data = await response.json()
+            console.log("services: ", data)
             setServices(data)
         } catch (error) {
             console.error('Error fetching services:', error)
@@ -654,10 +657,34 @@ export default function AdminPage() {
         setEditingService(null)
     }
 
+    const handleRestoreService = async (id: number) => {
+        setActionLoading(`restore-service-${id}`)
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/${id}/restore`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (response.ok) {
+                toast.success('Servicio restaurado exitosamente')
+                await fetchServices()
+            } else {
+                toast.error('Error al restaurar el servicio')
+            }
+        } catch (error) {
+            console.error('Error restoring service:', error)
+            toast.error('Error al restaurar el servicio')
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
     // ============ PRODUCTOS ============
     const fetchProducts = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/getAll`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/getAll?includeDeleted=true`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('jwt')}`
                 }
@@ -792,6 +819,30 @@ export default function AdminPage() {
         setEditingProduct(null)
     }
 
+    const handleRestoreProduct = async (id: number) => {
+        setActionLoading(`restore-product-${id}`)
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/producto/${id}/restore`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+
+            if (response.ok) {
+                toast.success('Producto restaurado exitosamente')
+                await fetchProducts()
+            } else {
+                toast.error('Error al restaurar el producto')
+            }
+        } catch (error) {
+            console.error('Error restoring product:', error)
+            toast.error('Error al restaurar el producto')
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
     // ============ USUARIOS ============
     const fetchUsers = async () => {
         try {
@@ -810,13 +861,13 @@ export default function AdminPage() {
 
     const handleUserSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
+
         // Validar que el teléfono tenga exactamente 10 caracteres
         if (userForm.phone.length !== 10) {
             toast.error('El número de teléfono debe tener exactamente 10 caracteres')
             return
         }
-        
+
         setLoading(true)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/register`, {
@@ -904,13 +955,13 @@ export default function AdminPage() {
 
     const handleSupplierSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
+
         // Validar que el teléfono tenga exactamente 10 caracteres
         if (supplierForm.phone.length !== 10) {
             toast.error('El número de teléfono debe tener exactamente 10 caracteres')
             return
         }
-        
+
         setLoading(true)
         try {
             const url = editingSupplier
@@ -1860,6 +1911,7 @@ export default function AdminPage() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
+                                                <TableHead>Estado</TableHead>
                                                 <TableHead>Nombre</TableHead>
                                                 <TableHead className="w-80">Descripción</TableHead>
                                                 <TableHead>Precios por Tipo</TableHead>
@@ -1876,7 +1928,18 @@ export default function AdminPage() {
                                                 }
 
                                                 return (
-                                                    <TableRow key={service.id}>
+                                                    <TableRow key={service.id} className={service.isDeleted ? 'opacity-60 bg-gray-50' : ''}>
+                                                        <TableCell>
+                                                            {service.isDeleted ? (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                                                    Eliminado
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                                                    Activo
+                                                                </span>
+                                                            )}
+                                                        </TableCell>
                                                         <TableCell className="font-medium">{service.name}</TableCell>
                                                         <TableCell className="w-80">
                                                             <div className="group relative">
@@ -1927,25 +1990,45 @@ export default function AdminPage() {
                                                         <TableCell className="">{service.duration} min</TableCell>
                                                         <TableCell>
                                                             <div className="flex gap-2">
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => handleEditService(service)}
-                                                                >
-                                                                    <Edit2 className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    variant="destructive"
-                                                                    size="sm"
-                                                                    onClick={() => openDeleteConfirm('service', service.id, service.name)}
-                                                                    disabled={actionLoading === `delete-service-${service.id}`}
-                                                                >
-                                                                    {actionLoading === `delete-service-${service.id}` ? (
-                                                                        <span className="loading loading-spinner loading-xs"></span>
-                                                                    ) : (
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    )}
-                                                                </Button>
+                                                                {service.isDeleted ? (
+                                                                    <Button
+                                                                        variant="default"
+                                                                        size="sm"
+                                                                        onClick={() => handleRestoreService(service.id)}
+                                                                        disabled={actionLoading === `restore-service-${service.id}`}
+                                                                    >
+                                                                        {actionLoading === `restore-service-${service.id}` ? (
+                                                                            <span className="loading loading-spinner loading-xs"></span>
+                                                                        ) : (
+                                                                            <>
+                                                                                <RefreshCw className="h-4 w-4 mr-1" />
+                                                                                Restaurar
+                                                                            </>
+                                                                        )}
+                                                                    </Button>
+                                                                ) : (
+                                                                    <>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => handleEditService(service)}
+                                                                        >
+                                                                            <Edit2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="destructive"
+                                                                            size="sm"
+                                                                            onClick={() => openDeleteConfirm('service', service.id, service.name)}
+                                                                            disabled={actionLoading === `delete-service-${service.id}`}
+                                                                        >
+                                                                            {actionLoading === `delete-service-${service.id}` ? (
+                                                                                <span className="loading loading-spinner loading-xs"></span>
+                                                                            ) : (
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            )}
+                                                                        </Button>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </TableCell>
                                                     </TableRow>
@@ -1976,6 +2059,7 @@ export default function AdminPage() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
+                                                <TableHead>Estado</TableHead>
                                                 <TableHead>Nombre</TableHead>
                                                 {/* <TableHead>Descripción</TableHead> */}
                                                 <TableHead>Precio</TableHead>
@@ -1988,7 +2072,18 @@ export default function AdminPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {products.map((product) => (
-                                                <TableRow key={product.id}>
+                                                <TableRow key={product.id} className={product.isDeleted ? 'opacity-60 bg-gray-50' : ''}>
+                                                    <TableCell>
+                                                        {product.isDeleted ? (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                                                Eliminado
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                                                Activo
+                                                            </span>
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell className="font-medium">{product.name}</TableCell>
                                                     {/* <TableCell>{product.description}</TableCell> */}
                                                     <TableCell>${product.price.toLocaleString()}</TableCell>
@@ -2039,25 +2134,45 @@ export default function AdminPage() {
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex gap-2">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleEditProduct(product)}
-                                                            >
-                                                                <Edit2 className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="destructive"
-                                                                size="sm"
-                                                                onClick={() => openDeleteConfirm('product', product.id, product.name)}
-                                                                disabled={actionLoading === `delete-product-${product.id}`}
-                                                            >
-                                                                {actionLoading === `delete-product-${product.id}` ? (
-                                                                    <span className="loading loading-spinner loading-xs"></span>
-                                                                ) : (
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                )}
-                                                            </Button>
+                                                            {product.isDeleted ? (
+                                                                <Button
+                                                                    variant="default"
+                                                                    size="sm"
+                                                                    onClick={() => handleRestoreProduct(product.id)}
+                                                                    disabled={actionLoading === `restore-product-${product.id}`}
+                                                                >
+                                                                    {actionLoading === `restore-product-${product.id}` ? (
+                                                                        <span className="loading loading-spinner loading-xs"></span>
+                                                                    ) : (
+                                                                        <>
+                                                                            <RefreshCw className="h-4 w-4 mr-1" />
+                                                                            Restaurar
+                                                                        </>
+                                                                    )}
+                                                                </Button>
+                                                            ) : (
+                                                                <>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleEditProduct(product)}
+                                                                    >
+                                                                        <Edit2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="destructive"
+                                                                        size="sm"
+                                                                        onClick={() => openDeleteConfirm('product', product.id, product.name)}
+                                                                        disabled={actionLoading === `delete-product-${product.id}`}
+                                                                    >
+                                                                        {actionLoading === `delete-product-${product.id}` ? (
+                                                                            <span className="loading loading-spinner loading-xs"></span>
+                                                                        ) : (
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        )}
+                                                                    </Button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -2132,7 +2247,7 @@ export default function AdminPage() {
                                                                 size="sm"
                                                                 onClick={() => handleEditSupplier(supplier)}
                                                             >
-                                                                
+
                                                                 <Edit2 className="h-4 w-4" />
                                                             </Button>
                                                             <Button
@@ -3531,7 +3646,6 @@ export default function AdminPage() {
                                                     <SelectItem value="MARCAR_COMPLETADO">MARCAR_COMPLETADO</SelectItem>
                                                     <SelectItem value="MARCAR_PAGADO">MARCAR_PAGADO</SelectItem>
                                                     <SelectItem value="CANCELAR">CANCELAR</SelectItem>
-                                                    <SelectItem value="MODIFICAR_ROL">MODIFICAR_ROL</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -4308,7 +4422,6 @@ export default function AdminPage() {
                             <DialogTitle>Confirmar eliminación</DialogTitle>
                             <DialogDescription>
                                 ¿Estás seguro que deseas eliminar {deleteConfirmDialog.name}?
-                                Esta acción no se puede deshacer.
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>

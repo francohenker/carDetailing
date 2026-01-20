@@ -40,9 +40,10 @@ export class ProductoService {
     return this.productoRepository.save(producto);
   }
 
-  findAll(): Promise<Producto[]> {
+  findAll(includeDeleted: boolean = false): Promise<Producto[]> {
+    const whereCondition = includeDeleted ? {} : { isDeleted: false };
     return this.productoRepository.find({
-      where: { isDeleted: false },
+      where: whereCondition,
       relations: ['suppliers'],
     });
   }
@@ -52,6 +53,21 @@ export class ProductoService {
       where: { id, isDeleted: false },
       relations: ['suppliers'],
     });
+  }
+
+  async restore(id: number): Promise<Producto> {
+    const producto = await this.productoRepository.findOne({
+      where: { id },
+      relations: ['suppliers'],
+    });
+    if (!producto) {
+      throw new HttpException('Producto not found', 404);
+    }
+    if (!producto.isDeleted) {
+      throw new HttpException('Producto is not deleted', 400);
+    }
+    producto.isDeleted = false;
+    return await this.productoRepository.save(producto);
   }
 
   async update(

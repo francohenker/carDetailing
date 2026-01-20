@@ -4,8 +4,10 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ProductoService } from './producto.service';
@@ -49,14 +51,35 @@ export class ProductoController {
 
   //obtiene todos los productos
   @Get('getall')
-  findAllProductos() {
-    return this.productoService.findAll();
+  findAllProductos(@Query('includeDeleted') includeDeleted?: string) {
+    const shouldIncludeDeleted = includeDeleted === 'true';
+    return this.productoService.findAll(shouldIncludeDeleted);
   }
 
   //obtiene un producto por id
   @Get(':id')
   findProductoById(@Body('id') id: number) {
     return this.productoService.findById(id);
+  }
+
+  @Auditar({
+    accion: TipoAccion.MODIFICAR,
+    entidad: TipoEntidad.PRODUCTO,
+    descripcion: 'Restauración de producto eliminado',
+  })
+  @Patch(':id/restore')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async restoreProducto(@Param('id') id: number) {
+    const producto = await this.productoService.restore(id);
+    return {
+      id: producto.id,
+      name: producto.name,
+      price: producto.price,
+      stock_actual: producto.stock_actual,
+      stock_minimo: producto.stock_minimo,
+      message: 'Producto restaurado correctamente',
+    };
   }
 
   @Auditar({
@@ -75,7 +98,13 @@ export class ProductoController {
     const result = await this.productoService.update(id, updateProductoDto);
     // Retornar con nombres de proveedores para auditoría
     return {
-      ...result,
+      id: result.id,
+      name: result.name,
+      price: result.price,
+      stock_actual: result.stock_actual,
+      stock_minimo: result.stock_minimo,
+      servicios_por_producto: result.servicios_por_producto,
+      priority: result.priority,
       suppliers: result.suppliers?.map((s) => ({ id: s.id, name: s.name })),
     };
   }

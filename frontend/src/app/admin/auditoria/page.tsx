@@ -462,9 +462,6 @@ export default function AuditoriaPage() {
                         MARCAR_PAGADO
                       </SelectItem>
                       <SelectItem value="CANCELAR">CANCELAR</SelectItem>
-                      <SelectItem value="MODIFICAR_ROL">
-                        MODIFICAR_ROL
-                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

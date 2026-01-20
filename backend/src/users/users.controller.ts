@@ -44,7 +44,7 @@ export class UsersController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Auditar({
-    accion: TipoAccion.MODIFICAR_ROL,
+    accion: TipoAccion.MODIFICAR,
     entidad: TipoEntidad.USUARIO,
     descripcion: 'Cambio de rol de usuario',
     capturarDatosAnteriores: true,

@@ -71,7 +71,9 @@ export class AuditFormatter {
     if (data.stock_minimo !== undefined) parts.push(`Stock Mínimo: ${data.stock_minimo}`);
     
     if (data.suppliers && Array.isArray(data.suppliers)) {
-      const proveedores = data.suppliers.map((s: any) => s.name || `ID: ${s.id}`).join(', ');
+      const proveedores = data.suppliers
+        .map((s: any) => `${s.name || 'Sin nombre'} (ID: ${s.id})`)
+        .join(', ');
       parts.push(`Proveedores: ${proveedores}`);
     }
     

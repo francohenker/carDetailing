@@ -135,12 +135,26 @@ export class ServicioService {
     return servicios;
   }
 
-  async getAll(): Promise<Servicio[]> {
+  async getAll(includeDeleted: boolean = false): Promise<Servicio[]> {
+    const whereCondition = includeDeleted ? {} : { isDeleted: false };
     return this.servicioRepository.find({
-      where: {
-        isDeleted: false,
-      },
+      where: whereCondition,
       relations: ['precio', 'Producto'],
     });
+  }
+
+  async restore(id: number): Promise<Servicio> {
+    const servicio = await this.servicioRepository.findOne({
+      where: { id },
+      relations: ['precio', 'Producto'],
+    });
+    if (!servicio) {
+      throw new HttpException('Servicio not found', 404);
+    }
+    if (!servicio.isDeleted) {
+      throw new HttpException('Servicio is not deleted', 400);
+    }
+    servicio.isDeleted = false;
+    return await this.servicioRepository.save(servicio);
   }
 }

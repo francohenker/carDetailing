@@ -66,8 +66,6 @@ const AuditSummary: React.FC<AuditSummaryProps> = ({
       case 'CANCELAR':
       case 'RECHAZAR':
         return 'bg-pink-100 text-pink-700 border-pink-200';
-      case 'MODIFICAR_ROL':
-        return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'ACTIVAR_DESACTIVAR':
         return 'bg-indigo-100 text-indigo-700 border-indigo-200';
       case 'ENVIAR_EMAIL':
@@ -106,7 +104,6 @@ const AuditSummary: React.FC<AuditSummaryProps> = ({
       MARCAR_RECIBIDO: 'Marcado como recibido',
       RECHAZAR: 'Rechazado',
       CANCELAR: 'Cancelado',
-      MODIFICAR_ROL: 'Rol modificado',
       MODIFICAR: 'Modificado',
       ACTIVAR_DESACTIVAR: 'Estado cambiado',
       ENVIAR_EMAIL: 'Email enviado',

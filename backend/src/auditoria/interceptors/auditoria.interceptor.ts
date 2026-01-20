@@ -114,8 +114,12 @@ export class AuditoriaInterceptor implements NestInterceptor {
       const repository = this.getRepository(entidad);
       if (!repository) return null;
 
+      // Configurar relaciones según la entidad
+      const relations = this.getRelationsForEntity(entidad);
+
       const entity = await repository.findOne({
         where: { id: parseInt(entidadId) },
+        relations: relations,
       });
 
       return entity ? this.limpiarDatos(entity) : null;
@@ -123,6 +127,23 @@ export class AuditoriaInterceptor implements NestInterceptor {
       console.error('Error capturando datos anteriores:', error);
       return null;
     }
+  }
+
+  /**
+   * Obtiene las relaciones necesarias para capturar según la entidad
+   */
+  private getRelationsForEntity(entidad: string): string[] {
+    const relationsMap: { [key: string]: string[] } = {
+      PRODUCTO: ['suppliers'],
+      SERVICIO: ['precio', 'Producto'],
+      TURNO: ['servicio', 'pago', 'car'],
+      USUARIO: [],
+      PROVEEDOR: [],
+      PAGO: [],
+      CAR: ['user'],
+    };
+
+    return relationsMap[entidad] || [];
   }
 
   /**
@@ -157,6 +178,20 @@ export class AuditoriaInterceptor implements NestInterceptor {
         datosLimpios[campo] = '***';
       }
     });
+
+    // Eliminar campos internos que no deben mostrarse en auditoría
+    const camposInternos = ['isDeleted', 'createdAt', 'updatedAt'];
+    camposInternos.forEach((campo) => {
+      delete datosLimpios[campo];
+    });
+
+    // Simplificar relación de suppliers en productos (solo id y name)
+    if (datosLimpios.suppliers && Array.isArray(datosLimpios.suppliers)) {
+      datosLimpios.suppliers = datosLimpios.suppliers.map((supplier) => ({
+        id: supplier.id,
+        name: supplier.name,
+      }));
+    }
 
     // Eliminar relaciones circulares y campos muy grandes
     return JSON.parse(JSON.stringify(datosLimpios, this.getCircularReplacer()));
@@ -246,16 +281,45 @@ export class AuditoriaInterceptor implements NestInterceptor {
   private calcularCambios(datosAnteriores: any, datosNuevos: any): any {
     const cambios: any = {};
 
+    // Campos que deben ser excluidos de la comparación
+    const camposExcluidos = [
+      'id',
+      'createdAt',
+      'updatedAt',
+      'message',
+      'isDeleted',
+    ];
+
     // Comparar todos los campos
     Object.keys(datosNuevos).forEach((key) => {
-      if (
-        datosAnteriores[key] !== undefined &&
-        datosAnteriores[key] !== datosNuevos[key]
-      ) {
-        cambios[key] = {
-          anterior: datosAnteriores[key],
-          nuevo: datosNuevos[key],
-        };
+      // Excluir campos que no deben mostrarse como cambios
+      if (camposExcluidos.includes(key)) {
+        return;
+      }
+
+      const valorAnterior = datosAnteriores[key];
+      const valorNuevo = datosNuevos[key];
+
+      // Comparar valores
+      if (valorAnterior !== undefined) {
+        // Para arrays y objetos, comparar en formato JSON
+        if (
+          typeof valorAnterior === 'object' ||
+          typeof valorNuevo === 'object'
+        ) {
+          if (JSON.stringify(valorAnterior) !== JSON.stringify(valorNuevo)) {
+            cambios[key] = {
+              anterior: valorAnterior,
+              nuevo: valorNuevo,
+            };
+          }
+        } else if (valorAnterior !== valorNuevo) {
+          // Para valores primitivos, comparar directamente
+          cambios[key] = {
+            anterior: valorAnterior,
+            nuevo: valorNuevo,
+          };
+        }
       }
     });
 
@@ -281,10 +345,8 @@ export class AuditoriaInterceptor implements NestInterceptor {
 
     if (
       capturarDatosAnteriores &&
-      (accion === 'ACTUALIZAR' ||
-        accion === 'ELIMINAR' ||
+      (accion === 'ELIMINAR' ||
         accion === 'MODIFICAR' ||
-        accion === 'MODIFICAR_ROL' ||
         accion === 'ACTIVAR_DESACTIVAR' ||
         accion === 'MARCAR_COMPLETADO' ||
         accion === 'MARCAR_PAGADO' ||
@@ -328,13 +390,12 @@ export class AuditoriaInterceptor implements NestInterceptor {
 
           // Obtener datos nuevos del body o resultado
           let datosNuevos = null;
-          if (
-            accion === 'CREAR' ||
-            accion === 'ACTUALIZAR' ||
-            accion === 'MODIFICAR'
-          ) {
+          if (accion === 'CREAR') {
             datosNuevos = this.limpiarDatos(request.body);
-          } else if (result && typeof result === 'object') {
+          } else if (
+            accion === 'MODIFICAR' ||
+            (result && typeof result === 'object')
+          ) {
             datosNuevos = this.limpiarDatos(result);
           }
 

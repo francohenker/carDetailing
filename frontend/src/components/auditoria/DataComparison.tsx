@@ -63,6 +63,13 @@ const DataComparison: React.FC<DataComparisonProps> = ({
     if (value === null) return 'null';
     if (value === undefined) return 'undefined';
     if (typeof value === 'boolean') return value.toString();
+    
+    // Formatear suppliers de manera amigable
+    if (Array.isArray(value) && value.length > 0 && value[0]?.id && value[0]?.name) {
+      // Si es un array de objetos con id y name (como suppliers)
+      return value.map(item => `${item.name} (ID: ${item.id})`).join(', ');
+    }
+    
     if (typeof value === 'object') return JSON.stringify(value, null, 2);
     return String(value);
   };

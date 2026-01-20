@@ -4,8 +4,10 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -76,10 +78,10 @@ export class ServicioController {
   async deleteServicio(@Body() body, @Param('id') id: number): Promise<any> {
     // Obtener datos del servicio antes de eliminarlo
     const servicios = await this.servicioService.getAll();
-    const servicio = servicios.find(s => s.id === Number(id));
-    
+    const servicio = servicios.find((s) => s.id === Number(id));
+
     await this.servicioService.delete(id);
-    
+
     // Retornar información del servicio eliminado
     return {
       id: id,
@@ -90,7 +92,28 @@ export class ServicioController {
   }
 
   @Get('getAll')
-  async getAllServicios(): Promise<Servicio[]> {
-    return this.servicioService.getAll();
+  async getAllServicios(
+    @Query('includeDeleted') includeDeleted?: string,
+  ): Promise<Servicio[]> {
+    const shouldIncludeDeleted = includeDeleted === 'true';
+    return this.servicioService.getAll(shouldIncludeDeleted);
+  }
+
+  @Auditar({
+    accion: TipoAccion.MODIFICAR,
+    entidad: TipoEntidad.SERVICIO,
+    descripcion: 'Restauración de servicio eliminado',
+  })
+  @Patch(':id/restore')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async restoreServicio(@Param('id') id: number): Promise<any> {
+    const servicio = await this.servicioService.restore(id);
+    return {
+      id: servicio.id,
+      name: servicio.name,
+      description: servicio.description,
+      message: 'Servicio restaurado correctamente',
+    };
   }
 }
