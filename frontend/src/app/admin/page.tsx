@@ -1999,7 +1999,7 @@ export default function AdminPage() {
                                                                     product.stock_actual <= product.stock_minimo ? "font-semibold text-amber-600" :
                                                                         "font-semibold"
                                                             }>
-                                                                {product.stock_actual}
+                                                                {Number(product.stock_actual).toFixed(2)}
                                                             </span>
                                                             {product.stock_actual <= 0 && (
                                                                 <span className="text-xs text-red-600 font-medium">Sin stock</span>
@@ -2008,7 +2008,7 @@ export default function AdminPage() {
                                                     </TableCell>
                                                     <TableCell className="text-center">
                                                         <div className="flex flex-col items-center">
-                                                            <span className="font-semibold text-orange-600">{product.stock_minimo}</span>
+                                                            <span className="font-semibold text-orange-600">{Number(product.stock_minimo).toFixed(2)}</span>
                                                             <span className="text-xs text-muted-foreground">mínimo</span>
                                                         </div>
                                                     </TableCell>

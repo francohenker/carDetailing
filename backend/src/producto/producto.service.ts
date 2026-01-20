@@ -191,13 +191,16 @@ export class ProductoService {
 
           if (productoEnBD && productoEnBD.servicios_por_producto > 0) {
             // Calcular cuánto stock se debe descontar
-            const cantidadADescontar = Math.ceil(
-              1 / productoEnBD.servicios_por_producto,
-            );
+            // Si un producto rinde para X servicios, cada servicio consume 1/X unidades
+            const cantidadADescontar = 1 / productoEnBD.servicios_por_producto;
 
             if (productoEnBD.stock_actual >= cantidadADescontar) {
               const stockAnterior = productoEnBD.stock_actual;
               productoEnBD.stock_actual -= cantidadADescontar;
+
+              // Redondear a 2 decimales para evitar problemas de precisión
+              productoEnBD.stock_actual =
+                Math.round(productoEnBD.stock_actual * 100) / 100;
 
               const productoActualizado =
                 await this.productoRepository.save(productoEnBD);
@@ -220,7 +223,7 @@ export class ProductoService {
               }
 
               console.log(
-                `Stock descontado para ${productoEnBD.name}: ${cantidadADescontar} unidades. Stock actual: ${productoActualizado.stock_actual}`,
+                `Stock descontado para ${productoEnBD.name}: ${cantidadADescontar} unidades (1/${productoEnBD.servicios_por_producto}). Stock actual: ${productoActualizado.stock_actual}`,
               );
             } else {
               console.warn(

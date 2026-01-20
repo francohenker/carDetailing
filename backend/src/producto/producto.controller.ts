@@ -34,8 +34,17 @@ export class ProductoController {
   @Post('create')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  createProducto(@Body() createProductoDto: CreateProductoDto) {
-    return this.productoService.create(createProductoDto);
+  async createProducto(@Body() createProductoDto: CreateProductoDto) {
+    const result = await this.productoService.create(createProductoDto);
+    // Retornar datos enriquecidos para auditoría
+    return {
+      id: result.id,
+      name: result.name,
+      price: result.price,
+      stock_actual: result.stock_actual,
+      stock_minimo: result.stock_minimo,
+      suppliers: result.suppliers?.map((s) => ({ id: s.id, name: s.name })),
+    };
   }
 
   //obtiene todos los productos
@@ -97,7 +106,17 @@ export class ProductoController {
   @Delete('delete/:id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-  deleteProducto(@Param('id') id: number) {
-    return this.productoService.delete(id);
+  async deleteProducto(@Param('id') id: number) {
+    // Obtener producto antes de eliminar para auditoría
+    const producto = await this.productoService.findById(id);
+    await this.productoService.delete(id);
+    // Retornar datos enriquecidos para auditoría
+    return {
+      id: producto.id,
+      name: producto.name,
+      price: producto.price,
+      stock_actual: producto.stock_actual,
+      stock_minimo: producto.stock_minimo,
+    };
   }
 }

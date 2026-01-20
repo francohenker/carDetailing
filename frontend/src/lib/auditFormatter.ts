@@ -57,8 +57,15 @@ export class AuditFormatter {
 
   private static formatProducto(data: any): string {
     const parts: string[] = [];
-    if (data.id) parts.push(`ID: ${data.id}`);
-    if (data.name) parts.push(`Nombre: ${data.name}`);
+    
+    // Destacar ID y nombre al inicio para mayor visibilidad
+    if (data.name) {
+      parts.push(`📦 Producto: ${data.name}`);
+    }
+    if (data.id) {
+      parts.push(`ID: ${data.id}`);
+    }
+    
     if (data.price !== undefined) parts.push(`Precio: $${data.price}`);
     if (data.stock_actual !== undefined) parts.push(`Stock: ${data.stock_actual}`);
     if (data.stock_minimo !== undefined) parts.push(`Stock Mínimo: ${data.stock_minimo}`);
@@ -87,7 +94,11 @@ export class AuditFormatter {
     
     if (data.car?.user) {
       const user = data.car.user;
+      if(user.lastname === null) {
+        parts.push(`Cliente: ${user.firstname}`);
+      } else {
       parts.push(`Cliente: ${user.firstname} ${user.lastname}`);
+      }
     }
     
     if (data.car) {
@@ -125,7 +136,9 @@ export class AuditFormatter {
 
   private static formatCotizacion(data: any, accion?: string): string {
     const parts: string[] = [];
-    if (data.id) parts.push(`Cotización ID: ${data.id}`);
+    
+    // Siempre mostrar ID de la cotización al inicio para todas las acciones
+    if (data.id) parts.push(`🔖 Cotización ID: ${data.id}`);
     
     if (accion === 'SELECCIONAR_GANADOR') {
       if (data.supplierName) parts.push(`✓ Ganador: ${data.supplierName}`);
@@ -137,7 +150,11 @@ export class AuditFormatter {
         parts.push(`Productos recibidos: ${data.productNames.join(', ')}`);
       }
       if (data.totalAmount) parts.push(`Monto: $${data.totalAmount}`);
+    } else if (accion === 'RECHAZAR') {
+      // Para rechazos, solo mostrar el ID (ya agregado arriba)
+      if (!data.id) parts.push('Cotización rechazada');
     } else {
+      // Otros casos (CREAR, etc.)
       if (data.supplierName) parts.push(`Proveedor: ${data.supplierName}`);
       if (data.productNames && Array.isArray(data.productNames)) {
         parts.push(`Productos: ${data.productNames.join(', ')}`);

@@ -93,7 +93,11 @@ export class AuditFormatterHelper {
     // Información del cliente
     if (turno.car?.user) {
       const user = turno.car.user;
-      parts.push(`Cliente: ${user.firstname} ${user.lastname}`);
+      if (user.lastname === null) {
+        parts.push(`Cliente: ${user.firstname}`);
+      } else {
+        parts.push(`Cliente: ${user.firstname} ${user.lastname}`);
+      }
     }
 
     // Información del vehículo

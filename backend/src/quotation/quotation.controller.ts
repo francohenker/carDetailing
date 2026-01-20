@@ -92,7 +92,11 @@ export class QuotationController {
   @Post('requests/:id/reject')
   async rejectQuotation(@Param('id', ParseIntPipe) requestId: number) {
     await this.quotationService.rejectQuotation(requestId);
-    return { message: 'Quotation rejected successfully' };
+    // Retornar datos enriquecidos para auditoría
+    return {
+      message: 'Quotation rejected successfully',
+      id: requestId,
+    };
   }
 
   @Auditar({
