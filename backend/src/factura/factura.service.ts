@@ -110,11 +110,20 @@ export class FacturaService {
       doc
         .fontSize(14)
         .text('DATOS DEL CLIENTE:', { underline: true })
-        .fontSize(12)
-        .text(`Nombre: ${turno.car.user.firstname} ${turno.car.user.lastname}`)
-        .text(`Email: ${turno.car.user.email}`)
-        .text(`Teléfono: ${turno.car.user.phone}`)
-        .moveDown();
+        .fontSize(12);
+
+      const fullName = [turno.car.user.firstname, turno.car.user.lastname]
+        .filter((val) => val != null)
+        .join(' ');
+
+      doc.text(`Nombre: ${fullName}`);
+      doc.text(`Email: ${turno.car.user.email}`);
+
+      if (turno.car.user.phone) {
+        doc.text(`Teléfono: ${turno.car.user.phone}`);
+      }
+
+      doc.moveDown();
 
       // Información del vehículo
       doc

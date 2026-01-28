@@ -155,6 +155,14 @@ export default function ProfileClient() {
 
     const handleProfileSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (editedProfile.phone && editedProfile.phone.length !== 10) {
+            toast.error("Error en el teléfono", {
+                description: "El número de teléfono debe tener exactamente 10 dígitos.",
+            });
+            return;
+        }
+
         fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/update-profile`, {
             method: "PUT",
             headers: {
@@ -523,29 +531,27 @@ export default function ProfileClient() {
                                                     </span>
                                                     <span className="font-medium">{cars.length}</span>
                                                 </div>
-                                                <div className="flex justify-between text-sm">
+                                                {/* <div className="flex justify-between text-sm">
                                                     <span className="text-muted-foreground">
                                                         Servicios totales:
                                                     </span>
                                                     <span className="font-medium">
-                                                        {/* Aquí deberías obtener el total de servicios del usuario */}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between text-sm">
+                                                    {/* </span> */}
+                                                {/* </div> */}
+                                                {/* <div className="flex justify-between text-sm">
                                                     <span className="text-muted-foreground">
                                                         Próximos servicios:
                                                     </span>
                                                     <span className="font-medium">
-                                                        {/* Aquí deberías obtener la cantidad de próximos servicios a realizar */}
                                                     </span>
-                                                </div>
+                                                </div>  */}
                                             </div>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            <Card>
+                            {/* <Card>
                                 <CardHeader className="pb-3">
                                     <CardTitle className="text-base">
                                         Acciones rápidas
@@ -576,7 +582,7 @@ export default function ProfileClient() {
                                         Cerrar sesión
                                     </button>
                                 </CardContent>
-                            </Card>
+                            </Card> */}
                         </div>
 
                         {/* Contenido principal */}
@@ -619,6 +625,7 @@ export default function ProfileClient() {
                                                     <div className="space-y-2">
                                                         <Label htmlFor="username">Nombre</Label>
                                                         <Input
+                                                            disabled={true}
                                                             id="username"
                                                             name="username"
                                                             value={editedProfile.firstname}
@@ -628,6 +635,7 @@ export default function ProfileClient() {
                                                     <div className="space-y-2">
                                                         <Label htmlFor="lastName">Apellido</Label>
                                                         <Input
+                                                            disabled={true}
                                                             id="lastName"
                                                             name="lastName"
                                                             value={editedProfile.lastname}
@@ -649,12 +657,12 @@ export default function ProfileClient() {
                                                         <Input
                                                             id="phone"
                                                             name="phone"
+                                                            maxLength={10}
                                                             value={editedProfile.phone}
                                                             onChange={(e) => {
-                                                                const onlyNums = e.target.value.replace(
-                                                                    /\D/g,
-                                                                    "",
-                                                                );
+                                                                const onlyNums = e.target.value
+                                                                    .replace(/\D/g, "")
+                                                                    .slice(0, 10);
                                                                 setEditedProfile((prev) => ({
                                                                     ...prev,
                                                                     phone: onlyNums,
