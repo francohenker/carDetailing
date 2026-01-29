@@ -210,6 +210,47 @@ interface QuotationThresholds {
     low: number
 }
 
+interface PurchaseOrderItem {
+    id: number
+    productoId: number
+    producto: Product
+    unitPrice: number
+    quantityOrdered: number
+    quantityReceived: number
+    subtotal: number
+    notes?: string
+}
+
+interface PurchaseOrder {
+    id: number
+    orderNumber: string
+    supplier: Supplier
+    supplierId: number
+    quotationResponseId?: number
+    items: PurchaseOrderItem[]
+    status: 'PENDIENTE' | 'RECIBIDA' | 'PARCIAL' | 'CANCELADA'
+    totalAmount: number
+    notes?: string
+    isAutomatic: boolean
+    receivedAt?: string
+    createdAt: string
+    updatedAt: string
+}
+
+interface OrderItemForm {
+    productId: string
+    unitPrice: string
+    quantity: string
+    notes?: string
+}
+
+interface OrderForm {
+    id?: number
+    supplierId: string
+    items: OrderItemForm[]
+    notes?: string
+}
+
 export default function AdminPage() {
     // const router = useRouter()
 
@@ -430,6 +471,24 @@ export default function AdminPage() {
     })
     const [auditoriaDetailedLoading, setAuditoriaDetailedLoading] = useState(false)
 
+    // Estados para órdenes de compra
+    const [showPurchaseOrders, setShowPurchaseOrders] = useState(false)
+    const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
+    const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false)
+    const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<PurchaseOrder | null>(null)
+    const [orderForm, setOrderForm] = useState<OrderForm>({
+        supplierId: '',
+        items: [],
+        notes: ''
+    })
+    const [currentOrderItem, setCurrentOrderItem] = useState<OrderItemForm>({
+        productId: '',
+        unitPrice: '',
+        quantity: '',
+        notes: ''
+    })
+    const [filterOrderStatus, setFilterOrderStatus] = useState<'all' | 'PENDIENTE' | 'RECIBIDA' | 'PARCIAL' | 'CANCELADA'>('all')
+
     // Estados generales
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -524,7 +583,8 @@ export default function AdminPage() {
                 fetchDetailedAuditoriaRecords(),
                 fetchDetailedAuditoriaStats(),
                 fetchQuotationRequests(),
-                fetchQuotationThresholds()
+                fetchQuotationThresholds(),
+                fetchPurchaseOrders()
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
@@ -1431,6 +1491,199 @@ export default function AdminPage() {
         )
     }
 
+    // ============ ÓRDENES DE COMPRA ============
+    const fetchPurchaseOrders = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/purchase-orders`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error fetching orders')
+            const data = await response.json()
+            setPurchaseOrders(data)
+        } catch (error) {
+            console.error('Error fetching orders:', error)
+        }
+    }
+
+    const handleAddOrderItem = () => {
+        if (!currentOrderItem.productId || currentOrderItem.productId === '') {
+            toast.error("Selecciona un producto")
+            return
+        }
+        if (!currentOrderItem.quantity || parseFloat(currentOrderItem.quantity) <= 0) {
+            toast.error("La cantidad debe ser mayor a 0")
+            return
+        }
+        if (!currentOrderItem.unitPrice || parseFloat(currentOrderItem.unitPrice) <= 0) {
+            toast.error("El precio debe ser mayor a 0")
+            return
+        }
+        
+        setOrderForm({
+            ...orderForm,
+            items: [...orderForm.items, currentOrderItem]
+        })
+        
+        setCurrentOrderItem({
+            productId: '',
+            unitPrice: '',
+            quantity: '',
+            notes: ''
+        })
+    }
+
+    const handleRemoveOrderItem = (index: number) => {
+        setOrderForm({
+            ...orderForm,
+            items: orderForm.items.filter((_, i) => i !== index)
+        })
+    }
+
+    const handleSubmitPurchaseOrder = async (e: React.FormEvent) => {
+        e.preventDefault()
+        
+        if (!orderForm.supplierId || orderForm.supplierId === '') {
+            toast.error("Selecciona un proveedor")
+            return
+        }
+        
+        if (orderForm.items.length === 0) {
+            toast.error("Agrega al menos un producto")
+            return
+        }
+        
+        setActionLoading('submit-order')
+        try {
+            // Convertir los campos string a number para el backend
+            const orderData = {
+                supplierId: parseInt(orderForm.supplierId),
+                items: orderForm.items.map(item => ({
+                    productoId: parseInt(item.productId),
+                    quantityOrdered: parseInt(item.quantity),
+                    unitPrice: parseFloat(item.unitPrice),
+                    notes: item.notes
+                })),
+                notes: orderForm.notes
+            }
+            
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/purchase-orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify(orderData)
+            })
+            
+            if (!response.ok) throw new Error('Error creating order')
+            
+            toast.success("Orden de compra creada correctamente")
+            setIsOrderDialogOpen(false)
+            resetOrderForm()
+            await fetchPurchaseOrders()
+            await fetchProducts()
+        } catch (error) {
+            console.error('Error creating order:', error)
+            toast.error("Error al crear la orden de compra")
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
+    const handleMarkOrderAsReceived = async (orderId: number) => {
+        setActionLoading(`mark-received-${orderId}`)
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/purchase-orders/${orderId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify({
+                    status: 'RECIBIDA',
+                    receivedAt: new Date()
+                })
+            })
+            
+            if (!response.ok) throw new Error('Error updating order status')
+            
+            toast.success("Orden marcada como recibida y stock actualizado")
+            await fetchPurchaseOrders()
+            await fetchProducts()
+        } catch (error) {
+            console.error('Error updating order:', error)
+            toast.error("Error al actualizar la orden")
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
+    const handleDeletePurchaseOrder = async (orderId: number) => {
+        if (!confirm('¿Estás seguro de eliminar esta orden?')) return
+        
+        setActionLoading(`delete-order-${orderId}`)
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/purchase-orders/${orderId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            
+            if (!response.ok) throw new Error('Error deleting order')
+            
+            toast.success("Orden eliminada correctamente")
+            await fetchPurchaseOrders()
+        } catch (error) {
+            console.error('Error deleting order:', error)
+            toast.error("Error al eliminar la orden")
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
+    const resetOrderForm = () => {
+        setOrderForm({
+            supplierId: '',
+            items: [],
+            notes: ''
+        })
+        setCurrentOrderItem({
+            productId: '',
+            unitPrice: '',
+            quantity: '',
+            notes: ''
+        })
+    }
+
+    const getOrderStatusColor = (status: string) => {
+        switch (status) {
+            case 'PENDIENTE':
+                return 'bg-yellow-100 text-yellow-800'
+            case 'RECIBIDA':
+                return 'bg-green-100 text-green-800'
+            case 'PARCIAL':
+                return 'bg-blue-100 text-blue-800'
+            case 'CANCELADA':
+                return 'bg-red-100 text-red-800'
+            default:
+                return 'bg-gray-100 text-gray-800'
+        }
+    }
+
+    const filteredPurchaseOrders = purchaseOrders.filter(order => 
+        filterOrderStatus === 'all' || order.status === filterOrderStatus
+    )
+
+    const orderStats = {
+        total: purchaseOrders.length,
+        pending: purchaseOrders.filter(o => o.status === 'PENDIENTE').length,
+        received: purchaseOrders.filter(o => o.status === 'RECIBIDA').length,
+        partial: purchaseOrders.filter(o => o.status === 'PARCIAL').length
+    }
+
     // ============ AUDITORÍA ============
 
 
@@ -2042,19 +2295,26 @@ export default function AdminPage() {
 
                         {/* PESTAÑA DE PRODUCTOS */}
                         <TabsContent value="products" className="space-y-6">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <div>
-                                        <CardTitle>Gestión de Productos</CardTitle>
-                                        <CardDescription>
-                                            Administra el inventario de productos disponibles.
-                                        </CardDescription>
-                                    </div>
-                                    <Button onClick={() => { resetProductForm(); setIsProductDialogOpen(true); }}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Nuevo Producto
-                                    </Button>
-                                </CardHeader>
+                            {!showPurchaseOrders ? (
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <div>
+                                            <CardTitle>Gestión de Productos</CardTitle>
+                                            <CardDescription>
+                                                Administra el inventario de productos disponibles.
+                                            </CardDescription>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button variant="outline" onClick={() => setShowPurchaseOrders(true)}>
+                                                <FileText className="h-4 w-4 mr-2" />
+                                                Órdenes de Compra
+                                            </Button>
+                                            <Button onClick={() => { resetProductForm(); setIsProductDialogOpen(true); }}>
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Nuevo Producto
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
                                 <CardContent>
                                     <Table>
                                         <TableHeader>
@@ -2181,6 +2441,201 @@ export default function AdminPage() {
                                     </Table>
                                 </CardContent>
                             </Card>
+                            ) : (
+                                <>
+                                    {/* Vista de Órdenes de Compra */}
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                        <Card>
+                                            <CardContent className="p-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm text-muted-foreground">Total Órdenes</p>
+                                                        <p className="text-2xl font-bold">{orderStats.total}</p>
+                                                    </div>
+                                                    <FileText className="h-8 w-8 text-blue-500" />
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                        
+                                        <Card>
+                                            <CardContent className="p-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm text-muted-foreground">Pendientes</p>
+                                                        <p className="text-2xl font-bold">{orderStats.pending}</p>
+                                                    </div>
+                                                    <Clock className="h-8 w-8 text-yellow-500" />
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                        
+                                        <Card>
+                                            <CardContent className="p-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm text-muted-foreground">Recibidas</p>
+                                                        <p className="text-2xl font-bold">{orderStats.received}</p>
+                                                    </div>
+                                                    <CheckCircle className="h-8 w-8 text-green-500" />
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                        
+                                        <Card>
+                                            <CardContent className="p-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm text-muted-foreground">Parciales</p>
+                                                        <p className="text-2xl font-bold">{orderStats.partial}</p>
+                                                    </div>
+                                                    <TrendingUp className="h-8 w-8 text-blue-500" />
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+
+                                    <Card>
+                                        <CardHeader className="flex flex-row items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div>
+                                                    <CardTitle>Órdenes de Compra</CardTitle>
+                                                    <CardDescription>
+                                                        Gestiona las órdenes de compra manuales y automáticas
+                                                    </CardDescription>
+                                                </div>
+                                                <Select value={filterOrderStatus} onValueChange={(v: any) => setFilterOrderStatus(v)}>
+                                                    <SelectTrigger className="w-[180px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Todas</SelectItem>
+                                                        <SelectItem value="PENDIENTE">Pendientes</SelectItem>
+                                                        <SelectItem value="RECIBIDA">Recibidas</SelectItem>
+                                                        <SelectItem value="PARCIAL">Parciales</SelectItem>
+                                                        <SelectItem value="CANCELADA">Canceladas</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button variant="outline" onClick={() => setShowPurchaseOrders(false)}>
+                                                    <Package className="h-4 w-4 mr-2" />
+                                                    Ver Productos
+                                                </Button>
+                                                <Button onClick={() => setIsOrderDialogOpen(true)}>
+                                                    <Plus className="h-4 w-4 mr-2" />
+                                                    Nueva Orden
+                                                </Button>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {loading ? (
+                                                <div className="flex items-center justify-center py-8">
+                                                    <span className="loading loading-spinner loading-lg"></span>
+                                                </div>
+                                            ) : filteredPurchaseOrders.length === 0 ? (
+                                                <div className="text-center py-8 text-muted-foreground">
+                                                    No hay órdenes de compra
+                                                </div>
+                                            ) : (
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>N° Orden</TableHead>
+                                                            <TableHead>Proveedor</TableHead>
+                                                            <TableHead>Fecha</TableHead>
+                                                            <TableHead>Items</TableHead>
+                                                            <TableHead>Total</TableHead>
+                                                            <TableHead>Estado</TableHead>
+                                                            <TableHead>Fecha Recepción</TableHead>
+                                                            <TableHead>Acciones</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {filteredPurchaseOrders.map((order) => (
+                                                            <TableRow key={order.id}>
+                                                                <TableCell className="font-medium">
+                                                                    {order.orderNumber}
+                                                                    {order.isAutomatic && (
+                                                                        <Badge variant="outline" className="ml-2 text-xs">
+                                                                            Auto
+                                                                        </Badge>
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div>
+                                                                        <div className="font-medium">{order.supplier.name}</div>
+                                                                        <div className="text-sm text-muted-foreground">{order.supplier.email}</div>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {new Date(order.createdAt).toLocaleDateString('es-AR')}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <button
+                                                                        onClick={() => setSelectedPurchaseOrder(order)}
+                                                                        className="text-blue-600 hover:underline"
+                                                                    >
+                                                                        {order.items.length} producto(s)
+                                                                    </button>
+                                                                </TableCell>
+                                                                <TableCell className="font-bold">
+                                                                    ${order.totalAmount.toLocaleString('es-AR')}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Badge className={getOrderStatusColor(order.status)}>
+                                                                        {order.status}
+                                                                    </Badge>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {order.receivedAt ? (
+                                                                        new Date(order.receivedAt).toLocaleDateString('es-AR')
+                                                                    ) : (
+                                                                        <span className="text-muted-foreground">-</span>
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex gap-2">
+                                                                        {order.status === 'PENDIENTE' && (
+                                                                            <Button
+                                                                                size="sm"
+                                                                                onClick={() => handleMarkOrderAsReceived(order.id)}
+                                                                                disabled={actionLoading === `mark-received-${order.id}`}
+                                                                            >
+                                                                                {actionLoading === `mark-received-${order.id}` ? (
+                                                                                    <span className="loading loading-spinner loading-xs"></span>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <CheckCircle className="h-4 w-4 mr-1" />
+                                                                                        Recibida
+                                                                                    </>
+                                                                                )}
+                                                                            </Button>
+                                                                        )}
+                                                                        {order.status === 'PENDIENTE' && (
+                                                                            <Button
+                                                                                size="sm"
+                                                                                variant="destructive"
+                                                                                onClick={() => handleDeletePurchaseOrder(order.id)}
+                                                                                disabled={actionLoading === `delete-order-${order.id}`}
+                                                                            >
+                                                                                {actionLoading === `delete-order-${order.id}` ? (
+                                                                                    <span className="loading loading-spinner loading-xs"></span>
+                                                                                ) : (
+                                                                                    <Trash2 className="h-4 w-4" />
+                                                                                )}
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </>
+                            )}
                         </TabsContent>
 
                         {/* PESTAÑA DE PROVEEDORES */}
@@ -3758,6 +4213,7 @@ export default function AdminPage() {
                                                             datosAnteriores={record.datosAnteriores}
                                                             datosNuevos={record.datosNuevos}
                                                             accion={record.accion}
+                                                            services={services}
                                                         />
                                                     </div>
                                                 </div>
@@ -4716,6 +5172,363 @@ export default function AdminPage() {
                                 ) : (
                                     "Confirmar Recepción"
                                 )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* DIALOG PARA CREAR/EDITAR ORDEN DE COMPRA */}
+                <Dialog open={isOrderDialogOpen} onOpenChange={(open) => {
+                    setIsOrderDialogOpen(open)
+                    if (!open) resetOrderForm()
+                }}>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-blue-500" />
+                                {orderForm.id ? 'Editar Orden de Compra' : 'Nueva Orden de Compra'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                Complete los datos de la orden de compra
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleSubmitPurchaseOrder} className="space-y-6">
+                            {/* Información básica */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="order-supplier">Proveedor *</Label>
+                                    <Select 
+                                        value={orderForm.supplierId} 
+                                        onValueChange={(value) => setOrderForm({...orderForm, supplierId: value})}
+                                        required
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccione un proveedor" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {suppliers.map((supplier) => (
+                                                <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                                                    {supplier.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="order-notes">Notas (opcional)</Label>
+                                    <Input
+                                        id="order-notes"
+                                        value={orderForm.notes}
+                                        onChange={(e) => setOrderForm({...orderForm, notes: e.target.value})}
+                                        placeholder="Notas adicionales"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Items de la orden */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-semibold">Productos</h3>
+                                </div>
+
+                                {/* Agregar producto */}
+                                <Card>
+                                    <CardContent className="p-4">
+                                        <div className="grid grid-cols-12 gap-4 items-end">
+                                            <div className="col-span-5 space-y-2">
+                                                <Label>Producto</Label>
+                                                <Select 
+                                                    value={currentOrderItem.productId} 
+                                                    onValueChange={(value) => setCurrentOrderItem({...currentOrderItem, productId: value})}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Seleccione producto" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {products.map((product) => (
+                                                            <SelectItem key={product.id} value={product.id.toString()}>
+                                                                {product.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="col-span-2 space-y-2">
+                                                <Label>Cantidad</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    value={currentOrderItem.quantity}
+                                                    onChange={(e) => setCurrentOrderItem({...currentOrderItem, quantity: e.target.value})}
+                                                />
+                                            </div>
+
+                                            <div className="col-span-2 space-y-2">
+                                                <Label>Precio Unit.</Label>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={currentOrderItem.unitPrice}
+                                                    onChange={(e) => setCurrentOrderItem({...currentOrderItem, unitPrice: e.target.value})}
+                                                />
+                                            </div>
+
+                                            <div className="col-span-2 space-y-2">
+                                                <Label>Subtotal</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={(parseFloat(currentOrderItem.quantity || '0') * parseFloat(currentOrderItem.unitPrice || '0')).toFixed(2)}
+                                                    disabled
+                                                    className="bg-gray-50"
+                                                />
+                                            </div>
+
+                                            <div className="col-span-1">
+                                                <Button
+                                                    type="button"
+                                                    onClick={handleAddOrderItem}
+                                                    disabled={!currentOrderItem.productId || !currentOrderItem.quantity || !currentOrderItem.unitPrice}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Lista de productos agregados */}
+                                {orderForm.items.length > 0 && (
+                                    <Card>
+                                        <CardContent className="p-0">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Producto</TableHead>
+                                                        <TableHead className="text-right">Cantidad</TableHead>
+                                                        <TableHead className="text-right">Precio Unit.</TableHead>
+                                                        <TableHead className="text-right">Subtotal</TableHead>
+                                                        <TableHead className="w-[50px]"></TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {orderForm.items.map((item, index) => {
+                                                        const product = products.find(p => p.id === parseInt(item.productId))
+                                                        return (
+                                                            <TableRow key={index}>
+                                                                <TableCell>{product?.name || 'Producto desconocido'}</TableCell>
+                                                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                                                <TableCell className="text-right">${parseFloat(item.unitPrice).toLocaleString('es-AR')}</TableCell>
+                                                                <TableCell className="text-right font-bold">
+                                                                    ${(parseInt(item.quantity) * parseFloat(item.unitPrice)).toLocaleString('es-AR')}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={() => handleRemoveOrderItem(index)}
+                                                                    >
+                                                                        <X className="h-4 w-4 text-red-500" />
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })}
+                                                    <TableRow>
+                                                        <TableCell colSpan={3} className="text-right font-bold">Total:</TableCell>
+                                                        <TableCell className="text-right font-bold text-lg">
+                                                            ${orderForm.items.reduce((sum, item) => 
+                                                                sum + (parseInt(item.quantity) * parseFloat(item.unitPrice)), 0
+                                                            ).toLocaleString('es-AR')}
+                                                        </TableCell>
+                                                        <TableCell></TableCell>
+                                                    </TableRow>
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                )}
+                            </div>
+
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsOrderDialogOpen(false)
+                                        resetOrderForm()
+                                    }}
+                                >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={loading || orderForm.items.length === 0 || !orderForm.supplierId}
+                                >
+                                    {loading ? (
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                    ) : (
+                                        <>
+                                            <Save className="h-4 w-4 mr-2" />
+                                            {orderForm.id ? 'Actualizar' : 'Crear'} Orden
+                                        </>
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* DIALOG PARA VER DETALLES DE ORDEN DE COMPRA */}
+                <Dialog open={!!selectedPurchaseOrder} onOpenChange={(open) => !open && setSelectedPurchaseOrder(null)}>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-blue-500" />
+                                Detalles de Orden de Compra
+                            </DialogTitle>
+                            {selectedPurchaseOrder && (
+                                <DialogDescription>
+                                    Orden N° {selectedPurchaseOrder.orderNumber}
+                                </DialogDescription>
+                            )}
+                        </DialogHeader>
+
+                        {selectedPurchaseOrder && (
+                            <div className="space-y-6">
+                                {/* Información general */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Card>
+                                        <CardContent className="p-4">
+                                            <h3 className="font-semibold mb-2 flex items-center gap-2">
+                                                <Building2 className="h-4 w-4" />
+                                                Proveedor
+                                            </h3>
+                                            <div className="space-y-1 text-sm">
+                                                <p><strong>Nombre:</strong> {selectedPurchaseOrder.supplier.name}</p>
+                                                <p><strong>Email:</strong> {selectedPurchaseOrder.supplier.email}</p>
+                                                {selectedPurchaseOrder.supplier.phone && (
+                                                    <p><strong>Teléfono:</strong> {selectedPurchaseOrder.supplier.phone}</p>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card>
+                                        <CardContent className="p-4">
+                                            <h3 className="font-semibold mb-2 flex items-center gap-2">
+                                                <Calendar className="h-4 w-4" />
+                                                Fechas
+                                            </h3>
+                                            <div className="space-y-1 text-sm">
+                                                <p>
+                                                    <strong>Creación:</strong>{' '}
+                                                    {new Date(selectedPurchaseOrder.createdAt).toLocaleString('es-AR')}
+                                                </p>
+                                                {selectedPurchaseOrder.receivedAt && (
+                                                    <p>
+                                                        <strong>Recepción:</strong>{' '}
+                                                        {new Date(selectedPurchaseOrder.receivedAt).toLocaleString('es-AR')}
+                                                    </p>
+                                                )}
+                                                <p>
+                                                    <strong>Estado:</strong>{' '}
+                                                    <Badge className={getOrderStatusColor(selectedPurchaseOrder.status)}>
+                                                        {selectedPurchaseOrder.status}
+                                                    </Badge>
+                                                </p>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                {/* Notas */}
+                                {selectedPurchaseOrder.notes && (
+                                    <Card>
+                                        <CardContent className="p-4">
+                                            <h3 className="font-semibold mb-2">Notas</h3>
+                                            <p className="text-sm text-muted-foreground">{selectedPurchaseOrder.notes}</p>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                {/* Productos */}
+                                <Card>
+                                    <CardContent className="p-0">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Producto</TableHead>
+                                                    <TableHead className="text-right">Cant. Ordenada</TableHead>
+                                                    <TableHead className="text-right">Cant. Recibida</TableHead>
+                                                    <TableHead className="text-right">Precio Unit.</TableHead>
+                                                    <TableHead className="text-right">Subtotal</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {selectedPurchaseOrder.items.map((item) => (
+                                                    <TableRow key={item.id}>
+                                                        <TableCell>
+                                                            <div>
+                                                                <div className="font-medium">{item.producto.name}</div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">{item.quantityOrdered}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            {item.quantityReceived || 0}
+                                                            {item.quantityOrdered !== item.quantityReceived && (
+                                                                <Badge variant="outline" className="ml-2 text-xs">
+                                                                    Parcial
+                                                                </Badge>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            ${item.unitPrice.toLocaleString('es-AR')}
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-bold">
+                                                            ${item.subtotal.toLocaleString('es-AR')}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                <TableRow>
+                                                    <TableCell colSpan={4} className="text-right font-bold text-lg">Total:</TableCell>
+                                                    <TableCell className="text-right font-bold text-lg text-green-600">
+                                                        ${selectedPurchaseOrder.totalAmount.toLocaleString('es-AR')}
+                                                    </TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Información de cotización (si es automática) */}
+                                {selectedPurchaseOrder.quotationResponseId && (
+                                    <Card className="bg-blue-50">
+                                        <CardContent className="p-4">
+                                            <h3 className="font-semibold mb-2 flex items-center gap-2">
+                                                <FileText className="h-4 w-4 text-blue-600" />
+                                                Creada desde Cotización
+                                            </h3>
+                                            <p className="text-sm text-blue-800">
+                                                Esta orden fue creada automáticamente desde la cotización N° {selectedPurchaseOrder.quotationResponseId}
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                )}
+                            </div>
+                        )}
+
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setSelectedPurchaseOrder(null)}
+                            >
+                                Cerrar
                             </Button>
                         </DialogFooter>
                     </DialogContent>
