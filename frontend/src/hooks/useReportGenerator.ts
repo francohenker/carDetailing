@@ -27,10 +27,16 @@ interface StatisticsData {
   }>;
 }
 
+interface UserInfo {
+  firstname: string;
+  lastname: string;
+  email: string;
+}
+
 export function useReportGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generateReport = async (data: StatisticsData) => {
+  const generateReport = async (data: StatisticsData, userInfo: UserInfo | null = null) => {
     setIsGenerating(true);
     
     try {
@@ -55,19 +61,27 @@ export function useReportGenerator() {
       
       yPosition += 15;
       
-      // Información del período
+      // Información del período y emisor
       if (data.period) {
         pdf.setFontSize(12);
         pdf.setTextColor(0, 0, 0);
         const startDate = new Date(data.period.startDate).toLocaleDateString('es-AR');
         const endDate = new Date(data.period.endDate).toLocaleDateString('es-AR');
         pdf.text(`Período: ${startDate} - ${endDate} (${data.period.days} días)`, 20, yPosition);
-        yPosition += 10;
+        yPosition += 8;
         
         const currentDate = new Date().toLocaleDateString('es-AR');
         const currentTime = new Date().toLocaleTimeString('es-AR');
-        pdf.text(`Generado el: ${currentDate} a las ${currentTime}`, 20, yPosition);
-        yPosition += 20;
+        pdf.text(`Fecha de emisión: ${currentDate} a las ${currentTime}`, 20, yPosition);
+        yPosition += 8;
+        
+        // Agregar información del usuario emisor
+        if (userInfo) {
+          pdf.text(`Emitido por: ${userInfo.firstname} ${userInfo.lastname} (${userInfo.email})`, 20, yPosition);
+          yPosition += 12;
+        } else {
+          yPosition += 4;
+        }
       }
 
       // Métricas principales
@@ -98,10 +112,10 @@ export function useReportGenerator() {
 
       // Servicios más populares
       if (data.popularServices && data.popularServices.length > 0) {
-        pdf.setFontSize(16);
+        pdf.setFontSize(14);
         pdf.setTextColor(37, 99, 235);
         pdf.text('SERVICIOS MÁS POPULARES', 20, yPosition);
-        yPosition += 15;
+        yPosition += 12;
 
         pdf.setFontSize(12);
         pdf.setTextColor(0, 0, 0);
@@ -125,10 +139,10 @@ export function useReportGenerator() {
           yPosition = 20;
         }
 
-        pdf.setFontSize(16);
+        pdf.setFontSize(14);
         pdf.setTextColor(37, 99, 235);
         pdf.text('TOP CLIENTES', 20, yPosition);
-        yPosition += 15;
+        yPosition += 12;
 
         pdf.setFontSize(12);
         pdf.setTextColor(0, 0, 0);
@@ -152,10 +166,10 @@ export function useReportGenerator() {
           pdf.addPage();
           yPosition = 20;
           
-          pdf.setFontSize(16);
+          pdf.setFontSize(14);
           pdf.setTextColor(37, 99, 235);
           pdf.text('GRÁFICOS ESTADÍSTICOS', pageWidth / 2, yPosition, { align: 'center' });
-          yPosition += 20;
+          yPosition += 15;
 
           // Preparar gráficos y evitar problemas de CSS
           forceChartResize();

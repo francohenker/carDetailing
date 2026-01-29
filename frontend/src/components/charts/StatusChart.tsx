@@ -75,6 +75,28 @@ export default function StatusChart({ turnosStatus }: StatusChartProps) {
                     padding: 20,
                     usePointStyle: true,
                     pointStyle: 'circle',
+                    generateLabels: function(chart: any) {
+                        const data = chart.data;
+                        if (data.labels.length && data.datasets.length) {
+                            const dataset = data.datasets[0];
+                            const total = dataset.data.reduce((sum: number, value: number) => sum + value, 0);
+                            
+                            return data.labels.map((label: string, i: number) => {
+                                const value = dataset.data[i];
+                                const percentage = ((value * 100) / total).toFixed(0);
+                                
+                                return {
+                                    text: `${label}: ${value} (${percentage}%)`,
+                                    fillStyle: dataset.backgroundColor[i],
+                                    strokeStyle: dataset.borderColor[i],
+                                    lineWidth: 2,
+                                    hidden: false,
+                                    index: i
+                                };
+                            });
+                        }
+                        return [];
+                    }
                 },
             },
             title: {

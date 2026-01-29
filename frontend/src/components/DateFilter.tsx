@@ -14,6 +14,20 @@ interface DateFilterProps {
   isGeneratingReport: boolean;
 }
 
+// Función para convertir fecha de formato YYYY-MM-DD a DD/MM/YYYY
+const formatDateToDisplay = (dateString: string): string => {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+// Función para convertir fecha de formato DD/MM/YYYY a YYYY-MM-DD
+const formatDateToISO = (dateString: string): string => {
+  if (!dateString) return '';
+  const [day, month, year] = dateString.split('/');
+  return `${year}-${month}-${day}`;
+};
+
 export default function DateFilter({ 
   onFilter, 
   onGenerateReport, 
@@ -32,6 +46,28 @@ export default function DateFilter({
     return new Date().toISOString().split('T')[0];
   });
 
+  const [displayStartDate, setDisplayStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return formatDateToDisplay(date.toISOString().split('T')[0]);
+  });
+
+  const [displayEndDate, setDisplayEndDate] = useState(() => {
+    return formatDateToDisplay(new Date().toISOString().split('T')[0]);
+  });
+
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setStartDate(value);
+    setDisplayStartDate(formatDateToDisplay(value));
+  };
+
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEndDate(value);
+    setDisplayEndDate(formatDateToDisplay(value));
+  };
+
   const handleFilter = () => {
     onFilter(startDate, endDate);
   };
@@ -41,10 +77,15 @@ export default function DateFilter({
     const start = new Date();
     start.setDate(end.getDate() - days);
     
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    const startISO = start.toISOString().split('T')[0];
+    const endISO = end.toISOString().split('T')[0];
     
-    onFilter(start.toISOString().split('T')[0], end.toISOString().split('T')[0]);
+    setStartDate(startISO);
+    setEndDate(endISO);
+    setDisplayStartDate(formatDateToDisplay(startISO));
+    setDisplayEndDate(formatDateToDisplay(endISO));
+    
+    onFilter(startISO, endISO);
   };
 
   return (
@@ -63,14 +104,18 @@ export default function DateFilter({
                 Fecha Inicio
               </Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none z-10" />
                 <Input
                   id="startDate"
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="pl-10"
+                  onChange={handleStartDateChange}
+                  className="pl-10 date-input-custom"
+                  style={{ colorScheme: 'light' }}
                 />
+                <div className="absolute right-3 top-3 text-xs text-gray-500 pointer-events-none">
+                  {displayStartDate}
+                </div>
               </div>
             </div>
             
@@ -79,14 +124,18 @@ export default function DateFilter({
                 Fecha Final
               </Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none z-10" />
                 <Input
                   id="endDate"
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="pl-10"
+                  onChange={handleEndDateChange}
+                  className="pl-10 date-input-custom"
+                  style={{ colorScheme: 'light' }}
                 />
+                <div className="absolute right-3 top-3 text-xs text-gray-500 pointer-events-none">
+                  {displayEndDate}
+                </div>
               </div>
             </div>
           </div>

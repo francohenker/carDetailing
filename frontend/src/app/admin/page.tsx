@@ -410,6 +410,9 @@ export default function AdminPage() {
     } | null>(null)
     const [detailedLoading, setDetailedLoading] = useState(false)
     const { generateReport, isGenerating } = useReportGenerator()
+    
+    // Estado para usuario actual
+    const [currentUser, setCurrentUser] = useState<{firstname: string; lastname: string; email: string} | null>(null)
 
     // Estados para auditoría detallada
     interface AuditoriaRecord {
@@ -505,6 +508,30 @@ export default function AdminPage() {
     })
 
     // ============ FUNCIONES DE AUTENTICACIÓN ============
+    const fetchCurrentUser = async () => {
+        try {
+            const token = localStorage.getItem('jwt')
+            if (!token) return
+            
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/profile`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            
+            if (response.ok) {
+                const userData = await response.json()
+                setCurrentUser({
+                    firstname: userData.firstname,
+                    lastname: userData.lastname,
+                    email: userData.email
+                })
+            }
+        } catch (error) {
+            console.error('Error fetching user:', error)
+        }
+    }
+    
     const checkTokenValidity = () => {
         const token = localStorage.getItem('jwt')
         if (!token) return false
@@ -584,7 +611,8 @@ export default function AdminPage() {
                 fetchDetailedAuditoriaStats(),
                 fetchQuotationRequests(),
                 fetchQuotationThresholds(),
-                fetchPurchaseOrders()
+                fetchPurchaseOrders(),
+                fetchCurrentUser()
             ])
         } catch (error) {
             console.error('Error loading admin data:', error)
@@ -1372,7 +1400,7 @@ export default function AdminPage() {
         if (!detailedStatistics) return
 
         try {
-            await generateReport(detailedStatistics)
+            await generateReport(detailedStatistics, currentUser)
         } catch (err) {
             console.error('Error generando informe:', err)
             toast.error("Error", {
