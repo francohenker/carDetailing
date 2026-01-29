@@ -2,16 +2,23 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+interface Service {
+  id: number;
+  name: string;
+}
+
 interface DataComparisonProps {
   datosAnteriores?: any;
   datosNuevos?: any;
   accion: string;
+  services?: Service[];
 }
 
 const DataComparison: React.FC<DataComparisonProps> = ({
   datosAnteriores,
   datosNuevos,
   accion,
+  services = [],
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showRawData, setShowRawData] = useState(false);
@@ -59,10 +66,34 @@ const DataComparison: React.FC<DataComparisonProps> = ({
   const hasDifferences = Object.keys(differences).length > 0;
 
   // Función para formatear valores
-  const formatValue = (value: any): string => {
+  const formatValue = (value: any, key?: string): string => {
     if (value === null) return 'null';
     if (value === undefined) return 'undefined';
     if (typeof value === 'boolean') return value.toString();
+
+    // Formatear servicio si es un array de IDs
+    if (key === 'servicio' && Array.isArray(value) && services.length > 0) {
+        const serviceNames = value.map((id: number) => {
+            const service = services.find(s => s.id === id);
+            return service ? service.name : `ID: ${id}`;
+        });
+        return serviceNames.join(', ');
+    }
+
+    // Formatear fechas
+    if (key && (key.includes('fecha') || key === 'date' || key === 'createdAt' || key === 'updatedAt') && typeof value === 'string') {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+             return new Intl.DateTimeFormat("es-ES", {
+                weekday: "short",  // opcional: vie
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }).format(date);
+        }
+    }
     
     // Formatear suppliers de manera amigable
     if (Array.isArray(value) && value.length > 0 && value[0]?.id && value[0]?.name) {
@@ -199,7 +230,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({
                           </div>
                           <div className="bg-white bg-opacity-50 rounded p-2 border">
                             <code className="whitespace-pre-wrap break-all">
-                              {formatValue(change.old)}
+                              {formatValue(change.old, key)}
                             </code>
                           </div>
                         </div>
@@ -212,7 +243,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({
                           </div>
                           <div className="bg-white bg-opacity-50 rounded p-2 border">
                             <code className="whitespace-pre-wrap break-all">
-                              {formatValue(change.new)}
+                              {formatValue(change.new, key)}
                             </code>
                           </div>
                         </div>
@@ -233,7 +264,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({
                             {key}:
                           </span>
                           <span className="text-green-800">
-                            {formatValue(value)}
+                            {formatValue(value, key)}
                           </span>
                         </div>
                       ))}
@@ -257,7 +288,7 @@ const DataComparison: React.FC<DataComparisonProps> = ({
                             {key}:
                           </span>
                           <span className="text-red-800">
-                            {formatValue(value)}
+                            {formatValue(value, key)}
                           </span>
                         </div>
                       ))}

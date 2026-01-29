@@ -40,7 +40,7 @@ export class TurnoController {
   async createTurno(
     @Req() request,
     @Body() createTurnoDto: CreateTurnoDto,
-  ): Promise<Turno> {
+  ): Promise<any> {
     try {
       const user = await this.authService.findUserByToken(
         request.headers.authorization,
@@ -52,7 +52,22 @@ export class TurnoController {
       if (!car) {
         throw new HttpException('Car not found', 404);
       }
-      return this.turnoService.createTurno(car, createTurnoDto);
+      const turno = await this.turnoService.createTurno(car, createTurnoDto);
+
+      // Retornar datos simplificados para auditoría
+      return {
+        id: turno.id,
+        fechaHora: turno.fechaHora,
+        estado: turno.estado,
+        totalPrice: turno.totalPrice,
+        duration: turno.duration,
+        car: {
+          marca: turno.car.marca,
+          model: turno.car.model,
+          patente: turno.car.patente,
+        },
+        servicio: turno.servicio?.map((s) => ({ id: s.id, name: s.name })),
+      };
     } catch {
       throw new HttpException('User unauthorized', 401);
     }

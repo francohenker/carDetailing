@@ -24,6 +24,7 @@ import { WeatherModule } from './weather/weather.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { QuotationModule } from './quotation/quotation.module';
 import { SystemConfigModule } from './config/system-config.module';
+import { PurchaseOrderModule } from './purchase-order/purchase-order.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { SystemConfigModule } from './config/system-config.module';
     StatisticsModule,
     QuotationModule,
     SystemConfigModule,
+    PurchaseOrderModule,
   ],
   controllers: [AppController],
   providers: [

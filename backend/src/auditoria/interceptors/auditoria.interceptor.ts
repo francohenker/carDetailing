@@ -391,7 +391,12 @@ export class AuditoriaInterceptor implements NestInterceptor {
           // Obtener datos nuevos del body o resultado
           let datosNuevos = null;
           if (accion === 'CREAR') {
-            datosNuevos = this.limpiarDatos(request.body);
+            // Para CREAR, usar el resultado (entidad creada con relaciones) en lugar del body (solo IDs)
+            if (result && typeof result === 'object') {
+              datosNuevos = this.limpiarDatos(result);
+            } else {
+              datosNuevos = this.limpiarDatos(request.body);
+            }
           } else if (
             accion === 'MODIFICAR' ||
             (result && typeof result === 'object')

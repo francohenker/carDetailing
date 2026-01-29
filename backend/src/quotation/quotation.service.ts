@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { QuotationRequest } from './entities/quotation-request.entity';
@@ -10,6 +10,7 @@ import {
   QuotationRequestStatus,
   QuotationResponseStatus,
 } from '../enums/quotation-status.enum';
+import { PurchaseOrderService } from '../purchase-order/purchase-order.service';
 
 @Injectable()
 export class QuotationService {
@@ -22,6 +23,8 @@ export class QuotationService {
     private productoRepository: Repository<Producto>,
     @InjectRepository(Supplier)
     private supplierRepository: Repository<Supplier>,
+    @Inject(forwardRef(() => PurchaseOrderService))
+    private purchaseOrderService: PurchaseOrderService,
   ) {}
 
   async createQuotationRequest(
@@ -257,6 +260,13 @@ export class QuotationService {
     request.status = QuotationRequestStatus.COMPLETED;
     await this.quotationRequestRepository.save(request);
 
+    // Crear orden de compra automáticamente
+    try {
+      await this.purchaseOrderService.createFromQuotationResponse(responseId);
+    } catch (error) {
+      console.error('Error al crear orden de compra automática:', error);
+    }
+
     // Cancelar automáticamente otras cotizaciones pendientes con productos superpuestos
     await this.cancelOverlappingQuotations(request);
 
@@ -327,16 +337,22 @@ export class QuotationService {
       throw new Error('No winning response found for this quotation');
     }
 
-    for (const quote of winningResponse.productQuotes) {
-      const product = await this.productoRepository.findOne({
-        where: { id: quote.productId },
-      });
+    // Ya no actualizamos el stock aquí, eso se hace en la orden de compra
+    // Buscar la orden de compra asociada y marcarla como recibida
+    try {
+      const purchaseOrders = await this.purchaseOrderService.findAll();
+      const relatedOrder = purchaseOrders.find(
+        (order) => order.quotationResponseId === winningResponse.id,
+      );
 
-      if (product) {
-        product.stock_actual =
-          Number(product.stock_actual) + Number(quote.quantity);
-        await this.productoRepository.save(product);
+      if (relatedOrder) {
+        await this.purchaseOrderService.updateStatus(relatedOrder.id, {
+          status: 'RECIBIDA' as any,
+          receivedAt: new Date(),
+        });
       }
+    } catch (error) {
+      console.error('Error al actualizar orden de compra:', error);
     }
 
     // Marcar la solicitud como finalizada (stock recibido)
