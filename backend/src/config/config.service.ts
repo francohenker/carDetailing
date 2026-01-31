@@ -49,8 +49,8 @@ class ConfigService {
       autoLoadEntities: true,
 
       //SINCRONIZAR LA BD (OSEA MIGRACIONES DE LAS ENTIDADES)
+      dropSchema: false,
       synchronize: false,
-
       // ssl: this.getValue('POSTGRES_SSL', false) === 'true',
       // ssl: true,
       ssl: {

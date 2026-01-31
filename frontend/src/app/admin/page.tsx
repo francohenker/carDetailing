@@ -635,7 +635,7 @@ export default function AdminPage() {
             })
             if (!response.ok) throw new Error('Error fetching services')
             const data = await response.json()
-            console.log("services: ", data)
+            // console.log("services: ", data)
             setServices(data)
         } catch (error) {
             console.error('Error fetching services:', error)
@@ -781,8 +781,10 @@ export default function AdminPage() {
             if (!response.ok) throw new Error('Error fetching products')
             const data = await response.json()
             setProducts(data)
+            return data
         } catch (error) {
             console.error('Error fetching products:', error)
+            return products
         }
     }
 
@@ -824,11 +826,14 @@ export default function AdminPage() {
 
             setIsProductDialogOpen(false)
             resetProductForm()
-            fetchProducts()
-            // Actualizar auditoría y stock bajo
-            fetchAuditoriaStats()
-            fetchLowStockProducts()
-            fetchDetailedAuditoriaRecords()
+            await fetchProducts()
+            // Actualizar auditoría y stock bajo con un pequeño delay
+            // para asegurar que la BD se actualizó completamente
+            setTimeout(() => {
+                fetchAuditoriaStats()
+                fetchLowStockProducts()
+                fetchDetailedAuditoriaRecords()
+            }, 500)
         } catch (error) {
             console.error('Error saving product:', error)
             toast.error("Error", {
@@ -921,6 +926,10 @@ export default function AdminPage() {
             if (response.ok) {
                 toast.success('Producto restaurado exitosamente')
                 await fetchProducts()
+                // Refrescar stock bajo para reflejar cambios
+                setTimeout(() => {
+                    fetchLowStockProducts()
+                }, 500)
             } else {
                 toast.error('Error al restaurar el producto')
             }
@@ -1658,6 +1667,10 @@ export default function AdminPage() {
             toast.success("Orden marcada como recibida y stock actualizado")
             await fetchPurchaseOrders()
             await fetchProducts()
+            // Refrescar stock bajo ya que se recibió nueva mercancía
+            setTimeout(() => {
+                fetchLowStockProducts()
+            }, 500)
         } catch (error) {
             console.error('Error updating order:', error)
             toast.error("Error al actualizar la orden")
@@ -1811,22 +1824,26 @@ export default function AdminPage() {
         }
     }
 
-    const handleOpenEmailDialog = (supplier: Supplier) => {
+    const handleOpenEmailDialog = async (supplier: Supplier) => {
         setSelectedSupplier(supplier)
+        setActionLoading('opening-email-dialog')
+
+        // Refrescar productos para asegurar que tenemos los datos más actualizados
+        const freshProducts = await fetchProducts()
 
         // Obtener TODOS los productos asociados a este proveedor (excluyendo eliminados)
-        const allSupplierProducts = products.filter(product =>
+        const allSupplierProducts = freshProducts.filter((product: Product) =>
             !product.isDeleted &&
             product.suppliers && product.suppliers.some(s => s.id === supplier.id)
         );
 
         // Separar productos con stock bajo
-        const lowStockSupplierProducts = allSupplierProducts.filter(p => 
+        const lowStockSupplierProducts = allSupplierProducts.filter((p: Product) => 
             p.stock_actual <= p.stock_minimo
         );
 
         // Seleccionar solo los productos con stock bajo por defecto
-        setSelectedProducts(lowStockSupplierProducts.map(p => p.id))
+        setSelectedProducts(lowStockSupplierProducts.map((p: Product) => p.id))
 
         // Generar mensaje inicial con productos de stock bajo
         const generateInitialMessage = (products: Product[]) => {
@@ -1834,7 +1851,7 @@ export default function AdminPage() {
                 return `Estimado/a ${supplier.contactPerson || supplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para consultar sobre disponibilidad de productos.\n\nSaludos cordiales,\nEquipo de Car Detailing`
             }
 
-            const productList = products.map(p =>
+            const productList = products.map((p: Product) =>
                 // `• ${p.name} - Stock actual: ${p.stock_actual}, Stock mínimo: ${p.stock_minimo}, Consumo por servicio: ${p.servicios_por_producto || 1}`
                 `• ${p.name}, cantidad: ${p.stock_minimo * 2}`
             ).join('\n')
@@ -1845,9 +1862,10 @@ export default function AdminPage() {
         setEmailForm({
             supplierId: supplier.id,
             subject: `Solicitud de reposición de stock - ${new Date().toLocaleDateString()}`,
-            productIds: lowStockSupplierProducts.map(p => p.id),
+            productIds: lowStockSupplierProducts.map((p: Product) => p.id),
             message: generateInitialMessage(lowStockSupplierProducts)
         })
+        setActionLoading(null)
         setIsEmailDialogOpen(true)
     }
 
@@ -1995,7 +2013,12 @@ export default function AdminPage() {
                 description: "Turno marcado como pagado correctamente.",
             })
 
-            fetchTurnos()
+            await fetchTurnos()
+            // Refrescar productos y stock bajo ya que el pago puede haber afectado el inventario
+            setTimeout(() => {
+                fetchProducts()
+                fetchLowStockProducts()
+            }, 500)
         } catch (error) {
             console.error('Error marking turno as paid:', error)
             toast.error("Error", {
@@ -2030,7 +2053,12 @@ export default function AdminPage() {
             );
 
             // Recargar turnos para mantener consistencia con la paginación
-            fetchTurnos();
+            await fetchTurnos();
+            // Refrescar productos y stock bajo ya que se descontó inventario
+            setTimeout(() => {
+                fetchProducts()
+                fetchLowStockProducts()
+            }, 500)
 
 
         } catch (error) {
@@ -2801,13 +2829,32 @@ export default function AdminPage() {
                                 {/* PRODUCTOS CON STOCK BAJO */}
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <AlertTriangle className="h-5 w-5 text-red-500" />
-                                            Productos con Stock Bajo
-                                        </CardTitle>
-                                        <CardDescription>
-                                            Productos que han alcanzado su stock mínimo
-                                        </CardDescription>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="flex items-center gap-2">
+                                                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                                                    Productos con Stock Bajo
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Productos que han alcanzado su stock mínimo
+                                                </CardDescription>
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    fetchLowStockProducts()
+                                                    fetchProducts()
+                                                    toast.success("Datos actualizados", {
+                                                        description: "La lista de stock bajo se ha refrescado."
+                                                    })
+                                                }}
+                                                className="gap-2"
+                                            >
+                                                <RefreshCw className="h-4 w-4" />
+                                                Refrescar
+                                            </Button>
+                                        </div>
                                     </CardHeader>
                                     <CardContent>
                                         {lowStockProducts.length === 0 ? (
@@ -2944,9 +2991,9 @@ export default function AdminPage() {
                                                                         size="sm"
                                                                         onClick={() => handleOpenEmailDialog(supplier)}
                                                                         className="bg-blue-600 hover:bg-blue-700"
-                                                                        disabled={actionLoading === 'send-email'}
+                                                                        disabled={actionLoading === 'opening-email-dialog'}
                                                                     >
-                                                                        {actionLoading === 'send-email' ? (
+                                                                        {actionLoading === 'opening-email-dialog' ? (
                                                                             <span className="loading loading-spinner loading-xs mr-2"></span>
                                                                         ) : (
                                                                             <Mail className="h-4 w-4 mr-2" />

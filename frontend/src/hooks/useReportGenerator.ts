@@ -61,27 +61,32 @@ export function useReportGenerator() {
       
       yPosition += 15;
       
-      // Información del período y emisor
+      // Fecha de emisión y usuario (siempre mostrar)
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      
+      const currentDate = new Date().toLocaleDateString('es-AR');
+      const currentTime = new Date().toLocaleTimeString('es-AR');
+      pdf.text(`Fecha de emisión: ${currentDate} a las ${currentTime}`, 20, yPosition);
+      yPosition += 8;
+      
+      // Agregar información del usuario emisor con validación de apellido
+      if (userInfo) {
+        const userName = userInfo.lastname 
+          ? `${userInfo.firstname} ${userInfo.lastname}` 
+          : userInfo.firstname;
+        pdf.text(`Emitido por: ${userName} (${userInfo.email})`, 20, yPosition);
+        yPosition += 8;
+      }
+      
+      // Información del período
       if (data.period) {
-        pdf.setFontSize(12);
-        pdf.setTextColor(0, 0, 0);
         const startDate = new Date(data.period.startDate).toLocaleDateString('es-AR');
         const endDate = new Date(data.period.endDate).toLocaleDateString('es-AR');
         pdf.text(`Período: ${startDate} - ${endDate} (${data.period.days} días)`, 20, yPosition);
+        yPosition += 12;
+      } else {
         yPosition += 8;
-        
-        const currentDate = new Date().toLocaleDateString('es-AR');
-        const currentTime = new Date().toLocaleTimeString('es-AR');
-        pdf.text(`Fecha de emisión: ${currentDate} a las ${currentTime}`, 20, yPosition);
-        yPosition += 8;
-        
-        // Agregar información del usuario emisor
-        if (userInfo) {
-          pdf.text(`Emitido por: ${userInfo.firstname} ${userInfo.lastname} (${userInfo.email})`, 20, yPosition);
-          yPosition += 12;
-        } else {
-          yPosition += 4;
-        }
       }
 
       // Métricas principales

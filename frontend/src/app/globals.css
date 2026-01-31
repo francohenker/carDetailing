@@ -98,3 +98,16 @@
     @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
   }
 }
+
+/* Estilos para inputs de fecha con formato dd/mm/yyyy */
+.date-input-custom::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.date-input-custom {
+  position: relative;
+}

@@ -18,7 +18,7 @@ export class PurchaseOrder {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 50, unique: true })
+  @Column({ type: 'varchar', length: 50 })
   orderNumber: string;
 
   @ManyToOne(() => Supplier)
