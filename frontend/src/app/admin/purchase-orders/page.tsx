@@ -409,7 +409,7 @@ export default function PurchaseOrdersPage() {
                             </CardContent>
                         </Card>
                         
-                        <Card>
+                        {/* <Card>
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
@@ -419,7 +419,7 @@ export default function PurchaseOrdersPage() {
                                     <TrendingUp className="h-8 w-8 text-blue-500" />
                                 </div>
                             </CardContent>
-                        </Card>
+                        </Card> */}
                     </div>
 
                     {/* Controles */}
@@ -440,7 +440,7 @@ export default function PurchaseOrdersPage() {
                                         <SelectItem value="all">Todas</SelectItem>
                                         <SelectItem value="PENDIENTE">Pendientes</SelectItem>
                                         <SelectItem value="RECIBIDA">Recibidas</SelectItem>
-                                        <SelectItem value="PARCIAL">Parciales</SelectItem>
+                                        {/* <SelectItem value="PARCIAL">Parciales</SelectItem> */}
                                         <SelectItem value="CANCELADA">Canceladas</SelectItem>
                                     </SelectContent>
                                 </Select>

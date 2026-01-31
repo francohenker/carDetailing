@@ -491,6 +491,7 @@ export default function AdminPage() {
         notes: ''
     })
     const [filterOrderStatus, setFilterOrderStatus] = useState<'all' | 'PENDIENTE' | 'RECIBIDA' | 'PARCIAL' | 'CANCELADA'>('all')
+    const [supplierSearchQuery, setSupplierSearchQuery] = useState('')
 
     // Estados generales
     const [loading, setLoading] = useState(true)
@@ -1400,7 +1401,24 @@ export default function AdminPage() {
         if (!detailedStatistics) return
 
         try {
-            await generateReport(detailedStatistics, currentUser)
+            // Si no hay período en las estadísticas, agregar el período por defecto (últimos 30 días)
+            const statsWithPeriod = { ...detailedStatistics };
+            
+            if (!statsWithPeriod.period) {
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - 30);
+                
+                const days = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                statsWithPeriod.period = {
+                    startDate: startDate.toISOString().split('T')[0],
+                    endDate: endDate.toISOString().split('T')[0],
+                    days: days
+                };
+            }
+            
+            await generateReport(statsWithPeriod, currentUser)
         } catch (err) {
             console.error('Error generando informe:', err)
             toast.error("Error", {
@@ -1796,15 +1814,21 @@ export default function AdminPage() {
     const handleOpenEmailDialog = (supplier: Supplier) => {
         setSelectedSupplier(supplier)
 
-        // Filtrar productos con stock bajo que están asignados a este proveedor
-        const supplierProducts = lowStockProducts.filter(product =>
+        // Obtener TODOS los productos asociados a este proveedor (excluyendo eliminados)
+        const allSupplierProducts = products.filter(product =>
+            !product.isDeleted &&
             product.suppliers && product.suppliers.some(s => s.id === supplier.id)
         );
 
-        // Seleccionar todos los productos del proveedor por defecto
-        setSelectedProducts(supplierProducts.map(p => p.id))
+        // Separar productos con stock bajo
+        const lowStockSupplierProducts = allSupplierProducts.filter(p => 
+            p.stock_actual <= p.stock_minimo
+        );
 
-        // Generar mensaje inicial con productos del proveedor
+        // Seleccionar solo los productos con stock bajo por defecto
+        setSelectedProducts(lowStockSupplierProducts.map(p => p.id))
+
+        // Generar mensaje inicial con productos de stock bajo
         const generateInitialMessage = (products: Product[]) => {
             if (products.length === 0) {
                 return `Estimado/a ${supplier.contactPerson || supplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para consultar sobre disponibilidad de productos.\n\nSaludos cordiales,\nEquipo de Car Detailing`
@@ -1821,8 +1845,8 @@ export default function AdminPage() {
         setEmailForm({
             supplierId: supplier.id,
             subject: `Solicitud de reposición de stock - ${new Date().toLocaleDateString()}`,
-            productIds: supplierProducts.map(p => p.id),
-            message: generateInitialMessage(supplierProducts)
+            productIds: lowStockSupplierProducts.map(p => p.id),
+            message: generateInitialMessage(lowStockSupplierProducts)
         })
         setIsEmailDialogOpen(true)
     }
@@ -1830,7 +1854,7 @@ export default function AdminPage() {
     const updateEmailMessage = (productIds: number[]) => {
         if (!selectedSupplier) return;
 
-        const selectedProductsList = lowStockProducts.filter(p => productIds.includes(p.id));
+        const selectedProductsList = products.filter(p => !p.isDeleted && productIds.includes(p.id));
 
         const generateMessage = (products: Product[]) => {
             if (products.length === 0) {
@@ -2472,7 +2496,7 @@ export default function AdminPage() {
                             ) : (
                                 <>
                                     {/* Vista de Órdenes de Compra */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                                         <Card>
                                             <CardContent className="p-6">
                                                 <div className="flex items-center justify-between">
@@ -2509,7 +2533,7 @@ export default function AdminPage() {
                                             </CardContent>
                                         </Card>
                                         
-                                        <Card>
+                                        {/* <Card>
                                             <CardContent className="p-6">
                                                 <div className="flex items-center justify-between">
                                                     <div>
@@ -2519,7 +2543,7 @@ export default function AdminPage() {
                                                     <TrendingUp className="h-8 w-8 text-blue-500" />
                                                 </div>
                                             </CardContent>
-                                        </Card>
+                                        </Card> */}
                                     </div>
 
                                     <Card>
@@ -2539,7 +2563,7 @@ export default function AdminPage() {
                                                         <SelectItem value="all">Todas</SelectItem>
                                                         <SelectItem value="PENDIENTE">Pendientes</SelectItem>
                                                         <SelectItem value="RECIBIDA">Recibidas</SelectItem>
-                                                        <SelectItem value="PARCIAL">Parciales</SelectItem>
+                                                        {/* <SelectItem value="PARCIAL">Parciales</SelectItem> */}
                                                         <SelectItem value="CANCELADA">Canceladas</SelectItem>
                                                     </SelectContent>
                                                 </Select>
@@ -2883,35 +2907,67 @@ export default function AdminPage() {
                                                 <p>No hay proveedores activos disponibles.</p>
                                             </div>
                                         ) : (
-                                            <div className="space-y-3">
-                                                {suppliers.filter(s => s.isActive).map((supplier) => (
-                                                    <div key={supplier.id} className="border rounded-lg p-3 hover:bg-blue-50 transition-colors">
-                                                        <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <h3 className="font-medium">{supplier.name}</h3>
-                                                                <p className="text-sm text-muted-foreground">{supplier.email}</p>
-                                                                {supplier.contactPerson && (
-                                                                    <p className="text-xs text-muted-foreground">
-                                                                        Contacto: {supplier.contactPerson}
-                                                                    </p>
-                                                                )}
+                                            <div className="space-y-4">
+                                                {/* Campo de búsqueda */}
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                    <Input
+                                                        placeholder="Buscar proveedor..."
+                                                        value={supplierSearchQuery}
+                                                        onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                                                        className="pl-10"
+                                                    />
+                                                </div>
+
+                                                {/* Lista de proveedores con scroll */}
+                                                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                                                    {suppliers
+                                                        .filter(s => 
+                                                            s.isActive && 
+                                                            (s.name.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
+                                                            s.email.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
+                                                            s.contactPerson?.toLowerCase().includes(supplierSearchQuery.toLowerCase()))
+                                                        )
+                                                        .map((supplier) => (
+                                                            <div key={supplier.id} className="border rounded-lg p-3 hover:bg-blue-50 transition-colors">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <h3 className="font-medium">{supplier.name}</h3>
+                                                                        <p className="text-sm text-muted-foreground">{supplier.email}</p>
+                                                                        {supplier.contactPerson && (
+                                                                            <p className="text-xs text-muted-foreground">
+                                                                                Contacto: {supplier.contactPerson}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => handleOpenEmailDialog(supplier)}
+                                                                        className="bg-blue-600 hover:bg-blue-700"
+                                                                        disabled={actionLoading === 'send-email'}
+                                                                    >
+                                                                        {actionLoading === 'send-email' ? (
+                                                                            <span className="loading loading-spinner loading-xs mr-2"></span>
+                                                                        ) : (
+                                                                            <Mail className="h-4 w-4 mr-2" />
+                                                                        )}
+                                                                        Enviar Email
+                                                                    </Button>
+                                                                </div>
                                                             </div>
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => handleOpenEmailDialog(supplier)}
-                                                                className="bg-blue-600 hover:bg-blue-700"
-                                                                disabled={actionLoading === 'send-email'}
-                                                            >
-                                                                {actionLoading === 'send-email' ? (
-                                                                    <span className="loading loading-spinner loading-xs mr-2"></span>
-                                                                ) : (
-                                                                    <Mail className="h-4 w-4 mr-2" />
-                                                                )}
-                                                                Enviar Email
-                                                            </Button>
+                                                        ))}
+                                                    {suppliers.filter(s => 
+                                                        s.isActive && 
+                                                        (s.name.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
+                                                        s.email.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
+                                                        s.contactPerson?.toLowerCase().includes(supplierSearchQuery.toLowerCase()))
+                                                    ).length === 0 && (
+                                                        <div className="text-center py-8 text-muted-foreground">
+                                                            <Building2 className="h-12 w-12 mx-auto mb-2" />
+                                                            <p>No se encontraron proveedores con ese criterio de búsqueda.</p>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </CardContent>
@@ -5043,87 +5099,117 @@ export default function AdminPage() {
                                     />
                                 </div>
 
-                                {lowStockProducts.length > 0 && (
-                                    <div className="bg-amber-50 p-3 rounded-lg">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <AlertTriangle className="h-4 w-4 text-amber-600" />
-                                            <span className="font-medium text-amber-900">Seleccionar Productos para Solicitar</span>
-                                        </div>
-                                        <div className="text-sm text-amber-800 mb-3">
-                                            <p>Marca los productos que deseas incluir en la solicitud de reposición:</p>
-                                        </div>
+                                {selectedSupplier && (() => {
+                                    // Obtener todos los productos del proveedor seleccionado (excluyendo eliminados)
+                                    const allSupplierProducts = products.filter(product =>
+                                        !product.isDeleted &&
+                                        product.suppliers && product.suppliers.some(s => s.id === selectedSupplier.id)
+                                    );
 
-                                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                                            {lowStockProducts.map((product) => {
-                                                const isSupplierProduct = product.suppliers && product.suppliers.some(s => s.id === selectedSupplier?.id);
-                                                const isSelected = selectedProducts.includes(product.id);
+                                    // Separar en productos con stock bajo y stock normal
+                                    const lowStock = allSupplierProducts.filter(p => p.stock_actual <= p.stock_minimo);
+                                    const normalStock = allSupplierProducts.filter(p => p.stock_actual > p.stock_minimo);
 
-                                                return (
-                                                    <div
-                                                        key={product.id}
-                                                        className={`bg-white p-3 rounded border transition-all ${isSelected ? 'border-blue-300 bg-blue-50' : 'border-amber-200'
-                                                            } ${!isSupplierProduct ? 'opacity-50' : ''}`}
-                                                    >
-                                                        <div className="flex items-start gap-3">
-                                                            <input
-                                                                type="checkbox"
-                                                                id={`product-${product.id}`}
-                                                                checked={isSelected}
-                                                                onChange={(e) => handleProductSelection(product.id, e.target.checked)}
-                                                                className="checkbox checkbox-sm mt-1"
-                                                                disabled={!isSupplierProduct}
-                                                            />
-                                                            <label
-                                                                htmlFor={`product-${product.id}`}
-                                                                className="flex-1 cursor-pointer"
-                                                                aria-label={`Seleccionar producto ${product.name}`}
-                                                            >
-                                                                <div className="flex justify-between items-start">
-                                                                    <div>
-                                                                        <span className={`font-medium ${isSelected ? 'text-blue-900' : 'text-amber-900'}`}>
-                                                                            {product.name}
-                                                                        </span>
-                                                                        <div className="flex gap-4 text-xs text-amber-700 mt-1">
-                                                                            <span>Stock: <strong className="text-red-600">{product.stock_actual}</strong></span>
-                                                                            <span>Mínimo: <strong>{product.stock_minimo}</strong></span>
-                                                                            <span>Por servicio: <strong>{product.servicios_por_producto || 1}</strong></span>
+                                    // Combinar: primero stock bajo, luego normal
+                                    const sortedProducts = [...lowStock, ...normalStock];
+
+                                    if (sortedProducts.length === 0) {
+                                        return (
+                                            <div className="bg-gray-50 p-4 rounded-lg text-center">
+                                                <p className="text-sm text-gray-600">No hay productos asociados a este proveedor</p>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div className="bg-amber-50 p-3 rounded-lg">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                                <span className="font-medium text-amber-900">Seleccionar Productos para Solicitar</span>
+                                            </div>
+                                            <div className="text-sm text-amber-800 mb-3">
+                                                <p>Marca los productos que deseas incluir en la solicitud de reposición:</p>
+                                                {lowStock.length > 0 && (
+                                                    <p className="text-xs mt-1 text-amber-700">
+                                                        <strong>{lowStock.length}</strong> producto(s) con stock bajo se muestran primero
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                                                {sortedProducts.map((product) => {
+                                                    const isLowStock = product.stock_actual <= product.stock_minimo;
+                                                    const isSelected = selectedProducts.includes(product.id);
+
+                                                    return (
+                                                        <div
+                                                            key={product.id}
+                                                            className={`bg-white p-3 rounded border transition-all ${
+                                                                isSelected ? 'border-blue-300 bg-blue-50' : 
+                                                                isLowStock ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    id={`product-${product.id}`}
+                                                                    checked={isSelected}
+                                                                    onChange={(e) => handleProductSelection(product.id, e.target.checked)}
+                                                                    className="checkbox checkbox-sm mt-1"
+                                                                />
+                                                                <label
+                                                                    htmlFor={`product-${product.id}`}
+                                                                    className="flex-1 cursor-pointer"
+                                                                    aria-label={`Seleccionar producto ${product.name}`}
+                                                                >
+                                                                    <div className="flex justify-between items-start">
+                                                                        <div>
+                                                                            <span className={`font-medium ${
+                                                                                isSelected ? 'text-blue-900' : 
+                                                                                isLowStock ? 'text-red-900' : 'text-gray-900'
+                                                                            }`}>
+                                                                                {product.name}
+                                                                            </span>
+                                                                            <div className={`flex gap-4 text-xs mt-1 ${
+                                                                                isLowStock ? 'text-red-700' : 'text-gray-600'
+                                                                            }`}>
+                                                                                <span>Stock: <strong className={isLowStock ? 'text-red-600' : ''}>{product.stock_actual}</strong></span>
+                                                                                <span>Mínimo: <strong>{product.stock_minimo}</strong></span>
+                                                                                <span>Por servicio: <strong>{product.servicios_por_producto || 1}</strong></span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex flex-col items-end gap-1">
+                                                                            {isLowStock && (
+                                                                                <Badge variant="destructive" className="text-xs">
+                                                                                    Stock Bajo
+                                                                                </Badge>
+                                                                            )}
+                                                                            {isSelected && (
+                                                                                <Badge variant="default" className="text-xs bg-blue-600">
+                                                                                    Seleccionado
+                                                                                </Badge>
+                                                                            )}
                                                                         </div>
                                                                     </div>
-                                                                    <div className="flex flex-col items-end gap-1">
-                                                                        <Badge
-                                                                            variant="outline"
-                                                                            className={`text-xs ${isSupplierProduct ? 'text-green-700 border-green-300' : 'text-gray-500 border-gray-300'}`}
-                                                                        >
-                                                                            {isSupplierProduct ? 'Asignado' : 'No asignado'}
-                                                                        </Badge>
-                                                                        {isSelected && (
-                                                                            <Badge variant="default" className="text-xs bg-blue-600">
-                                                                                Seleccionado
-                                                                            </Badge>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </label>
+                                                                </label>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )
-                                            })}
-                                        </div>
-                                        {selectedProducts.length > 0 && (
-                                            <div className="mt-3 p-2 bg-blue-100 rounded border border-blue-200">
-                                                <div className="flex items-center gap-2">
-                                                    <CheckCircle className="h-4 w-4 text-blue-600" />
-                                                    <span className="text-sm font-medium text-blue-800">
-                                                        {selectedProducts.length} producto(s) seleccionado(s) para incluir en el email
-                                                    </span>
-                                                </div>
+                                                    );
+                                                })}
                                             </div>
-                                        )}
-                                        <div className="mt-2 text-xs text-amber-600">
-                                            <p>💡 Solo se pueden seleccionar productos asignados a este proveedor. El mensaje se actualizará automáticamente.</p>
+                                            {selectedProducts.length > 0 && (
+                                                <div className="mt-3 p-2 bg-blue-100 rounded border border-blue-200">
+                                                    <div className="flex items-center gap-2">
+                                                        <CheckCircle className="h-4 w-4 text-blue-600" />
+                                                        <span className="text-sm font-medium text-blue-800">
+                                                            {selectedProducts.length} producto(s) seleccionado(s) para incluir en el email
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
 
                             <DialogFooter>
@@ -5227,18 +5313,29 @@ export default function AdminPage() {
                                     <Label htmlFor="order-supplier">Proveedor *</Label>
                                     <Select 
                                         value={orderForm.supplierId} 
-                                        onValueChange={(value) => setOrderForm({...orderForm, supplierId: value})}
+                                        onValueChange={(value) => {
+                                            setOrderForm({...orderForm, supplierId: value})
+                                            // Limpiar el producto seleccionado al cambiar de proveedor
+                                            setCurrentOrderItem({
+                                                productId: '',
+                                                quantity: '',
+                                                unitPrice: '',
+                                                notes: ''
+                                            })
+                                        }}
                                         required
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Seleccione un proveedor" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {suppliers.map((supplier) => (
-                                                <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                                                    {supplier.name}
-                                                </SelectItem>
-                                            ))}
+                                            {suppliers
+                                                .filter(supplier => supplier.isActive)
+                                                .map((supplier) => (
+                                                    <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                                                        {supplier.name}
+                                                    </SelectItem>
+                                                ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -5269,18 +5366,35 @@ export default function AdminPage() {
                                                 <Select 
                                                     value={currentOrderItem.productId} 
                                                     onValueChange={(value) => setCurrentOrderItem({...currentOrderItem, productId: value})}
+                                                    disabled={!orderForm.supplierId}
                                                 >
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Seleccione producto" />
+                                                        <SelectValue placeholder={orderForm.supplierId ? "Seleccione producto" : "Primero seleccione un proveedor"} />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {products.map((product) => (
-                                                            <SelectItem key={product.id} value={product.id.toString()}>
-                                                                {product.name}
-                                                            </SelectItem>
-                                                        ))}
+                                                        {products
+                                                            .filter(product => 
+                                                                !product.isDeleted && 
+                                                                orderForm.supplierId && 
+                                                                product.suppliers && 
+                                                                product.suppliers.some(s => s.id === parseInt(orderForm.supplierId))
+                                                            )
+                                                            .map((product) => (
+                                                                <SelectItem key={product.id} value={product.id.toString()}>
+                                                                    {product.name}
+                                                                </SelectItem>
+                                                            ))}
                                                     </SelectContent>
                                                 </Select>
+                                                {orderForm.supplierId && products.filter(p => 
+                                                    !p.isDeleted && 
+                                                    p.suppliers && 
+                                                    p.suppliers.some(s => s.id === parseInt(orderForm.supplierId))
+                                                ).length === 0 && (
+                                                    <p className="text-xs text-amber-600 mt-1">
+                                                        No hay productos asociados a este proveedor
+                                                    </p>
+                                                )}
                                             </div>
 
                                             <div className="col-span-2 space-y-2">
