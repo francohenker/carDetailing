@@ -1839,7 +1839,7 @@ export default function AdminPage() {
 
         // Separar productos con stock bajo
         const lowStockSupplierProducts = allSupplierProducts.filter((p: Product) => 
-            p.stock_actual <= p.stock_minimo
+            Number(p.stock_actual) <= Number(p.stock_minimo)
         );
 
         // Seleccionar solo los productos con stock bajo por defecto
@@ -2430,13 +2430,13 @@ export default function AdminPage() {
                                                     <TableCell className="text-center">
                                                         <div className="flex flex-col items-center gap-1">
                                                             <span className={
-                                                                product.stock_actual <= 0 ? "font-semibold text-red-600" :
-                                                                    product.stock_actual <= product.stock_minimo ? "font-semibold text-amber-600" :
+                                                                Number(product.stock_actual) <= 0 ? "font-semibold text-red-600" :
+                                                                    Number(product.stock_actual) <= Number(product.stock_minimo) ? "font-semibold text-amber-600" :
                                                                         "font-semibold"
                                                             }>
                                                                 {Number(product.stock_actual).toFixed(2)}
                                                             </span>
-                                                            {product.stock_actual <= 0 && (
+                                                            {Number(product.stock_actual) <= 0 && (
                                                                 <span className="text-xs text-red-600 font-medium">Sin stock</span>
                                                             )}
                                                         </div>
@@ -5154,8 +5154,8 @@ export default function AdminPage() {
                                     );
 
                                     // Separar en productos con stock bajo y stock normal
-                                    const lowStock = allSupplierProducts.filter(p => p.stock_actual <= p.stock_minimo);
-                                    const normalStock = allSupplierProducts.filter(p => p.stock_actual > p.stock_minimo);
+                                    const lowStock = allSupplierProducts.filter(p => Number(p.stock_actual) <= Number(p.stock_minimo));
+                                    const normalStock = allSupplierProducts.filter(p => Number(p.stock_actual) > Number(p.stock_minimo));
 
                                     // Combinar: primero stock bajo, luego normal
                                     const sortedProducts = [...lowStock, ...normalStock];
@@ -5185,7 +5185,7 @@ export default function AdminPage() {
 
                                             <div className="space-y-2 max-h-60 overflow-y-auto">
                                                 {sortedProducts.map((product) => {
-                                                    const isLowStock = product.stock_actual <= product.stock_minimo;
+                                                    const isLowStock = Number(product.stock_actual) <= Number(product.stock_minimo);
                                                     const isSelected = selectedProducts.includes(product.id);
 
                                                     return (
