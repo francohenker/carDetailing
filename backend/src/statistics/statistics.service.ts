@@ -62,14 +62,26 @@ export class StatisticsService {
       where: { createdAt: MoreThan(startOfMonth) },
     });
 
-    // 6. Servicios más populares (Top 5)
+    // 6. Servicios más populares (Top 5) con estado de turnos
     const popularServices = await this.turnoRepository
       .createQueryBuilder('turno')
       .leftJoinAndSelect('turno.servicio', 'servicio')
       .select('servicio.name', 'name')
-      .addSelect('COUNT(servicio.id)', 'count')
+      .addSelect('COUNT(servicio.id)', 'total')
+      .addSelect(
+        `COUNT(CASE WHEN turno.estado = '${estado_turno.FINALIZADO}' THEN 1 END)`,
+        'realizados',
+      )
+      .addSelect(
+        `COUNT(CASE WHEN turno.estado = '${estado_turno.PENDIENTE}' THEN 1 END)`,
+        'pendientes',
+      )
+      .addSelect(
+        `COUNT(CASE WHEN turno.estado = '${estado_turno.CANCELADO}' THEN 1 END)`,
+        'cancelados',
+      )
       .groupBy('servicio.name')
-      .orderBy('count', 'DESC')
+      .orderBy('total', 'DESC')
       .limit(5)
       .getRawMany();
 
@@ -214,15 +226,27 @@ export class StatisticsService {
       },
     });
 
-    // 5. Servicios más populares en el período
+    // 5. Servicios más populares en el período con estado de turnos
     const popularServices = await this.turnoRepository
       .createQueryBuilder('turno')
       .leftJoinAndSelect('turno.servicio', 'servicio')
       .select('servicio.name', 'name')
-      .addSelect('COUNT(servicio.id)', 'count')
+      .addSelect('COUNT(servicio.id)', 'total')
+      .addSelect(
+        `COUNT(CASE WHEN turno.estado = '${estado_turno.FINALIZADO}' THEN 1 END)`,
+        'realizados',
+      )
+      .addSelect(
+        `COUNT(CASE WHEN turno.estado = '${estado_turno.PENDIENTE}' THEN 1 END)`,
+        'pendientes',
+      )
+      .addSelect(
+        `COUNT(CASE WHEN turno.estado = '${estado_turno.CANCELADO}' THEN 1 END)`,
+        'cancelados',
+      )
       .where('turno.fechaHora BETWEEN :start AND :end', { start, end })
       .groupBy('servicio.name')
-      .orderBy('count', 'DESC')
+      .orderBy('total', 'DESC')
       .limit(10)
       .getRawMany();
 
@@ -404,6 +428,10 @@ export class StatisticsService {
         .addSelect('user.email', 'clientEmail')
         .addSelect('COALESCE(SUM(pago.monto), 0)', 'totalSpent') // Manejar NULLs
         .addSelect('COUNT(DISTINCT turno.id)', 'turnosCount')
+        .addSelect(
+          `COUNT(DISTINCT CASE WHEN turno.estado = '${estado_turno.FINALIZADO}' THEN turno.id END)`,
+          'turnosRealizados',
+        )
         .where('pago.fecha_pago BETWEEN :start AND :end', {
           start: startDate,
           end: endDate,
@@ -426,6 +454,7 @@ export class StatisticsService {
         clientEmail: client.clientEmail || 'Sin email',
         totalSpent: parseFloat(client.totalSpent) || 0,
         turnosCount: parseInt(client.turnosCount) || 0,
+        turnosRealizados: parseInt(client.turnosRealizados) || 0,
       }));
     } catch (error) {
       console.error('❌ Error en getTopClientsFiltered:', error);

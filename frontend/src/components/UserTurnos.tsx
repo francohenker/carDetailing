@@ -496,14 +496,14 @@ export default function UserTurnos() {
                     <div className="text-lg font-bold mb-2">
                       ${turno.totalPrice.toLocaleString("es-AR")}
                     </div>
-                    {turno.estado !== "cancelado" && !isTurnoPagado(turno) && (
+                    {/* {turno.estado !== "cancelado" && !isTurnoPagado(turno) && (
                       <div className="text-sm text-muted-foreground font-bold my-2">
                         Falta pagar:{" "}
                         <span className="text-destructive font-bold">
                           ${getMontoFaltante(turno).toLocaleString("es-AR")}
                         </span>
                       </div>
-                    )}
+                    )} */}
                     <div className="flex gap-2">
                       {turno.estado === "pendiente" &&
                         !isTurnoPagado(turno) && (

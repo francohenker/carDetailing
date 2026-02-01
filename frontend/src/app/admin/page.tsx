@@ -3534,27 +3534,41 @@ export default function AdminPage() {
                                             </CardHeader>
                                             <CardContent>
                                                 <div className="space-y-4">
-                                                    {detailedStatistics.topClients.slice(0, 10).map((client, index) => (
-                                                        <div key={`${client.clientEmail}-${index}`} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
-                                                                    index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
+                                                    {/* Encabezados de tabla */}
+                                                    <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-gray-100 rounded-lg font-semibold text-sm text-gray-700">
+                                                        <div className="col-span-2">Cliente</div>
+                                                        <div className="text-center">Ingresos</div>
+                                                        <div className="text-center">Turnos Realizados</div>
+                                                    </div>
+
+                                                    {detailedStatistics.topClients.slice(0, 10).map((client: any, index) => {
+                                                        const turnosRealizados = client.turnosRealizados || client.turnosCount || 0;
+                                                        
+                                                        return (
+                                                            <div key={`${client.clientEmail}-${index}`} className="grid grid-cols-4 gap-2 items-center p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
+                                                                <div className="col-span-2 flex items-center gap-3">
+                                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${
+                                                                        index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                                                                        index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
                                                                         index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
-                                                                            'bg-gradient-to-r from-blue-400 to-blue-600'
+                                                                        'bg-gradient-to-r from-blue-400 to-blue-600'
                                                                     }`}>
-                                                                    {index + 1}
+                                                                        {index + 1}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-semibold text-gray-900">{client.clientName}</p>
+                                                                        <p className="text-sm text-gray-600">{client.clientEmail}</p>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <p className="font-semibold text-gray-900">{client.clientName}</p>
-                                                                    <p className="text-sm text-gray-600">{client.clientEmail}</p>
+                                                                <div className="text-center">
+                                                                    <p className="font-bold text-green-600">{formatCurrency(client.totalSpent)}</p>
+                                                                </div>
+                                                                <div className="text-center">
+                                                                    <p className="text-xl font-bold text-blue-600">{turnosRealizados}</p>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-right">
-                                                                <p className="font-bold text-green-600">{formatCurrency(client.totalSpent)}</p>
-                                                                <p className="text-sm text-gray-500">{client.turnosCount} turnos</p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             </CardContent>
                                         </Card>
@@ -3571,27 +3585,53 @@ export default function AdminPage() {
                                         <CardContent>
                                             <div className="space-y-4">
                                                 {statistics?.popularServices && statistics.popularServices.length > 0 ? (
-                                                    statistics.popularServices.map((service, index) => (
-                                                        <div key={service.name} className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-100">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
-                                                                    index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
-                                                                        index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
-                                                                            'bg-gradient-to-r from-blue-400 to-blue-600'
-                                                                    }`}>
-                                                                    {index + 1}
-                                                                </div>
-                                                                <div>
-                                                                    <h3 className="font-semibold text-gray-900">{service.name}</h3>
-                                                                    <p className="text-sm text-gray-600">Servicio popular</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <span className="text-2xl font-bold text-orange-600">{service.count}</span>
-                                                                <p className="text-sm text-gray-500">solicitudes</p>
-                                                            </div>
+                                                    <>
+                                                        {/* Encabezados de tabla */}
+                                                        <div className="grid grid-cols-6 gap-2 px-4 py-2 bg-gray-100 rounded-lg font-semibold text-sm text-gray-700">
+                                                            <div className="col-span-2">Servicio</div>
+                                                            <div className="text-center">Realizados</div>
+                                                            <div className="text-center">Pendientes</div>
+                                                            <div className="text-center">Cancelados</div>
+                                                            <div className="text-center">TOTAL</div>
                                                         </div>
-                                                    ))
+                                                        
+                                                        {statistics.popularServices.map((service: any, index) => {
+                                                            const realizados = service.realizados || service.count || 0;
+                                                            const pendientes = service.pendientes || 0;
+                                                            const cancelados = service.cancelados || 0;
+                                                            const total = service.total || parseInt(service.count) || 0;
+                                                            
+                                                            return (
+                                                                <div key={service.name} className="grid grid-cols-6 gap-2 items-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-100">
+                                                                    <div className="col-span-2 flex items-center gap-3">
+                                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 ${
+                                                                            index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                                                                            index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
+                                                                            index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
+                                                                            'bg-gradient-to-r from-blue-400 to-blue-600'
+                                                                        }`}>
+                                                                            {index + 1}
+                                                                        </div>
+                                                                        <div>
+                                                                            <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-center">
+                                                                        <span className="text-xl font-bold text-green-600">{realizados}</span>
+                                                                    </div>
+                                                                    <div className="text-center">
+                                                                        <span className="text-xl font-bold text-yellow-600">{pendientes}</span>
+                                                                    </div>
+                                                                    <div className="text-center">
+                                                                        <span className="text-xl font-bold text-red-600">{cancelados}</span>
+                                                                    </div>
+                                                                    <div className="text-center">
+                                                                        <span className="text-2xl font-bold text-orange-600">{total}</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </>
                                                 ) : (
                                                     <div className="text-center py-8">
                                                         <p className="text-muted-foreground">No hay datos de servicios disponibles</p>

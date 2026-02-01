@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +24,30 @@ const formatDateToDisplay = (dateString: string): string => {
 // Función para convertir fecha de formato DD/MM/YYYY a YYYY-MM-DD
 const formatDateToISO = (dateString: string): string => {
   if (!dateString) return '';
-  const [day, month, year] = dateString.split('/');
-  return `${year}-${month}-${day}`;
+  const parts = dateString.split('/');
+  if (parts.length !== 3) return '';
+  const [day, month, year] = parts;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
+// Validar formato DD/MM/YYYY
+const isValidDateFormat = (dateString: string): boolean => {
+  const regex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  const match = dateString.match(regex);
+  
+  if (!match) return false;
+  
+  const day = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const year = parseInt(match[3], 10);
+  
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  if (year < 1900 || year > 2100) return false;
+  
+  // Validar días según el mes
+  const daysInMonth = new Date(year, month, 0).getDate();
+  return day <= daysInMonth;
 };
 
 export default function DateFilter({ 
@@ -34,42 +56,124 @@ export default function DateFilter({
   isLoading, 
   isGeneratingReport 
 }: DateFilterProps) {
-  const [startDate, setStartDate] = useState(() => {
-    // Por defecto, últimos 30 días
+  // Refs para los inputs de calendario ocultos
+  const startDateInputRef = useRef<HTMLInputElement>(null);
+  const endDateInputRef = useRef<HTMLInputElement>(null);
+
+  // Estados para valores ISO (YYYY-MM-DD) - para el input date
+  const [startDateISO, setStartDateISO] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 30);
     return date.toISOString().split('T')[0];
   });
   
-  const [endDate, setEndDate] = useState(() => {
-    // Por defecto, hoy
+  const [endDateISO, setEndDateISO] = useState(() => {
     return new Date().toISOString().split('T')[0];
   });
 
-  const [displayStartDate, setDisplayStartDate] = useState(() => {
+  // Estados para valores display (DD/MM/YYYY)
+  const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 30);
     return formatDateToDisplay(date.toISOString().split('T')[0]);
   });
-
-  const [displayEndDate, setDisplayEndDate] = useState(() => {
+  
+  const [endDate, setEndDate] = useState(() => {
     return formatDateToDisplay(new Date().toISOString().split('T')[0]);
   });
 
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  const [startDateError, setStartDateError] = useState('');
+  const [endDateError, setEndDateError] = useState('');
+
+  // Handler para cuando el usuario escribe en el input de texto
+  const handleStartDateTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    
+    // Auto-formatear mientras escribe
+    value = value.replace(/[^0-9]/g, ''); // Solo números
+    
+    if (value.length >= 2) {
+      value = value.slice(0, 2) + '/' + value.slice(2);
+    }
+    if (value.length >= 5) {
+      value = value.slice(0, 5) + '/' + value.slice(5, 9);
+    }
+    
     setStartDate(value);
-    setDisplayStartDate(formatDateToDisplay(value));
+    
+    if (value.length === 10) {
+      if (isValidDateFormat(value)) {
+        setStartDateError('');
+        const isoDate = formatDateToISO(value);
+        setStartDateISO(isoDate);
+      } else {
+        setStartDateError('Formato inválido. Use DD/MM/YYYY');
+      }
+    }
   };
 
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  const handleEndDateTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    
+    // Auto-formatear mientras escribe
+    value = value.replace(/[^0-9]/g, ''); // Solo números
+    
+    if (value.length >= 2) {
+      value = value.slice(0, 2) + '/' + value.slice(2);
+    }
+    if (value.length >= 5) {
+      value = value.slice(0, 5) + '/' + value.slice(5, 9);
+    }
+    
     setEndDate(value);
-    setDisplayEndDate(formatDateToDisplay(value));
+    
+    if (value.length === 10) {
+      if (isValidDateFormat(value)) {
+        setEndDateError('');
+        const isoDate = formatDateToISO(value);
+        setEndDateISO(isoDate);
+      } else {
+        setEndDateError('Formato inválido. Use DD/MM/YYYY');
+      }
+    }
+  };
+
+  // Handler para cuando el usuario selecciona del calendario
+  const handleStartDateCalendarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value; // YYYY-MM-DD
+    setStartDateISO(value);
+    setStartDate(formatDateToDisplay(value));
+    setStartDateError('');
+  };
+
+  const handleEndDateCalendarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value; // YYYY-MM-DD
+    setEndDateISO(value);
+    setEndDate(formatDateToDisplay(value));
+    setEndDateError('');
+  };
+
+  // Abrir el calendario cuando se hace clic en el ícono
+  const handleStartCalendarClick = () => {
+    startDateInputRef.current?.showPicker();
+  };
+
+  const handleEndCalendarClick = () => {
+    endDateInputRef.current?.showPicker();
   };
 
   const handleFilter = () => {
-    onFilter(startDate, endDate);
+    // Validar que las fechas sean correctas antes de aplicar el filtro
+    if (!isValidDateFormat(startDate)) {
+      setStartDateError('Fecha de inicio inválida');
+      return;
+    }
+    if (!isValidDateFormat(endDate)) {
+      setEndDateError('Fecha final inválida');
+      return;
+    }
+    
+    onFilter(startDateISO, endDateISO);
   };
 
   const handlePresetFilter = (days: number) => {
@@ -80,10 +184,12 @@ export default function DateFilter({
     const startISO = start.toISOString().split('T')[0];
     const endISO = end.toISOString().split('T')[0];
     
-    setStartDate(startISO);
-    setEndDate(endISO);
-    setDisplayStartDate(formatDateToDisplay(startISO));
-    setDisplayEndDate(formatDateToDisplay(endISO));
+    setStartDateISO(startISO);
+    setEndDateISO(endISO);
+    setStartDate(formatDateToDisplay(startISO));
+    setEndDate(formatDateToDisplay(endISO));
+    setStartDateError('');
+    setEndDateError('');
     
     onFilter(startISO, endISO);
   };
@@ -104,19 +210,33 @@ export default function DateFilter({
                 Fecha Inicio
               </Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                <Calendar 
+                  className="absolute left-3 top-3 h-4 w-4 text-gray-400 cursor-pointer z-10 hover:text-blue-600 transition-colors" 
+                  onClick={handleStartCalendarClick}
+                />
+                {/* Input visible con formato DD/MM/YYYY */}
                 <Input
                   id="startDate"
-                  type="date"
+                  type="text"
                   value={startDate}
-                  onChange={handleStartDateChange}
-                  className="pl-10 date-input-custom"
-                  style={{ colorScheme: 'light' }}
+                  onChange={handleStartDateTextChange}
+                  placeholder="DD/MM/YYYY"
+                  className={`pl-10 ${startDateError ? 'border-red-500' : ''}`}
+                  maxLength={10}
                 />
-                <div className="absolute right-3 top-3 text-xs text-gray-500 pointer-events-none">
-                  {displayStartDate}
-                </div>
+                {/* Input oculto con type="date" para el calendario */}
+                <input
+                  ref={startDateInputRef}
+                  type="date"
+                  value={startDateISO}
+                  onChange={handleStartDateCalendarChange}
+                  className="absolute opacity-0 pointer-events-none"
+                  tabIndex={-1}
+                />
               </div>
+              {startDateError && (
+                <p className="text-xs text-red-500 mt-1">{startDateError}</p>
+              )}
             </div>
             
             <div>
@@ -124,19 +244,33 @@ export default function DateFilter({
                 Fecha Final
               </Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                <Calendar 
+                  className="absolute left-3 top-3 h-4 w-4 text-gray-400 cursor-pointer z-10 hover:text-blue-600 transition-colors" 
+                  onClick={handleEndCalendarClick}
+                />
+                {/* Input visible con formato DD/MM/YYYY */}
                 <Input
                   id="endDate"
-                  type="date"
+                  type="text"
                   value={endDate}
-                  onChange={handleEndDateChange}
-                  className="pl-10 date-input-custom"
-                  style={{ colorScheme: 'light' }}
+                  onChange={handleEndDateTextChange}
+                  placeholder="DD/MM/YYYY"
+                  className={`pl-10 ${endDateError ? 'border-red-500' : ''}`}
+                  maxLength={10}
                 />
-                <div className="absolute right-3 top-3 text-xs text-gray-500 pointer-events-none">
-                  {displayEndDate}
-                </div>
+                {/* Input oculto con type="date" para el calendario */}
+                <input
+                  ref={endDateInputRef}
+                  type="date"
+                  value={endDateISO}
+                  onChange={handleEndDateCalendarChange}
+                  className="absolute opacity-0 pointer-events-none"
+                  tabIndex={-1}
+                />
               </div>
+              {endDateError && (
+                <p className="text-xs text-red-500 mt-1">{endDateError}</p>
+              )}
             </div>
           </div>
 

@@ -18,12 +18,17 @@ interface StatisticsData {
   popularServices?: Array<{
     name: string;
     count: string;
+    realizados?: string;
+    pendientes?: string;
+    cancelados?: string;
+    total?: number;
   }>;
   topClients?: Array<{
     clientName: string;
     clientEmail: string;
     totalSpent: number;
     turnosCount: string;
+    turnosRealizados?: string;
   }>;
 }
 
@@ -122,14 +127,48 @@ export function useReportGenerator() {
         pdf.text('SERVICIOS MÁS POPULARES', 20, yPosition);
         yPosition += 12;
 
-        pdf.setFontSize(12);
+        // Encabezados de tabla
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(107, 114, 128);
+        pdf.text('Servicio', 25, yPosition);
+        pdf.text('Realizados', 85, yPosition);
+        pdf.text('Pendientes', 115, yPosition);
+        pdf.text('Cancelados', 145, yPosition);
+        pdf.text('TOTAL', 175, yPosition);
+        yPosition += 8;
+
+        // Línea separadora
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(20, yPosition - 2, 190, yPosition - 2);
+        yPosition += 2;
+
+        pdf.setFontSize(11);
         pdf.setTextColor(0, 0, 0);
 
         data.popularServices.forEach((service, index) => {
+          const realizados = service.realizados || service.count || '0';
+          const pendientes = service.pendientes || '0';
+          const cancelados = service.cancelados || '0';
+          const total = service.total || parseInt(service.count) || 0;
+
           pdf.setFont('helvetica', 'bold');
           pdf.text(`${index + 1}. ${service.name}`, 25, yPosition);
+          
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`${service.count} turnos`, 120, yPosition);
+          pdf.setTextColor(16, 185, 129); // Green para realizados
+          pdf.text(realizados, 95, yPosition, { align: 'center' });
+          
+          pdf.setTextColor(251, 191, 36); // Yellow para pendientes
+          pdf.text(pendientes, 125, yPosition, { align: 'center' });
+          
+          pdf.setTextColor(239, 68, 68); // Red para cancelados
+          pdf.text(cancelados, 155, yPosition, { align: 'center' });
+          
+          pdf.setFont('helvetica', 'bold');
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(`${total}`, 180, yPosition, { align: 'center' });
+          
           yPosition += 8;
         });
 
@@ -149,15 +188,37 @@ export function useReportGenerator() {
         pdf.text('TOP CLIENTES', 20, yPosition);
         yPosition += 12;
 
-        pdf.setFontSize(12);
+        // Encabezados de tabla
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(107, 114, 128);
+        pdf.text('Cliente', 25, yPosition);
+        pdf.text('Ingresos', 125, yPosition);
+        pdf.text('Turnos Realizados', 160, yPosition);
+        yPosition += 8;
+
+        // Línea separadora
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(20, yPosition - 2, 190, yPosition - 2);
+        yPosition += 2;
+
+        pdf.setFontSize(11);
         pdf.setTextColor(0, 0, 0);
 
         data.topClients.slice(0, 10).forEach((client, index) => {
+          const turnosRealizados = client.turnosRealizados || client.turnosCount || '0';
+          
           pdf.setFont('helvetica', 'bold');
-          pdf.text(`${index + 1}. ${client.clientName}`, 20, yPosition);
+          pdf.text(`${index + 1}. ${client.clientName}`, 25, yPosition);
+          
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`$${client.totalSpent.toLocaleString('es-AR')}`, 120, yPosition);
-          pdf.text(`(${client.turnosCount} turnos)`, 160, yPosition);
+          pdf.setTextColor(16, 185, 129); // Green para ingresos
+          pdf.text(`$${client.totalSpent.toLocaleString('es-AR')}`, 135, yPosition, { align: 'center' });
+          
+          pdf.setTextColor(59, 130, 246); // Blue para turnos
+          pdf.text(`(${turnosRealizados})`, 175, yPosition, { align: 'center' });
+          
+          pdf.setTextColor(0, 0, 0);
           yPosition += 8;
         });
       }
