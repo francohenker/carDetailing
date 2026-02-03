@@ -73,7 +73,7 @@ export default function ServicesChart({ popularServices }: ServicesChartProps) {
               
               return data.labels.map((label: string, i: number) => {
                 const value = dataset.data[i];
-                const percentage = ((value * 100) / total).toFixed(0);
+                const percentage = total > 0 ? ((value * 100) / total).toFixed(0) : '0';
                 
                 return {
                   text: `${label}: ${value} (${percentage}%)`,
@@ -107,7 +107,7 @@ export default function ServicesChart({ popularServices }: ServicesChartProps) {
         callbacks: {
           label: function(context: any) {
             const total = context.dataset.data.reduce((sum: number, value: number) => sum + value, 0);
-            const percentage = ((context.parsed * 100) / total).toFixed(1);
+            const percentage = total > 0 ? ((context.parsed * 100) / total).toFixed(1) : '0';
             return `${context.label}: ${context.parsed} turnos (${percentage}%)`;
           }
         }

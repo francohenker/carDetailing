@@ -3511,7 +3511,7 @@ export default function AdminPage() {
                                         {/* Services Chart */}
                                         <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
                                             <CardContent className="p-6">
-                                                <ServicesChart popularServices={statistics?.popularServices?.map(s => ({ name: s.name, count: s.count.toString() })) || []} />
+                                                <ServicesChart popularServices={statistics?.popularServices?.map(s => ({ name: s.name, count: String(s.count ?? 0) })) || []} />
                                             </CardContent>
                                         </Card>
 
