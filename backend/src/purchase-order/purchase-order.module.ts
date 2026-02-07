@@ -7,6 +7,7 @@ import { PurchaseOrderItem } from './entities/purchase-order-item.entity';
 import { Supplier } from '../supplier/entities/supplier.entity';
 import { Producto } from '../producto/entities/producto.entity';
 import { QuotationResponse } from '../quotation/entities/quotation-response.entity';
+import { QuotationRequest } from '../quotation/entities/quotation-request.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { QuotationResponse } from '../quotation/entities/quotation-response.enti
       Supplier,
       Producto,
       QuotationResponse,
+      QuotationRequest,
     ]),
   ],
   controllers: [PurchaseOrderController],

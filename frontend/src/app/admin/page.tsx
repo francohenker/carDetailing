@@ -1263,12 +1263,13 @@ export default function AdminPage() {
             if (!response.ok) throw new Error('Error marking as received')
 
             toast.success("Éxito", {
-                description: "Stock actualizado correctamente.",
+                description: "Stock actualizado correctamente y orden de compra marcada como recibida.",
             })
 
             setIsReceivedConfirmDialogOpen(false)
             setQuotationToMarkReceived(null)
             await fetchQuotationRequests()
+            await fetchPurchaseOrders() // Actualizar órdenes de compra también
             await fetchProducts() // Actualizar productos para ver el nuevo stock
             await fetchAuditoriaStats()
             await fetchDetailedAuditoriaRecords()
@@ -1664,8 +1665,9 @@ export default function AdminPage() {
             
             if (!response.ok) throw new Error('Error updating order status')
             
-            toast.success("Orden marcada como recibida y stock actualizado")
+            toast.success("Orden marcada como recibida, stock actualizado y cotización finalizada")
             await fetchPurchaseOrders()
+            await fetchQuotationRequests() // Actualizar cotizaciones también
             await fetchProducts()
             // Refrescar stock bajo ya que se recibió nueva mercancía
             setTimeout(() => {

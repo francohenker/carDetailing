@@ -10,10 +10,12 @@ import { PurchaseOrderItem } from './entities/purchase-order-item.entity';
 import { Supplier } from '../supplier/entities/supplier.entity';
 import { Producto } from '../producto/entities/producto.entity';
 import { QuotationResponse } from '../quotation/entities/quotation-response.entity';
+import { QuotationRequest } from '../quotation/entities/quotation-request.entity';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { UpdatePurchaseOrderStatusDto } from './dto/update-purchase-order-status.dto';
 import { UpdatePurchaseOrderItemDto } from './dto/update-purchase-order-item.dto';
 import { PurchaseOrderStatus } from '../enums/purchase-order-status.enum';
+import { QuotationRequestStatus } from '../enums/quotation-status.enum';
 
 @Injectable()
 export class PurchaseOrderService {
@@ -28,6 +30,8 @@ export class PurchaseOrderService {
     private productoRepository: Repository<Producto>,
     @InjectRepository(QuotationResponse)
     private quotationResponseRepository: Repository<QuotationResponse>,
+    @InjectRepository(QuotationRequest)
+    private quotationRequestRepository: Repository<QuotationRequest>,
   ) {}
 
   async create(
@@ -148,6 +152,29 @@ export class PurchaseOrderService {
           // Actualizar cantidad recibida del item
           item.quantityReceived = item.quantityOrdered;
           await this.purchaseOrderItemRepository.save(item);
+        }
+      }
+
+      // Si la orden está vinculada a una cotización, marcar la cotización como finalizada
+      if (order.quotationResponseId) {
+        try {
+          const quotationResponse = await this.quotationResponseRepository.findOne({
+            where: { id: order.quotationResponseId },
+            relations: ['quotationRequest'],
+          });
+
+          if (quotationResponse && quotationResponse.quotationRequest) {
+            const quotationRequest = quotationResponse.quotationRequest;
+            
+            // Solo marcar como finalizada si está en estado COMPLETED
+            if (quotationRequest.status === QuotationRequestStatus.COMPLETED) {
+              quotationRequest.status = QuotationRequestStatus.FINISHED;
+              await this.quotationRequestRepository.save(quotationRequest);
+            }
+          }
+        } catch (error) {
+          console.error('Error al actualizar cotización relacionada:', error);
+          // No lanzamos el error para no interrumpir el flujo
         }
       }
     }
