@@ -29,9 +29,26 @@ interface RevenueChartProps {
     month: string;
     revenue: number;
   }>;
+  period?: {
+    startDate: string;
+    endDate: string;
+    days: number;
+  };
 }
 
-export default function RevenueChart({ monthlyRevenue }: RevenueChartProps) {
+export default function RevenueChart({ monthlyRevenue, period }: RevenueChartProps) {
+  // Generar el título dinámico basado en el período
+  const getChartTitle = () => {
+    if (!period) {
+      return 'Evolución de Ingresos (Últimos 6 Meses)';
+    }
+
+    const startDate = new Date(period.startDate);
+    const endDate = new Date(period.endDate);
+    const formatDate = (date: Date) => date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    return `Evolución de Ingresos (${formatDate(startDate)} - ${formatDate(endDate)})`;
+  };
   const data = {
     labels: monthlyRevenue.map(item => item.month),
     datasets: [
@@ -69,7 +86,7 @@ export default function RevenueChart({ monthlyRevenue }: RevenueChartProps) {
       },
       title: {
         display: true,
-        text: 'Evolución de Ingresos (Últimos 6 Meses)',
+        text: getChartTitle(),
         font: {
           size: 16,
           weight: 'bold' as const,

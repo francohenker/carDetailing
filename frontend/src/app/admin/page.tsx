@@ -3379,7 +3379,13 @@ export default function AdminPage() {
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <h3 className="font-semibold text-blue-900">
-                                                    Período Filtrado: {new Date(detailedStatistics.period.startDate).toLocaleDateString('es-AR')} - {new Date(detailedStatistics.period.endDate).toLocaleDateString('es-AR')}
+                                                    Período Filtrado: {(() => {
+                                                        const [y1, m1, d1] = detailedStatistics.period.startDate.split('-');
+                                                        const [y2, m2, d2] = detailedStatistics.period.endDate.split('-');
+                                                        const startDate = new Date(parseInt(y1), parseInt(m1) - 1, parseInt(d1));
+                                                        const endDate = new Date(parseInt(y2), parseInt(m2) - 1, parseInt(d2));
+                                                        return `${startDate.toLocaleDateString('es-AR')} - ${endDate.toLocaleDateString('es-AR')}`;
+                                                    })()}
                                                 </h3>
                                                 <p className="text-blue-700">
                                                     Mostrando datos de {detailedStatistics.period.days} días
@@ -3482,9 +3488,15 @@ export default function AdminPage() {
                                     <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
                                         <CardContent className="p-6">
                                             {detailedStatistics?.monthlyRevenue ? (
-                                                <RevenueChart monthlyRevenue={detailedStatistics.monthlyRevenue} />
+                                                <RevenueChart 
+                                                    monthlyRevenue={detailedStatistics.monthlyRevenue} 
+                                                    period={detailedStatistics.period}
+                                                />
                                             ) : detailedStatistics?.dailyRevenue ? (
-                                                <RevenueChart monthlyRevenue={detailedStatistics.dailyRevenue.map(d => ({ month: d.day, revenue: d.revenue }))} />
+                                                <RevenueChart 
+                                                    monthlyRevenue={detailedStatistics.dailyRevenue.map(d => ({ month: d.day, revenue: d.revenue }))} 
+                                                    period={detailedStatistics.period}
+                                                />
                                             ) : (
                                                 <div className="h-80 flex items-center justify-center">
                                                     <p className="text-muted-foreground">No hay datos de ingresos disponibles</p>

@@ -171,10 +171,11 @@ export class StatisticsService {
 
       const nextDay = new Date(targetDate);
       nextDay.setDate(targetDate.getDate() + 1);
+      nextDay.setHours(0, 0, 0, 0);
 
       const dayTurnos = await this.turnoRepository.count({
         where: {
-          fechaHora: MoreThan(targetDate),
+          fechaHora: Between(targetDate, nextDay),
         },
       });
 
@@ -273,8 +274,8 @@ export class StatisticsService {
 
     return {
       period: {
-        startDate: start.toISOString().split('T')[0],
-        endDate: end.toISOString().split('T')[0],
+        startDate: startDate,
+        endDate: endDate,
         days: Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)),
       },
       periodRevenue: periodRevenue.total || 0,
