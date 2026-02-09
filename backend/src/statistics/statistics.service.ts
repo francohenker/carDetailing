@@ -63,7 +63,7 @@ export class StatisticsService {
     });
 
     // 6. Servicios más populares (Top 5) con estado de turnos
-    const popularServices = await this.turnoRepository
+    const popularServicesRaw = await this.turnoRepository
       .createQueryBuilder('turno')
       .leftJoinAndSelect('turno.servicio', 'servicio')
       .select('servicio.name', 'name')
@@ -84,6 +84,16 @@ export class StatisticsService {
       .orderBy('total', 'DESC')
       .limit(5)
       .getRawMany();
+
+    // Mapear para incluir 'count' como alias de 'total' y conservar todos los campos
+    const popularServices = popularServicesRaw.map((service) => ({
+      name: service.name,
+      count: parseInt(service.total),
+      total: parseInt(service.total),
+      realizados: parseInt(service.realizados) || 0,
+      pendientes: parseInt(service.pendientes) || 0,
+      cancelados: parseInt(service.cancelados) || 0,
+    }));
 
     // 7. Ingresos por mes (últimos 6 meses)
     const monthlyRevenue = await this.getMonthlyRevenue();
@@ -228,7 +238,7 @@ export class StatisticsService {
     });
 
     // 5. Servicios más populares en el período con estado de turnos
-    const popularServices = await this.turnoRepository
+    const popularServicesRaw = await this.turnoRepository
       .createQueryBuilder('turno')
       .leftJoinAndSelect('turno.servicio', 'servicio')
       .select('servicio.name', 'name')
@@ -250,6 +260,16 @@ export class StatisticsService {
       .orderBy('total', 'DESC')
       .limit(10)
       .getRawMany();
+
+    // Mapear para incluir 'count' como alias de 'total' y conservar todos los campos
+    const popularServices = popularServicesRaw.map((service) => ({
+      name: service.name,
+      count: parseInt(service.total),
+      total: parseInt(service.total),
+      realizados: parseInt(service.realizados) || 0,
+      pendientes: parseInt(service.pendientes) || 0,
+      cancelados: parseInt(service.cancelados) || 0,
+    }));
 
     // 6. Ingresos por mes en el período
     const monthlyRevenue = await this.getMonthlyRevenueFiltered(start, end);

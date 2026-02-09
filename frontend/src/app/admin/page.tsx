@@ -393,6 +393,7 @@ export default function AdminPage() {
         weeklyTurnos?: Array<{ day: string; turnos: number }>
         dailyTurnos?: Array<{ date: string; day: string; turnos: number }>
         dailyRevenue?: Array<{ date: string; day: string; revenue: number }>
+        popularServices?: Array<{ name: string; count: number; total?: number; realizados?: number; pendientes?: number; cancelados?: number }>
         topClients?: Array<{
             clientName: string
             clientEmail: string
@@ -3525,7 +3526,7 @@ export default function AdminPage() {
                                         {/* Services Chart */}
                                         <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
                                             <CardContent className="p-6">
-                                                <ServicesChart popularServices={statistics?.popularServices?.map(s => ({ name: s.name, count: String(s.count ?? 0) })) || []} />
+                                                <ServicesChart popularServices={detailedStatistics?.popularServices?.map(s => ({ name: s.name, count: String(s.count ?? 0) })) || []} />
                                             </CardContent>
                                         </Card>
 
@@ -3598,7 +3599,7 @@ export default function AdminPage() {
                                         </CardHeader>
                                         <CardContent>
                                             <div className="space-y-4">
-                                                {statistics?.popularServices && statistics.popularServices.length > 0 ? (
+                                                {detailedStatistics?.popularServices && detailedStatistics.popularServices.length > 0 ? (
                                                     <>
                                                         {/* Encabezados de tabla */}
                                                         <div className="grid grid-cols-6 gap-2 px-4 py-2 bg-gray-100 rounded-lg font-semibold text-sm text-gray-700">
@@ -3609,11 +3610,11 @@ export default function AdminPage() {
                                                             <div className="text-center">TOTAL</div>
                                                         </div>
                                                         
-                                                        {statistics.popularServices.map((service: any, index) => {
-                                                            const realizados = service.realizados || service.count || 0;
-                                                            const pendientes = service.pendientes || 0;
-                                                            const cancelados = service.cancelados || 0;
-                                                            const total = service.total || parseInt(service.count) || 0;
+                                                        {detailedStatistics.popularServices.map((service, index) => {
+                                                            const realizados = service.realizados ?? 0;
+                                                            const pendientes = service.pendientes ?? 0;
+                                                            const cancelados = service.cancelados ?? 0;
+                                                            const total = service.total ?? service.count ?? 0;
                                                             
                                                             return (
                                                                 <div key={service.name} className="grid grid-cols-6 gap-2 items-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-100">

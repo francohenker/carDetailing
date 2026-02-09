@@ -43,8 +43,11 @@ export default function RevenueChart({ monthlyRevenue, period }: RevenueChartPro
       return 'Evolución de Ingresos (Últimos 6 Meses)';
     }
 
-    const startDate = new Date(period.startDate);
-    const endDate = new Date(period.endDate);
+    // Parsear las fechas sin conversión de zona horaria
+    const [y1, m1, d1] = period.startDate.split('-');
+    const [y2, m2, d2] = period.endDate.split('-');
+    const startDate = new Date(parseInt(y1), parseInt(m1) - 1, parseInt(d1));
+    const endDate = new Date(parseInt(y2), parseInt(m2) - 1, parseInt(d2));
     const formatDate = (date: Date) => date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
 
     return `Evolución de Ingresos (${formatDate(startDate)} - ${formatDate(endDate)})`;
