@@ -1263,7 +1263,7 @@ export default function AdminPage() {
             if (!response.ok) throw new Error('Error marking as received')
 
             toast.success("Éxito", {
-                description: "Stock actualizado correctamente y orden de compra marcada como recibida.",
+                description: "Stock actualizado correctamente y orden de compra marcada como recibida. ",
             })
 
             setIsReceivedConfirmDialogOpen(false)
