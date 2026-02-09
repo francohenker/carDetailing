@@ -47,7 +47,7 @@ export class StockNotificationService {
   }
 
   async checkSingleProductStockAndNotify(product: Producto): Promise<void> {
-    if (product.stock_actual <= product.stock_minimo) {
+    if (Number(product.stock_actual) <= Number(product.stock_minimo)) {
       // Obtener el producto con proveedores y prioridad
       const productWithSuppliers = await this.productoRepository.findOne({
         where: { id: product.id },
@@ -147,7 +147,7 @@ export class StockNotificationService {
 
         // Filtrar solo los que están en o bajo el stock mínimo
         const productsAtMinimum = lowStockProducts.filter(
-          (p) => p.stock_actual <= p.stock_minimo,
+          (p) => Number(p.stock_actual) <= Number(p.stock_minimo),
         );
 
         let shouldCreateQuotation = false;
@@ -209,7 +209,7 @@ export class StockNotificationService {
                 // Generar lista de productos con cantidades
                 const productList = supplierProducts
                   .map((product) => {
-                    const cantidad = product.stock_minimo * 2;
+                    const cantidad = Number(product.stock_minimo) * 2;
                     return `• ${product.name}, cantidad: ${cantidad}`;
                   })
                   .join('\n');
@@ -588,7 +588,7 @@ Equipo de Car Detailing`;
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${product.stock_actual}</td>
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${product.stock_minimo}</td>
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
-            ${Math.max(product.stock_minimo - product.stock_actual + 5, 10)}
+            ${Math.max(Number(product.stock_minimo) - Number(product.stock_actual) + 5, 10)}
           </td>
         </tr>
       `,

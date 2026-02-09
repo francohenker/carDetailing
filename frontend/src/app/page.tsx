@@ -69,7 +69,7 @@ export default function Home() {
         </section>
 
         {/* Reserva de Turnos */}
-        <section id="reservar" className="py-16 btn-soft">
+        {/* <section id="reservar" className="py-16 btn-soft">
           <div className="container">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-base-content">
@@ -115,11 +115,10 @@ export default function Home() {
 
               <Card>
                 <WeatherWidget />
-                {/* <WeatherDisplay latitude={-27.0005} longitude={-54.4816} /> */}
               </Card>
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* Servicios */}
         <section id="servicios" className="py-16">

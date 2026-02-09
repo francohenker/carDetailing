@@ -15,7 +15,7 @@ import {
   ChevronRight,
   Edit2,
 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import ModifyTurno from "./ModifyTurno";
 
@@ -88,26 +88,22 @@ const getMetodoPago = (turno: Turno): string => {
   return pagoCompletado ? pagoCompletado.metodo : "Pendiente";
 };
 
-const getMontoFaltante = (turno: Turno): number => {
-  if (!turno.pago || turno.pago.length === 0) return turno.totalPrice;
-
-  const totalPagado = turno.pago
-    .filter((p) => p.estado === "PAGADO")
-    .reduce((sum, p) => sum + p.monto, 0);
-
-  return Math.max(0, turno.totalPrice - totalPagado);
-};
-
 export default function UserTurnos() {
   const searchParams = useSearchParams();
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Estados para paginación del historial
+  // Estados para paginación del historial (realizados)
   const [currentPageHistorial, setCurrentPageHistorial] = useState(1);
   const [itemsPerPageHistorial] = useState(5);
   const [paginatedHistorial, setPaginatedHistorial] = useState<Turno[]>([]);
   const [totalPagesHistorial, setTotalPagesHistorial] = useState(0);
+
+  // Estados para paginación de pendientes
+  const [currentPagePendientes, setCurrentPagePendientes] = useState(1);
+  const [itemsPerPagePendientes] = useState(5);
+  const [paginatedPendientes, setPaginatedPendientes] = useState<Turno[]>([]);
+  const [totalPagesPendientes, setTotalPagesPendientes] = useState(0);
 
   // Estados para modificar turno
   const [modifyTurnoOpen, setModifyTurnoOpen] = useState(false);
@@ -124,16 +120,47 @@ export default function UserTurnos() {
     [itemsPerPageHistorial],
   );
 
+  // Función para paginar turnos pendientes
+  const paginatePendientes = useCallback(
+    (pendientesData: Turno[], page: number) => {
+      const startIndex = (page - 1) * itemsPerPagePendientes;
+      const endIndex = startIndex + itemsPerPagePendientes;
+      const paginated = pendientesData.slice(startIndex, endIndex);
+      setPaginatedPendientes(paginated);
+    },
+    [itemsPerPagePendientes],
+  );
+
   // Función para cambiar de página en el historial
   const handlePageChangeHistorial = (page: number) => {
     setCurrentPageHistorial(page);
     const historialTurnos = turnos
-      .filter((t) => t.estado === "finalizado")
+      .filter((t) => {
+        const turnoDate = new Date(t.fechaHora);
+        const now = new Date();
+        return turnoDate < now || t.estado === "finalizado" || t.estado === "cancelado";
+      })
       .sort(
         (a, b) =>
           new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime(),
       );
     paginateHistorial(historialTurnos, page);
+  };
+
+  // Función para cambiar de página en pendientes
+  const handlePageChangePendientes = (page: number) => {
+    setCurrentPagePendientes(page);
+    const pendientesTurnos = turnos
+      .filter((t) => {
+        const turnoDate = new Date(t.fechaHora);
+        const now = new Date();
+        return turnoDate >= now && t.estado !== "finalizado" && t.estado !== "cancelado";
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime(),
+      );
+    paginatePendientes(pendientesTurnos, page);
   };
 
   // Función para determinar si un turno se puede cancelar
@@ -199,7 +226,11 @@ export default function UserTurnos() {
 
       // Actualizar paginación del historial
       const historialTurnos = data
-        .filter((t: Turno) => t.estado === "finalizado")
+        .filter((t: Turno) => {
+          const turnoDate = new Date(t.fechaHora);
+          const now = new Date();
+          return turnoDate < now || t.estado === "finalizado" || t.estado === "cancelado";
+        })
         .sort(
           (a: Turno, b: Turno) =>
             new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime(),
@@ -214,6 +245,28 @@ export default function UserTurnos() {
         currentPageHistorial <= totalPages ? currentPageHistorial : 1;
       setCurrentPageHistorial(newPage);
       paginateHistorial(historialTurnos, newPage);
+
+      // Actualizar paginación de pendientes
+      const pendientesTurnos = data
+        .filter((t: Turno) => {
+          const turnoDate = new Date(t.fechaHora);
+          const now = new Date();
+          return turnoDate >= now && t.estado !== "finalizado" && t.estado !== "cancelado";
+        })
+        .sort(
+          (a: Turno, b: Turno) =>
+            new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime(),
+        );
+
+      const totalPagesPendientes = Math.ceil(
+        pendientesTurnos.length / itemsPerPagePendientes,
+      );
+      setTotalPagesPendientes(totalPagesPendientes);
+
+      const newPagePendientes =
+        currentPagePendientes <= totalPagesPendientes ? currentPagePendientes : 1;
+      setCurrentPagePendientes(newPagePendientes);
+      paginatePendientes(pendientesTurnos, newPagePendientes);
     } catch (error) {
       console.error("Error refreshing turnos:", error);
     }
@@ -254,7 +307,11 @@ export default function UserTurnos() {
 
         // Actualizar paginación del historial
         const historialTurnos = updatedData
-          .filter((t: Turno) => t.estado === "finalizado")
+          .filter((t: Turno) => {
+            const turnoDate = new Date(t.fechaHora);
+            const now = new Date();
+            return turnoDate < now || t.estado === "finalizado" || t.estado === "cancelado";
+          })
           .sort(
             (a: Turno, b: Turno) =>
               new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime(),
@@ -270,6 +327,28 @@ export default function UserTurnos() {
           currentPageHistorial <= totalPages ? currentPageHistorial : 1;
         setCurrentPageHistorial(newPage);
         paginateHistorial(historialTurnos, newPage);
+
+        // Actualizar paginación de pendientes
+        const pendientesTurnos = updatedData
+          .filter((t: Turno) => {
+            const turnoDate = new Date(t.fechaHora);
+            const now = new Date();
+            return turnoDate >= now && t.estado !== "finalizado" && t.estado !== "cancelado";
+          })
+          .sort(
+            (a: Turno, b: Turno) =>
+              new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime(),
+          );
+
+        const totalPagesPendientes = Math.ceil(
+          pendientesTurnos.length / itemsPerPagePendientes,
+        );
+        setTotalPagesPendientes(totalPagesPendientes);
+
+        const newPagePendientes =
+          currentPagePendientes <= totalPagesPendientes ? currentPagePendientes : 1;
+        setCurrentPagePendientes(newPagePendientes);
+        paginatePendientes(pendientesTurnos, newPagePendientes);
       }
     } catch (error) {
       console.error("Error canceling turno:", error);
@@ -334,9 +413,13 @@ export default function UserTurnos() {
         const data = await response.json();
         setTurnos(data);
 
-        // Inicializar paginación del historial
+        // Inicializar paginación del historial (realizados)
         const historialTurnos = data
-          .filter((t: Turno) => t.estado === "finalizado")
+          .filter((t: Turno) => {
+            const turnoDate = new Date(t.fechaHora);
+            const now = new Date();
+            return turnoDate < now || t.estado === "finalizado" || t.estado === "cancelado";
+          })
           .sort(
             (a: Turno, b: Turno) =>
               new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime(),
@@ -348,6 +431,25 @@ export default function UserTurnos() {
         setTotalPagesHistorial(totalPages);
         setCurrentPageHistorial(1);
         paginateHistorial(historialTurnos, 1);
+
+        // Inicializar paginación de pendientes
+        const pendientesTurnos = data
+          .filter((t: Turno) => {
+            const turnoDate = new Date(t.fechaHora);
+            const now = new Date();
+            return turnoDate >= now && t.estado !== "finalizado" && t.estado !== "cancelado";
+          })
+          .sort(
+            (a: Turno, b: Turno) =>
+              new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime(),
+          );
+
+        const totalPagesPendientes = Math.ceil(
+          pendientesTurnos.length / itemsPerPagePendientes,
+        );
+        setTotalPagesPendientes(totalPagesPendientes);
+        setCurrentPagePendientes(1);
+        paginatePendientes(pendientesTurnos, 1);
       } catch {
         toast.error("Error", {
           description:
@@ -359,7 +461,7 @@ export default function UserTurnos() {
     };
 
     fetchTurnos();
-  }, [itemsPerPageHistorial, paginateHistorial]);
+  }, [itemsPerPageHistorial, itemsPerPagePendientes, paginateHistorial, paginatePendientes]);
 
   // Estado para fecha sugerida (desde URL)
   const [suggestedDate, setSuggestedDate] = useState<Date | null>(null);
@@ -424,21 +526,6 @@ export default function UserTurnos() {
     }
   };
 
-  const proximosTurnos = turnos
-    .filter((t) => t.estado !== "finalizado") // Todos los turnos que NO están finalizados
-    .sort(
-      (a, b) =>
-        new Date(a.fechaHora).getTime() - new Date(b.fechaHora).getTime(),
-    );
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const historialTurnos = turnos
-    .filter((t) => t.estado === "finalizado") // Solo turnos finalizados
-    .sort(
-      (a, b) =>
-        new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime(),
-    );
-
   if (loading) {
     return (
       <div className="text-center py-6">
@@ -449,223 +536,269 @@ export default function UserTurnos() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Sección de Próximos Turnos */}
-      <div>
-        <h3 className="text-xl font-semibold mb-4">Próximos Turnos</h3>
-        {proximosTurnos.length === 0 ? (
-          <p className="text-muted-foreground">No tienes turnos programados.</p>
-        ) : (
-          <div className="space-y-4">
-            {proximosTurnos.map((turno) => (
-              <Card key={turno.id}>
-                <CardContent className="p-4 grid gap-4 md:grid-cols-[1fr_auto]">
-                  <div>
-                    <div className="flex items-center gap-4 mb-2">
-                      <h4 className="font-semibold">
-                        {turno.servicio.map((s) => s.name).join(", ")}
-                      </h4>
+    <Tabs defaultValue="pendientes" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 mb-6">
+        <TabsTrigger value="pendientes">Turnos Pendientes</TabsTrigger>
+        <TabsTrigger value="realizados">Turnos Realizados</TabsTrigger>
+      </TabsList>
 
-                      <Badge
-                        variant={
-                          isTurnoPagado(turno)
-                            ? "default"
-                            : turno.estado === "cancelado"
-                              ? "destructive"
-                              : "secondary"
-                        }
-                      >
-                        {isTurnoPagado(turno)
-                          ? `Pagado (${getMetodoPago(turno)})`
-                          : turno.estado === "pendiente"
-                            ? "Pendiente de pago"
-                            : "Cancelado"}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={16} /> {formatDateTime(turno.fechaHora)}{" "}
-                        hs
+      {/* Pestaña de Turnos Pendientes */}
+      <TabsContent value="pendientes">
+        <div>
+          {paginatedPendientes.length === 0 ? (
+            <p className="text-muted-foreground text-center py-6">
+              No tienes turnos pendientes.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {paginatedPendientes.map((turno) => (
+                <Card key={turno.id}>
+                  <CardContent className="p-4 grid gap-4 md:grid-cols-[1fr_auto]">
+                    <div>
+                      <div className="flex items-center gap-4 mb-2">
+                        <h4 className="font-semibold">
+                          {turno.servicio.map((s) => s.name).join(", ")}
+                        </h4>
+
+                        <Badge
+                          variant={
+                            isTurnoPagado(turno)
+                              ? "default"
+                              : turno.estado === "cancelado"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
+                          {isTurnoPagado(turno)
+                            ? `Pagado (${getMetodoPago(turno)})`
+                            : turno.estado === "pendiente"
+                              ? "Pendiente de pago"
+                              : "Cancelado"}
+                        </Badge>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Car size={16} /> {turno.car.marca} {turno.car.model}
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Calendar size={16} /> {formatDateTime(turno.fechaHora)}{" "}
+                          hs
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Car size={16} /> {turno.car.marca} {turno.car.model}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end justify-between">
-                    <div className="text-lg font-bold mb-2">
-                      ${turno.totalPrice.toLocaleString("es-AR")}
-                    </div>
-                    {/* {turno.estado !== "cancelado" && !isTurnoPagado(turno) && (
-                      <div className="text-sm text-muted-foreground font-bold my-2">
-                        Falta pagar:{" "}
-                        <span className="text-destructive font-bold">
-                          ${getMontoFaltante(turno).toLocaleString("es-AR")}
-                        </span>
+                    <div className="flex flex-col items-end justify-between">
+                      <div className="text-lg font-bold mb-2">
+                        ${turno.totalPrice.toLocaleString("es-AR")}
                       </div>
-                    )} */}
-                    <div className="flex gap-2">
-                      {turno.estado === "pendiente" &&
-                        !isTurnoPagado(turno) && (
+                      <div className="flex gap-2">
+                        {turno.estado === "pendiente" &&
+                          !isTurnoPagado(turno) && (
+                            <Button
+                              size="sm"
+                              onClick={() => handlePagarMercadoPago(turno)}
+                            >
+                              <CreditCard className="mr-2 h-4 w-4" /> Pagar
+                            </Button>
+                          )}
+                        {canModifyTurno(turno) && (
                           <Button
+                            variant="outline"
                             size="sm"
-                            onClick={() => handlePagarMercadoPago(turno)}
+                            onClick={() => handleModifyTurno(turno)}
                           >
-                            <CreditCard className="mr-2 h-4 w-4" /> Pagar
+                            <Edit2 className="mr-2 h-4 w-4" /> Modificar
                           </Button>
                         )}
-                      {canModifyTurno(turno) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleModifyTurno(turno)}
-                        >
-                          <Edit2 className="mr-2 h-4 w-4" /> Modificar
-                        </Button>
-                      )}
-                      {canCancelTurno(turno) && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleCancelTurno(turno.id)}
-                        >
-                          <X className="mr-2 h-4 w-4" /> Cancelar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <Separator />
-
-      {/* Sección de Historial de Servicios */}
-      <div>
-        <h3 className="text-xl font-semibold mb-4">
-          Historial de Servicios Realizados
-        </h3>
-        {paginatedHistorial.length === 0 ? (
-          <p className="text-muted-foreground">
-            No tienes servicios en tu historial.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {paginatedHistorial.map((turno) => (
-              <Card key={turno.id} className="opacity-80">
-                <CardContent className="p-4 grid gap-4 md:grid-cols-[1fr_auto]">
-                  <div>
-                    <div className="flex items-center gap-4 mb-2">
-                      <h4 className="font-semibold">
-                        {turno.servicio.map((s) => s.name).join(", ")}
-                      </h4>
-                      <Badge
-                        variant={
-                          turno.estado === "cancelado"
-                            ? "destructive"
-                            : isTurnoPagado(turno)
-                              ? "default"
-                              : "secondary"
-                        }
-                      >
-                        {turno.estado === "cancelado"
-                          ? "Cancelado"
-                          : isTurnoPagado(turno)
-                            ? `Pagado (${getMetodoPago(turno)})`
-                            : "Pendiente de pago"}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={16} />{" "}
-                        {formatShortDate(turno.fechaHora)}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Car size={16} /> {turno.car.marca} {turno.car.model}
+                        {canCancelTurno(turno) && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleCancelTurno(turno.id)}
+                          >
+                            <X className="mr-2 h-4 w-4" /> Cancelar
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end justify-between">
-                    <div className="text-lg font-bold mb-2">
-                      ${turno.totalPrice.toLocaleString("es-AR")}
-                    </div>
-                    {isTurnoPagado(turno) ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadFactura(turno.id)}
-                        className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
-                      >
-                        <FileDown className="mr-2 h-4 w-4" />
-                        Descargar Factura
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => handlePagarMercadoPago(turno)}
-                      >
-                        <CreditCard className="mr-2 h-4 w-4" /> Pagar
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Controles de paginación para historial */}
-        {totalPagesHistorial > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-6">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                handlePageChangeHistorial(Math.max(currentPageHistorial - 1, 1))
-              }
-              disabled={currentPageHistorial === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Anterior
-            </Button>
-
-            <div className="flex gap-1">
-              {Array.from({ length: totalPagesHistorial }, (_, i) => i + 1).map(
-                (page) => (
-                  <Button
-                    key={page}
-                    variant={
-                      currentPageHistorial === page ? "default" : "outline"
-                    }
-                    size="sm"
-                    onClick={() => handlePageChangeHistorial(page)}
-                    className="min-w-[2.5rem]"
-                  >
-                    {page}
-                  </Button>
-                ),
-              )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
+          )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                handlePageChangeHistorial(
-                  Math.min(currentPageHistorial + 1, totalPagesHistorial),
-                )
-              }
-              disabled={currentPageHistorial === totalPagesHistorial}
-            >
-              Siguiente
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
+          {/* Controles de paginación para pendientes */}
+          {totalPagesPendientes > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  handlePageChangePendientes(Math.max(currentPagePendientes - 1, 1))
+                }
+                disabled={currentPagePendientes === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+
+              <div className="flex gap-1">
+                {Array.from({ length: totalPagesPendientes }, (_, i) => i + 1).map(
+                  (page) => (
+                    <Button
+                      key={page}
+                      variant={
+                        currentPagePendientes === page ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => handlePageChangePendientes(page)}
+                      className="min-w-[2.5rem]"
+                    >
+                      {page}
+                    </Button>
+                  ),
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  handlePageChangePendientes(
+                    Math.min(currentPagePendientes + 1, totalPagesPendientes),
+                  )
+                }
+                disabled={currentPagePendientes === totalPagesPendientes}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </TabsContent>
+
+      {/* Pestaña de Turnos Realizados */}
+      <TabsContent value="realizados">
+        <div>
+          {paginatedHistorial.length === 0 ? (
+            <p className="text-muted-foreground text-center py-6">
+              No tienes servicios en tu historial.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {paginatedHistorial.map((turno) => (
+                <Card key={turno.id} className="opacity-80">
+                  <CardContent className="p-4 grid gap-4 md:grid-cols-[1fr_auto]">
+                    <div>
+                      <div className="flex items-center gap-4 mb-2">
+                        <h4 className="font-semibold">
+                          {turno.servicio.map((s) => s.name).join(", ")}
+                        </h4>
+                        <Badge
+                          variant={
+                            turno.estado === "cancelado"
+                              ? "destructive"
+                              : isTurnoPagado(turno)
+                                ? "default"
+                                : "secondary"
+                          }
+                        >
+                          {turno.estado === "cancelado"
+                            ? "Cancelado"
+                            : isTurnoPagado(turno)
+                              ? `Pagado (${getMetodoPago(turno)})`
+                              : "Pendiente de pago"}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Calendar size={16} />{" "}
+                          {formatShortDate(turno.fechaHora)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Car size={16} /> {turno.car.marca} {turno.car.model}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end justify-between">
+                      <div className="text-lg font-bold mb-2">
+                        ${turno.totalPrice.toLocaleString("es-AR")}
+                      </div>
+                      {isTurnoPagado(turno) ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadFactura(turno.id)}
+                          className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                        >
+                          <FileDown className="mr-2 h-4 w-4" />
+                          Descargar Factura
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handlePagarMercadoPago(turno)}
+                        >
+                          <CreditCard className="mr-2 h-4 w-4" /> Pagar
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Controles de paginación para historial */}
+          {totalPagesHistorial > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  handlePageChangeHistorial(Math.max(currentPageHistorial - 1, 1))
+                }
+                disabled={currentPageHistorial === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+
+              <div className="flex gap-1">
+                {Array.from({ length: totalPagesHistorial }, (_, i) => i + 1).map(
+                  (page) => (
+                    <Button
+                      key={page}
+                      variant={
+                        currentPageHistorial === page ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => handlePageChangeHistorial(page)}
+                      className="min-w-[2.5rem]"
+                    >
+                      {page}
+                    </Button>
+                  ),
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  handlePageChangeHistorial(
+                    Math.min(currentPageHistorial + 1, totalPagesHistorial),
+                  )
+                }
+                disabled={currentPageHistorial === totalPagesHistorial}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </TabsContent>
 
       {/* Modal para modificar turno */}
       <ModifyTurno
@@ -675,6 +808,6 @@ export default function UserTurnos() {
         onSuccess={handleModifySuccess}
         suggestedDate={suggestedDate}
       />
-    </div>
+    </Tabs>
   );
 }

@@ -124,7 +124,7 @@ export class ProductoService {
     // Verificar si el stock cambió y está en o bajo el mínimo
     if (
       updateProductoDto.stock_actual !== undefined &&
-      updatedProduct.stock_actual <= updatedProduct.stock_minimo
+      Number(updatedProduct.stock_actual) <= Number(updatedProduct.stock_minimo)
     ) {
       // Ejecutar verificación de stock de forma asíncrona
       this.stockNotificationService
@@ -157,7 +157,7 @@ export class ProductoService {
     const updatedProduct = await this.productoRepository.save(producto);
 
     // Verificar si el stock está en o bajo el mínimo
-    if (stock_actual <= stock_minimo) {
+    if (Number(stock_actual) <= Number(stock_minimo)) {
       // Ejecutar verificación de stock de forma asíncrona
       this.stockNotificationService
         .checkSingleProductStockAndNotify(updatedProduct)
@@ -210,13 +210,13 @@ export class ProductoService {
             // Si un producto rinde para X servicios, cada servicio consume 1/X unidades
             const cantidadADescontar = 1 / productoEnBD.servicios_por_producto;
 
-            if (productoEnBD.stock_actual >= cantidadADescontar) {
+            if (Number(productoEnBD.stock_actual) >= cantidadADescontar) {
               const stockAnterior = productoEnBD.stock_actual;
-              productoEnBD.stock_actual -= cantidadADescontar;
+              productoEnBD.stock_actual = Number(productoEnBD.stock_actual) - cantidadADescontar;
 
               // Redondear a 2 decimales para evitar problemas de precisión
               productoEnBD.stock_actual =
-                Math.round(productoEnBD.stock_actual * 100) / 100;
+                Math.round(Number(productoEnBD.stock_actual) * 100) / 100;
 
               const productoActualizado =
                 await this.productoRepository.save(productoEnBD);
@@ -224,8 +224,8 @@ export class ProductoService {
 
               // Verificar si el stock está en o bajo el mínimo después del descuento
               if (
-                productoActualizado.stock_actual <=
-                productoActualizado.stock_minimo
+                Number(productoActualizado.stock_actual) <=
+                Number(productoActualizado.stock_minimo)
               ) {
                 // Enviar notificación de stock bajo de forma asíncrona
                 this.stockNotificationService
