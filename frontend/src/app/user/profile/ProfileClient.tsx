@@ -123,7 +123,7 @@ export default function ProfileClient() {
     const [claimDialogOpen, setClaimDialogOpen] = useState(false);
     const [claimPatente, setClaimPatente] = useState("");
     const [claimLoading, setClaimLoading] = useState(false);
-    const [claimCheckResult, setClaimCheckResult] = useState<{ exists: boolean; isDeleted?: boolean } | null>(null);
+    const [claimCheckResult, setClaimCheckResult] = useState<{ exists: boolean; isDeleted?: boolean; marca?: string; model?: string; color?: string; type?: string; patente?: string } | null>(null);
 
     // Estado de loading para prevenir doble click ya declarado arriba
 
@@ -1271,7 +1271,18 @@ export default function ProfileClient() {
                                         <p className="text-sm text-red-700">Este vehículo está activo y pertenece a otro usuario. No se puede reclamar.</p>
                                     )}
                                     {claimCheckResult.exists && claimCheckResult.isDeleted && (
-                                        <p className="text-sm text-green-700">✅ Vehículo disponible para reclamar. Haga clic en el botón para transferirlo a su cuenta.</p>
+                                        <>
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <div className="bg-green-100 rounded-full p-2">
+                                                    <Car className="h-5 w-5 text-green-700" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-green-900">{claimCheckResult.marca} {claimCheckResult.model}</p>
+                                                    <p className="text-xs text-green-700">Patente: {claimCheckResult.patente} · Color: {claimCheckResult.color} · Tipo: {claimCheckResult.type}</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm text-green-700">✅ Vehículo disponible para reclamar. Haga clic en el botón para transferirlo a su cuenta.</p>
+                                        </>
                                     )}
                                 </div>
                             )}

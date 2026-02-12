@@ -159,9 +159,16 @@ export class CarService {
   }
 
   // Buscar vehículo por patente (para transferencia)
-  async checkPatente(
-    patente: string,
-  ): Promise<{ exists: boolean; isDeleted?: boolean; carId?: number }> {
+  async checkPatente(patente: string): Promise<{
+    exists: boolean;
+    isDeleted?: boolean;
+    carId?: number;
+    marca?: string;
+    model?: string;
+    color?: string;
+    type?: string;
+    patente?: string;
+  }> {
     const car = await this.carRepository.findOne({
       where: { patente: patente.toUpperCase() },
       relations: ['user'],
@@ -175,6 +182,11 @@ export class CarService {
       exists: true,
       isDeleted: car.isDeleted,
       carId: car.id,
+      marca: car.marca,
+      model: car.model,
+      color: car.color,
+      type: car.type,
+      patente: car.patente,
     };
   }
 
