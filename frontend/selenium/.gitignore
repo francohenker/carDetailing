@@ -1,0 +1,16 @@
+# Screenshots de tests
+screenshots/
+
+# Logs
+*.log
+logs/
+
+# Dependencies instaladas localmente
+node_modules/
+
+# Environment variables locales
+.env.local
+.env.*.local
+
+# Cache
+.cache/

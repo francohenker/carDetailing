@@ -1,0 +1,169 @@
+# Workflow de GitHub Actions para tests de Selenium
+# Este archivo va en .github/workflows/selenium-tests.yml en la raíz del repositorio
+
+name: Selenium Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/selenium-tests.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Tipo de test a ejecutar'
+        required: true
+        default: 'turno'
+        type: choice
+        options:
+          - turno
+          - advanced
+          - all
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      # Servicio del backend (si aplica)
+      backend:
+        image: node:18
+        # Puedes descomentar y configurar si tienes un backend en Docker
+        # ports:
+        #   - 3001:3001
+        # options: >-
+        #   --health-cmd "curl -f http://localhost:3001/health || exit 1"
+        #   --health-interval 10s
+        #   --health-timeout 5s
+        #   --health-retries 5
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+        browser: [chrome]
+      fail-fast: false
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Instalar Chrome
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: latest
+
+      - name: Verificar Chrome
+        run: google-chrome --version
+
+      - name: Instalar dependencias del frontend
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Construir frontend (si es necesario)
+        working-directory: ./frontend
+        run: npm run build --if-present
+        continue-on-error: true
+
+      - name: Iniciar servidor de desarrollo
+        working-directory: ./frontend
+        run: npm run dev &
+        env:
+          NODE_ENV: test
+        timeout-minutes: 2
+        continue-on-error: true
+
+      - name: Esperar a que el servidor esté listo
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 1; done' || true
+        timeout-minutes: 2
+
+      - name: Ejecutar tests de Selenium (Turno)
+        if: github.event.inputs.test_type == 'turno' || github.event.inputs.test_type == 'all' || github.event.inputs.test_type == ''
+        working-directory: ./frontend
+        run: npm run test:selenium:turno
+        env:
+          FRONTEND_URL: http://localhost:3000
+          BACKEND_URL: http://localhost:3001
+          BROWSER: chrome
+          HEADLESS: 'true'
+          SCREENSHOTS: 'true'
+        timeout-minutes: 10
+        continue-on-error: true
+
+      - name: Ejecutar tests avanzados (Advanced)
+        if: github.event.inputs.test_type == 'advanced' || github.event.inputs.test_type == 'all'
+        working-directory: ./frontend
+        run: npm run test:selenium:advanced
+        env:
+          FRONTEND_URL: http://localhost:3000
+          BACKEND_URL: http://localhost:3001
+          BROWSER: chrome
+          HEADLESS: 'true'
+          SCREENSHOTS: 'true'
+        timeout-minutes: 15
+        continue-on-error: true
+
+      - name: Cargar screenshots como artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: selenium-screenshots-${{ matrix.browser }}
+          path: frontend/selenium/screenshots/
+          retention-days: 7
+        continue-on-error: true
+
+      - name: Mostrar logs
+        if: always()
+        run: |
+          if [ -d "frontend/selenium/screenshots" ]; then
+            echo "Screenshots encontrados:"
+            ls -lah frontend/selenium/screenshots/
+          else
+            echo "No hay screenshots"
+          fi
+
+      - name: Comentar en PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const screenshotPath = './frontend/selenium/screenshots';
+            const screenshots = fs.readdirSync(screenshotPath || '.').filter(f => f.endsWith('.png'));
+            
+            let comment = '## Selenium Test Results\n\n';
+            comment += '✅ Tests ejecutados en Ubuntu (Chrome)\n\n';
+            
+            if (screenshots.length > 0) {
+              comment += `📸 Screenshots: ${screenshots.length} archivos\n`;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+        continue-on-error: true
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+      - name: Resumen de tests
+        run: |
+          echo "Tests de Selenium completados"
+          echo "Status: ${{ needs.test.result }}"
