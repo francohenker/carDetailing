@@ -59,7 +59,7 @@ export function useReportGenerator() {
 
   const fetchEmpresaInfo = async (): Promise<EmpresaInfo | null> => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const token = localStorage.getItem('jwt');
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/empresa`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -120,7 +120,8 @@ export function useReportGenerator() {
       yPosition += 10;
       pdf.setFontSize(16);
       pdf.setTextColor(107, 114, 128); // Gray-500
-      pdf.text('Car Detailing - Dashboard Ejecutivo', pageWidth / 2, yPosition, { align: 'center' });
+      const empresaNombre = empresaInfo?.razonSocial || 'Car Detailing';
+      pdf.text(`${empresaNombre} - Dashboard Ejecutivo`, pageWidth / 2, yPosition, { align: 'center' });
       
       yPosition += 15;
       
@@ -523,16 +524,27 @@ export function useReportGenerator() {
 
       // Footer en cada página
       const totalPages = pdf.getNumberOfPages();
+      const footerEmpresa = empresaInfo?.razonSocial || 'Car Detailing';
       for (let i = 1; i <= totalPages; i++) {
         pdf.setPage(i);
         pdf.setFontSize(8);
         pdf.setTextColor(107, 114, 128);
-        pdf.text(
-          `Car Detailing - Informe de Estadísticas - Página ${i} de ${totalPages}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: 'center' }
-        );
+        
+        // Footer con datos de la empresa
+        const footerLines: string[] = [];
+        footerLines.push(`${footerEmpresa} - Informe de Estadísticas - Página ${i} de ${totalPages}`);
+        if (empresaInfo) {
+          footerLines.push(
+            `${empresaInfo.sucursal.direccion} - ${empresaInfo.sucursal.localidad}, ${empresaInfo.sucursal.provincia} | Tel: ${empresaInfo.telefono} | ${empresaInfo.email}`
+          );
+        }
+        
+        let footerY = pageHeight - 10;
+        if (footerLines.length > 1) footerY = pageHeight - 14;
+        
+        footerLines.forEach((line, idx) => {
+          pdf.text(line, pageWidth / 2, footerY + (idx * 5), { align: 'center' });
+        });
       }
 
       // Generar nombre del archivo
