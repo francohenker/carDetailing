@@ -6,8 +6,9 @@ import {
   Param,
   UseGuards,
   ParseIntPipe,
+  Req,
 } from '@nestjs/common';
-import { QuotationService } from './quotation.service';
+import { QuotationService, SupplierRespondDto } from './quotation.service';
 import { CreateQuotationRequestDto } from './dto/create-quotation-request.dto';
 import { SelectWinnerDto } from './dto/select-winner.dto';
 import { AuthGuard } from '../auth/auth.guard';
@@ -19,13 +20,64 @@ import {
   TipoAccion,
   TipoEntidad,
 } from '../auditoria/entities/auditoria.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Supplier } from '../supplier/entities/supplier.entity';
 
 @Controller('quotation')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
 export class QuotationController {
-  constructor(private readonly quotationService: QuotationService) {}
+  constructor(
+    private readonly quotationService: QuotationService,
+    @InjectRepository(Supplier)
+    private readonly supplierRepository: Repository<Supplier>,
+  ) {}
 
+  // ============ SUPPLIER ENDPOINTS ============
+
+  @Roles(Role.SUPPLIER)
+  @Get('supplier/pending')
+  async getSupplierPendingQuotations(@Req() request) {
+    const supplier = await this.supplierRepository.findOne({
+      where: { userId: request.user.userId },
+    });
+    if (!supplier) {
+      throw new Error('Proveedor no encontrado para este usuario');
+    }
+    return this.quotationService.getPendingForSupplier(supplier.id);
+  }
+
+  @Roles(Role.SUPPLIER)
+  @Post('supplier/respond/:requestId')
+  async supplierRespondToQuotation(
+    @Req() request,
+    @Param('requestId', ParseIntPipe) requestId: number,
+    @Body() dto: SupplierRespondDto,
+  ) {
+    const supplier = await this.supplierRepository.findOne({
+      where: { userId: request.user.userId },
+    });
+    if (!supplier) {
+      throw new Error('Proveedor no encontrado para este usuario');
+    }
+    return this.quotationService.supplierRespond(requestId, supplier.id, dto);
+  }
+
+  @Roles(Role.SUPPLIER)
+  @Get('supplier/history')
+  async getSupplierQuotationHistory(@Req() request) {
+    const supplier = await this.supplierRepository.findOne({
+      where: { userId: request.user.userId },
+    });
+    if (!supplier) {
+      throw new Error('Proveedor no encontrado para este usuario');
+    }
+    return this.quotationService.getSupplierHistory(supplier.id);
+  }
+
+  // ============ ADMIN ENDPOINTS ============
+
+  @Roles(Role.ADMIN)
   @Auditar({
     accion: TipoAccion.CREAR,
     entidad: TipoEntidad.COTIZACION,
@@ -45,16 +97,24 @@ export class QuotationController {
     };
   }
 
+  @Roles(Role.ADMIN)
+  // @Auditar({
+  //   accion: TipoAccion.CONSULTAR,
+  //   entidad: TipoEntidad.COTIZACION,
+  //   descripcion: 'Consulta de solicitudes de cotización',
+  // })
   @Get('requests')
   async getQuotationRequests() {
     return this.quotationService.getQuotationRequests();
   }
 
+  @Roles(Role.ADMIN)
   @Get('requests/:id')
   async getQuotationRequestById(@Param('id', ParseIntPipe) id: number) {
     return this.quotationService.getQuotationRequestById(id);
   }
 
+  @Roles(Role.ADMIN)
   @Get('requests/:id/responses')
   async getQuotationResponses(@Param('id', ParseIntPipe) id: number) {
     return this.quotationService.getQuotationResponses(id);

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SystemConfig } from './entities/system-config.entity';
 import { UpdateQuotationThresholdsDto } from './dto/update-quotation-thresholds.dto';
+import { TIPO_AUTO } from '../enums/tipo_auto.enum';
 
 @Injectable()
 export class SystemConfigService {
@@ -26,6 +27,17 @@ export class SystemConfigService {
           medium: 2,
           low: 3,
         },
+      });
+    }
+
+    const vehicleTypesConfig = await this.systemConfigRepository.findOne({
+      where: { key: 'active_vehicle_types' },
+    });
+
+    if (!vehicleTypesConfig) {
+      await this.systemConfigRepository.save({
+        key: 'active_vehicle_types',
+        value: [TIPO_AUTO.AUTO, TIPO_AUTO.CAMIONETA],
       });
     }
   }
@@ -95,5 +107,20 @@ export class SystemConfigService {
     }
 
     await this.systemConfigRepository.save(config);
+  }
+
+  async getActiveVehicleTypes(): Promise<TIPO_AUTO[]> {
+    const config = await this.systemConfigRepository.findOne({
+      where: { key: 'active_vehicle_types' },
+    });
+    if (!config) {
+      return [TIPO_AUTO.AUTO, TIPO_AUTO.CAMIONETA];
+    }
+    return config.value;
+  }
+
+  async updateActiveVehicleTypes(types: TIPO_AUTO[]): Promise<TIPO_AUTO[]> {
+    await this.updateConfig('active_vehicle_types', types);
+    return types;
   }
 }

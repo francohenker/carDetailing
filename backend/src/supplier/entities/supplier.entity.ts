@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Users } from '../../users/entities/users.entity';
 
 @Entity('suppliers')
 export class Supplier {
@@ -34,6 +37,13 @@ export class Supplier {
 
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
+
+  @OneToOne(() => Users, { nullable: true })
+  @JoinColumn({ name: 'userId' })
+  user: Users;
+
+  @Column({ nullable: true })
+  userId: number;
 
   @CreateDateColumn()
   createdAt: Date;

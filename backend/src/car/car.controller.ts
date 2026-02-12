@@ -52,6 +52,12 @@ export class CarController {
     return cars;
   }
 
+  // Verificar si una patente existe en el sistema
+  @Get('check-patente/:patente')
+  async checkPatente(@Param('patente') patente: string) {
+    return await this.carService.checkPatente(patente);
+  }
+
   // only change color
   @Auditar({
     accion: TipoAccion.MODIFICAR,
@@ -67,6 +73,21 @@ export class CarController {
     // Assuming you have a method to modify the car
     await this.carService.modify(carData, user);
     return { message: 'Car modified successfully' };
+  }
+
+  // Reclamar un auto dado de baja por patente
+  @Auditar({
+    accion: TipoAccion.CREAR,
+    entidad: TipoEntidad.CAR,
+    descripcion: 'Reclamo de vehículo por patente',
+  })
+  @Post('claim')
+  async claimCar(@Req() request, @Body() body: { patente: string }): Promise<any> {
+    const user = await this.authService.findUserByToken(
+      request.headers.authorization,
+    );
+    const car = await this.carService.claimCar(user, body.patente);
+    return { message: 'Vehículo reclamado exitosamente', car };
   }
 
   @Auditar({

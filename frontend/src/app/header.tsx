@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button"
 import { Car } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import ThemeToggleButton from "../components/ThemeToggle";
 import { useUserStore } from "./store/useUserStore";
 export default function HeaderDefault() {
@@ -23,6 +24,30 @@ export default function HeaderDefault() {
     const { isAuthenticated } = useUserStore();
     const user = useUserStore((state) => state.user);
     const initial = user?.name?.charAt(0).toUpperCase() ?? '?';
+
+    const [pendingCount, setPendingCount] = useState(0);
+
+    useEffect(() => {
+        if (isAuthenticated && user?.role === 'supplier') {
+            const fetchPendingCount = async () => {
+                try {
+                    const token = localStorage.getItem("jwt");
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/supplier/pending`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setPendingCount(Array.isArray(data) ? data.length : 0);
+                    }
+                } catch {
+                    // silent
+                }
+            };
+            fetchPendingCount();
+            const interval = setInterval(fetchPendingCount, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [isAuthenticated, user?.role]);
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/0" >
@@ -75,6 +100,16 @@ export default function HeaderDefault() {
                             <>
                                 {user?.role === 'admin' &&
                                     <li><a href="/admin" className="justify-between">Admin</a></li>
+                                }
+                                {user?.role === 'supplier' &&
+                                    <li>
+                                        <a href="/supplier" className="justify-between">
+                                            Panel Proveedor
+                                            {pendingCount > 0 && (
+                                                <span className="badge badge-sm badge-error text-white">{pendingCount}</span>
+                                            )}
+                                        </a>
+                                    </li>
                                 }
                                 <li><a href="/user/profile" className="justify-between">Perfil</a></li>
                                 {/* <li><a href="/user/settings">Configuración</a></li> */}

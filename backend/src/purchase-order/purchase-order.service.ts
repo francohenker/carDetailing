@@ -56,6 +56,15 @@ export class PurchaseOrderService {
       }
     }
 
+    // Validar que no haya productos duplicados
+    const productoIds = createPurchaseOrderDto.items.map((item) => item.productoId);
+    const uniqueIds = new Set(productoIds);
+    if (uniqueIds.size !== productoIds.length) {
+      throw new BadRequestException(
+        'No se puede agregar el mismo producto más de una vez en una orden de compra',
+      );
+    }
+
     // Generar número de orden único
     const orderNumber = await this.generateOrderNumber();
 

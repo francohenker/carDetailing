@@ -1,5 +1,7 @@
 export enum TIPO_AUTO {
   AUTO = 'AUTO',
   CAMIONETA = 'CAMIONETA',
-  // OTRO = 'otro',
+  MOTO = 'MOTO',
+  CAMION = 'CAMION',
+  UTILITARIO = 'UTILITARIO',
 }

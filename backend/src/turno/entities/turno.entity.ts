@@ -2,6 +2,7 @@ import { Car } from '../../car/entities/car.entity';
 import { estado_turno } from '../../enums/estado_turno.enum';
 import { Pago } from '../../pago/entities/pago.entity';
 import { Servicio } from '../../servicio/entities/servicio.entity';
+import { WorkSpace } from './workspace.entity';
 import {
   Column,
   Entity,
@@ -20,7 +21,7 @@ export class Turno {
   @ManyToOne(() => Car, (Car) => Car.turno)
   car: Car;
 
-  @Column({ type: 'timestamp', unique: true })
+  @Column({ type: 'timestamp' })
   fechaHora: Date;
 
   @Column()
@@ -41,6 +42,9 @@ export class Turno {
 
   @OneToMany(() => Pago, (pago) => pago.turno)
   pago: Pago[];
+
+  @ManyToOne(() => WorkSpace, { nullable: true })
+  workspace: WorkSpace;
 
   constructor(
     car: Car,

@@ -115,6 +115,16 @@ export default function ProfileClient() {
     const [isUpdatingCar, setIsUpdatingCar] = useState(false);
     const [isDeletingCar, setIsDeletingCar] = useState(false);
 
+    // Estados para confirmación de eliminación
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [carToDelete, setCarToDelete] = useState<car | null>(null);
+
+    // Estados para reclamar auto por patente
+    const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+    const [claimPatente, setClaimPatente] = useState("");
+    const [claimLoading, setClaimLoading] = useState(false);
+    const [claimCheckResult, setClaimCheckResult] = useState<{ exists: boolean; isDeleted?: boolean } | null>(null);
+
     // Estado de loading para prevenir doble click ya declarado arriba
 
     // Función para cambiar a la pestaña de historial
@@ -329,11 +339,20 @@ export default function ProfileClient() {
     };
 
     const handleDeletecar = (id: string) => {
-        if (isDeletingCar) return; // Evitar múltiples clicks
+        // Buscar el auto para mostrar info en el diálogo de confirmación
+        const car = cars.find(c => c.id === id);
+        if (car) {
+            setCarToDelete(car);
+            setDeleteConfirmOpen(true);
+        }
+    };
 
-        setIsDeletingCar(true); // Deshabilitar el botón
+    const confirmDeleteCar = () => {
+        if (!carToDelete || isDeletingCar) return;
 
-        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/car/delete/${id}`, {
+        setIsDeletingCar(true);
+
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/car/delete/${carToDelete.id}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
@@ -344,11 +363,18 @@ export default function ProfileClient() {
                 if (!response.ok) {
                     throw new Error("Error al eliminar el vehículo");
                 }
-                // Solo eliminar del estado local después de la confirmación del backend
-                setcars((prev) => prev.filter((v) => v.id !== id));
-                toast.success("Vehículo eliminado", {
-                    description: "Tu vehículo ha sido eliminado correctamente.",
+                return response.json();
+            })
+            .then((data) => {
+                setcars((prev) => prev.filter((v) => v.id !== carToDelete.id));
+                const cancelledMsg = data.cancelledTurnos > 0
+                    ? ` Se cancelaron ${data.cancelledTurnos} turno(s) pendiente(s).`
+                    : '';
+                toast.success("Vehículo dado de baja", {
+                    description: `Tu vehículo ha sido dado de baja correctamente.${cancelledMsg}`,
                 });
+                setDeleteConfirmOpen(false);
+                setCarToDelete(null);
             })
             .catch((error) => {
                 toast.error("Error", {
@@ -356,8 +382,72 @@ export default function ProfileClient() {
                 });
             })
             .finally(() => {
-                setIsDeletingCar(false); // Rehabilitar el botón
+                setIsDeletingCar(false);
             });
+    };
+
+    // Verificar patente para reclamar
+    const handleCheckPatente = async () => {
+        if (!claimPatente.trim()) return;
+        setClaimLoading(true);
+        try {
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_BACKEND_URL}/car/check-patente/${claimPatente.toUpperCase()}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+                    },
+                }
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setClaimCheckResult(data);
+                if (!data.exists) {
+                    toast.info("No se encontró un vehículo con esa patente");
+                } else if (!data.isDeleted) {
+                    toast.error("Este vehículo está activo y pertenece a otro usuario");
+                } else {
+                    toast.success("Vehículo encontrado y disponible para reclamar");
+                }
+            }
+        } catch {
+            toast.error("Error al verificar patente");
+        } finally {
+            setClaimLoading(false);
+        }
+    };
+
+    // Reclamar auto
+    const handleClaimCar = async () => {
+        setClaimLoading(true);
+        try {
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_BACKEND_URL}/car/claim`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+                    },
+                    body: JSON.stringify({ patente: claimPatente.toUpperCase() }),
+                }
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setcars((prev) => [...prev, data.car]);
+                toast.success("Vehículo reclamado exitosamente");
+                setClaimDialogOpen(false);
+                setClaimPatente("");
+                setClaimCheckResult(null);
+            } else {
+                const err = await res.json();
+                toast.error(err.message || "Error al reclamar vehículo");
+            }
+        } catch {
+            toast.error("Error al reclamar vehículo");
+        } finally {
+            setClaimLoading(false);
+        }
     };
 
     // Función para obtener el vehículo por ID
@@ -691,16 +781,20 @@ export default function ProfileClient() {
                                                     servicios.
                                                 </CardDescription>
                                             </div>
-                                            <Dialog
-                                                open={isAddcarOpen}
-                                                onOpenChange={setIsAddcarOpen}
-                                            >
-                                                <DialogTrigger asChild>
-                                                    <button className="btn btn-neutral btn-ghost">
-                                                        <Plus className="mr-2 h-4 w-4" />
-                                                        Agregar vehículo
-                                                    </button>
-                                                </DialogTrigger>
+                                            <div className="flex gap-2">
+                                                <button className="btn btn-ghost btn-sm" onClick={() => setClaimDialogOpen(true)}>
+                                                    Reclamar por patente
+                                                </button>
+                                                <Dialog
+                                                    open={isAddcarOpen}
+                                                    onOpenChange={setIsAddcarOpen}
+                                                >
+                                                    <DialogTrigger asChild>
+                                                        <button className="btn btn-neutral btn-ghost">
+                                                            <Plus className="mr-2 h-4 w-4" />
+                                                            Agregar vehículo
+                                                        </button>
+                                                    </DialogTrigger>
                                                 <DialogContent>
                                                     <DialogHeader>
                                                         <DialogTitle>Agregar nuevo vehículo</DialogTitle>
@@ -848,6 +942,7 @@ export default function ProfileClient() {
                                                     </DialogFooter>
                                                 </DialogContent>
                                             </Dialog>
+                                            </div>
                                         </CardHeader>
                                         <CardContent>
                                             {cars.length === 0 ? (
@@ -1110,6 +1205,90 @@ export default function ProfileClient() {
                         </div>
                     </div>
                 </div>
+
+                {/* Diálogo de confirmación de eliminación */}
+                <Dialog open={deleteConfirmOpen} onOpenChange={(open) => { if (!open) { setDeleteConfirmOpen(false); setCarToDelete(null); } }}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Confirmar eliminación</DialogTitle>
+                            <DialogDescription>
+                                ¿Estás seguro de que deseas dar de baja este vehículo?
+                            </DialogDescription>
+                        </DialogHeader>
+                        {carToDelete && (
+                            <div className="py-4">
+                                <div className="p-4 bg-muted rounded-lg">
+                                    <p className="font-semibold">{carToDelete.marca} {carToDelete.model}</p>
+                                    <p className="text-sm text-muted-foreground">Patente: {carToDelete.patente}</p>
+                                </div>
+                                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <p className="text-sm text-amber-800">
+                                        <strong>⚠️ Atención:</strong> Todos los turnos pendientes asociados a este vehículo serán cancelados automáticamente.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <button className="btn btn-ghost" onClick={() => { setDeleteConfirmOpen(false); setCarToDelete(null); }}>
+                                Cancelar
+                            </button>
+                            <button className={`btn btn-error ${isDeletingCar ? "loading" : ""}`} onClick={confirmDeleteCar} disabled={isDeletingCar}>
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                {isDeletingCar ? "Eliminando..." : "Confirmar eliminación"}
+                            </button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Diálogo de reclamar auto por patente */}
+                <Dialog open={claimDialogOpen} onOpenChange={(open) => { if (!open) { setClaimDialogOpen(false); setClaimPatente(""); setClaimCheckResult(null); } }}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Reclamar vehículo por patente</DialogTitle>
+                            <DialogDescription>
+                                Si un vehículo fue dado de baja por otro usuario, puede reclamarlo ingresando la patente.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Ej: ABC123 o AB123CD"
+                                    value={claimPatente}
+                                    onChange={(e) => { setClaimPatente(e.target.value.toUpperCase()); setClaimCheckResult(null); }}
+                                    maxLength={7}
+                                />
+                                <button className={`btn btn-neutral ${claimLoading ? "loading" : ""}`} onClick={handleCheckPatente} disabled={claimLoading || !claimPatente.trim()}>
+                                    Buscar
+                                </button>
+                            </div>
+                            {claimCheckResult && (
+                                <div className={`p-3 rounded-lg ${claimCheckResult.exists && claimCheckResult.isDeleted ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                                    {!claimCheckResult.exists && (
+                                        <p className="text-sm text-red-700">No se encontró un vehículo con esa patente.</p>
+                                    )}
+                                    {claimCheckResult.exists && !claimCheckResult.isDeleted && (
+                                        <p className="text-sm text-red-700">Este vehículo está activo y pertenece a otro usuario. No se puede reclamar.</p>
+                                    )}
+                                    {claimCheckResult.exists && claimCheckResult.isDeleted && (
+                                        <p className="text-sm text-green-700">✅ Vehículo disponible para reclamar. Haga clic en el botón para transferirlo a su cuenta.</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <DialogFooter>
+                            <button className="btn btn-ghost" onClick={() => { setClaimDialogOpen(false); setClaimPatente(""); setClaimCheckResult(null); }}>
+                                Cancelar
+                            </button>
+                            <button
+                                className={`btn btn-neutral ${claimLoading ? "loading" : ""}`}
+                                onClick={handleClaimCar}
+                                disabled={claimLoading || !claimCheckResult?.exists || !claimCheckResult?.isDeleted}
+                            >
+                                Reclamar vehículo
+                            </button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </main>
         </div>
     );

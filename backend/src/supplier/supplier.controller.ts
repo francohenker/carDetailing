@@ -82,4 +82,17 @@ export class SupplierController {
   async toggleActive(@Param('id') id: number): Promise<Supplier> {
     return await this.supplierService.toggleActive(id);
   }
+
+  @Auditar({
+    accion: TipoAccion.CREAR,
+    entidad: TipoEntidad.PROVEEDOR,
+    descripcion: 'Creación de cuenta de usuario para proveedor',
+  })
+  @Post('create-account/:id')
+  async createSupplierAccount(
+    @Param('id') id: number,
+    @Body('password') password: string,
+  ) {
+    return await this.supplierService.createSupplierAccount(id, password);
+  }
 }

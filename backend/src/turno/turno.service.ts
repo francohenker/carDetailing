@@ -11,6 +11,8 @@ import { Users } from '../users/entities/users.entity';
 import { MailService } from '../mail.services';
 import { ProductoService } from '../producto/producto.service';
 import { empresaInfo } from '../config/empresa.config';
+import { WorkspaceService } from './workspace.service';
+import { WorkSpace } from './entities/workspace.entity';
 
 @Injectable()
 export class TurnoService {
@@ -20,11 +22,15 @@ export class TurnoService {
     private servicioService: ServicioService,
     private mailService: MailService,
     private productoService: ProductoService,
+    private workspaceService: WorkspaceService,
   ) {}
 
   async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
-    // Validación mejorada que considera conflictos de tiempo basados en duración
+    // Validación mejorada que considera conflictos de tiempo basados en duración y espacios
     await this.validateTimeSlotAvailability(turnoView.date, turnoView.duration);
+
+    // Buscar un espacio disponible para asignar
+    const workspace = await this.findAvailableWorkspace(turnoView.date, turnoView.duration);
 
     const servicios = await this.servicioService.findByIds(turnoView.services);
     const newTurno = new Turno(
@@ -36,6 +42,9 @@ export class TurnoService {
       turnoView.duration,
       turnoView.totalPrice,
     );
+    if (workspace) {
+      newTurno.workspace = workspace;
+    }
     const turno = this.turnoRepository.create(newTurno);
     this.turnoRepository.save(turno);
 
@@ -63,12 +72,18 @@ export class TurnoService {
     // Obtener todos los turnos del día
     const existingTurnos = await this.findDate(dateString);
 
+    // Obtener cantidad de espacios activos
+    const activeWorkspaces = await this.workspaceService.getActiveCount();
+    // Si no hay espacios configurados, funciona como antes (1 turno por slot)
+    const maxConcurrent = activeWorkspaces > 0 ? activeWorkspaces : 1;
+
     // Crear las fechas de inicio y fin del nuevo turno
     const newTurnoStart = new Date(dateObj);
     const newTurnoEnd = new Date(dateObj);
     newTurnoEnd.setMinutes(newTurnoEnd.getMinutes() + duration);
 
-    // Verificar conflictos con turnos existentes
+    // Contar cuántos turnos se solapan con el horario solicitado
+    let overlappingCount = 0;
     for (const existingTurno of existingTurnos) {
       const existingStart = new Date(existingTurno.fechaHora);
       const existingEnd = new Date(existingTurno.fechaHora);
@@ -81,24 +96,100 @@ export class TurnoService {
         newTurnoStart < existingEnd && newTurnoEnd > existingStart;
 
       if (hasOverlap) {
-        throw new HttpException(
-          `El horario solicitado (${newTurnoStart.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${newTurnoEnd.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}) ` +
-            `se superpone con un turno existente (${existingStart.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${existingEnd.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })})`,
-          400,
-        );
+        overlappingCount++;
       }
     }
+
+    // Solo bloquear si todos los espacios están ocupados
+    if (overlappingCount >= maxConcurrent) {
+      throw new HttpException(
+        `El horario solicitado (${newTurnoStart.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - ${newTurnoEnd.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}) ` +
+          `no tiene espacios disponibles. Todos los ${maxConcurrent} espacio(s) están ocupados en ese horario.`,
+        400,
+      );
+    }
+  }
+
+  /**
+   * Encuentra un espacio de trabajo disponible para un turno en un horario dado.
+   */
+  private async findAvailableWorkspace(
+    requestedDateTime: Date,
+    duration: number,
+  ): Promise<WorkSpace | null> {
+    const activeWorkspaces = await this.workspaceService.findActive();
+    if (activeWorkspaces.length === 0) return null;
+
+    const dateObj = new Date(requestedDateTime);
+    const dateString = dateObj.toISOString().split('T')[0];
+    const existingTurnos = await this.findDate(dateString);
+
+    const newTurnoStart = new Date(dateObj);
+    const newTurnoEnd = new Date(dateObj);
+    newTurnoEnd.setMinutes(newTurnoEnd.getMinutes() + duration);
+
+    // Para cada workspace, verificar si está libre en el horario
+    for (const workspace of activeWorkspaces) {
+      let isFree = true;
+      for (const turno of existingTurnos) {
+        if (turno.workspace?.id !== workspace.id) continue;
+
+        const existingStart = new Date(turno.fechaHora);
+        const existingEnd = new Date(turno.fechaHora);
+        existingEnd.setMinutes(
+          existingEnd.getMinutes() + (turno.duration || 60),
+        );
+
+        if (newTurnoStart < existingEnd && newTurnoEnd > existingStart) {
+          isFree = false;
+          break;
+        }
+      }
+      if (isFree) return workspace;
+    }
+
+    return null;
   }
 
   //VERIFICAR!!!!!!!!!!, agregar validaciones con respecto a la fecha (y posiblemente a los demas campos, try no funciona como deberia)
   async modifyTurno(turno: ModifyTurnoDto): Promise<Turno> {
     const existingTurno = await this.turnoRepository.findOne({
       where: { id: turno.turnoId },
-      relations: ['car', 'car.user', 'servicio'],
+      relations: ['car', 'car.user', 'servicio', 'pago'],
     });
     if (!existingTurno) {
       throw new HttpException('Turno not found', 404);
     }
+
+    // Validación: no se pueden modificar servicios si el turno ya fue pagado
+    const pagosCompletados =
+      existingTurno.pago?.filter((p) => p.estado === 'PAGADO') || [];
+    const totalPagado = pagosCompletados.reduce((sum, p) => sum + p.monto, 0);
+
+    if (totalPagado > 0) {
+      // Verificar si los servicios están siendo modificados
+      const existingServiceIds = existingTurno.servicio
+        .map((s) => s.id)
+        .sort()
+        .join(',');
+      const newServiceIds = [...turno.servicios].sort().join(',');
+
+      if (existingServiceIds !== newServiceIds) {
+        throw new HttpException(
+          'No se pueden modificar los servicios de un turno que ya tiene pagos registrados. Solo se puede cambiar la fecha y observación.',
+          400,
+        );
+      }
+    }
+
+    // Validar disponibilidad del nuevo horario si cambió la fecha
+    const existingDate = new Date(existingTurno.fechaHora).getTime();
+    const newDate = new Date(turno.fechaHora).getTime();
+    if (existingDate !== newDate) {
+      const duration = existingTurno.duration || 60;
+      await this.validateTimeSlotAvailability(turno.fechaHora, duration);
+    }
+
     try {
       existingTurno.fechaHora = turno.fechaHora;
       existingTurno.estado = turno.estado;
@@ -177,7 +268,7 @@ export class TurnoService {
         fechaHora: Between(startDate, endDate),
         estado: estado_turno.PENDIENTE, // Solo turnos activos que ocupan horarios
       },
-      relations: ['car', 'car.user', 'servicio'],
+      relations: ['car', 'car.user', 'servicio', 'workspace'],
     });
 
     return turnos;
@@ -213,7 +304,7 @@ export class TurnoService {
         fechaHora: Between(startDate, endDate),
         estado: estado_turno.PENDIENTE, // Solo turnos activos que ocupan horarios
       },
-      relations: ['car', 'car.user', 'servicio'],
+      relations: ['car', 'car.user', 'servicio', 'workspace'],
       order: {
         fechaHora: 'ASC',
       },
@@ -235,6 +326,10 @@ export class TurnoService {
       new Date(targetDate + 'T03:00:00'),
     );
 
+    // Obtener cantidad de espacios activos
+    const activeWorkspaces = await this.workspaceService.getActiveCount();
+    const maxConcurrent = activeWorkspaces > 0 ? activeWorkspaces : 1;
+
     // Configuración de horarios de trabajo
     const workStartHour = 8; // 8:00 AM
     const workEndHour = 19; // 7:00 PM
@@ -249,8 +344,8 @@ export class TurnoService {
       }
     }
 
-    // Crear set de horarios ocupados considerando la duración
-    const occupiedSlots = new Set<string>();
+    // Crear mapa de ocupación por slot (cuántos turnos hay en cada slot)
+    const occupiedSlotCounts = new Map<string, number>();
 
     for (const turno of turnos) {
       const turnoStart = new Date(turno.fechaHora);
@@ -267,31 +362,35 @@ export class TurnoService {
       if (startSlotIndex !== -1) {
         for (let i = 0; i < slotsToBlock; i++) {
           if (startSlotIndex + i < allSlots.length) {
-            occupiedSlots.add(allSlots[startSlotIndex + i]);
+            const slotKey = allSlots[startSlotIndex + i];
+            occupiedSlotCounts.set(slotKey, (occupiedSlotCounts.get(slotKey) || 0) + 1);
           }
         }
       }
     }
 
-    // Determinar slots disponibles considerando la duración solicitada
-    const availableSlots: { time: string; available: boolean }[] = [];
+    // Determinar slots disponibles considerando la duración solicitada y espacios
+    const availableSlots: { time: string; available: boolean; availableSpaces: number }[] = [];
     const slotsNeeded = Math.ceil(duration / slotInterval);
 
     for (let i = 0; i <= allSlots.length - slotsNeeded; i++) {
       const currentTime = allSlots[i];
 
-      // Verificar si este slot y los siguientes (según duración) están disponibles
-      let isAvailable = true;
+      // Verificar la ocupación máxima en los slots necesarios
+      let maxOccupied = 0;
       for (let j = 0; j < slotsNeeded; j++) {
-        if (i + j >= allSlots.length || occupiedSlots.has(allSlots[i + j])) {
-          isAvailable = false;
-          break;
+        if (i + j < allSlots.length) {
+          const count = occupiedSlotCounts.get(allSlots[i + j]) || 0;
+          maxOccupied = Math.max(maxOccupied, count);
         }
       }
 
+      const spacesAvailable = maxConcurrent - maxOccupied;
+
       availableSlots.push({
         time: currentTime,
-        available: isAvailable,
+        available: spacesAvailable > 0,
+        availableSpaces: Math.max(0, spacesAvailable),
       });
     }
 
@@ -301,6 +400,7 @@ export class TurnoService {
         availableSlots.push({
           time: allSlots[i],
           available: false,
+          availableSpaces: 0,
         });
       }
     }
@@ -308,6 +408,7 @@ export class TurnoService {
     return {
       date: targetDate,
       duration: duration,
+      totalSpaces: maxConcurrent,
       slots: availableSlots,
       occupiedTurnos: turnos.map((t) => {
         const adjustedDate = new Date(t.fechaHora);
@@ -317,6 +418,7 @@ export class TurnoService {
           fechaHora: adjustedDate,
           duration: t.duration,
           servicios: t.servicio.map((s) => s.name),
+          workspace: t.workspace?.name || null,
         };
       }),
     };

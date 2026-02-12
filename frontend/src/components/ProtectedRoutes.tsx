@@ -6,7 +6,7 @@ import { useUserStore } from '@/app/store/useUserStore'
 
 interface ProtectedRouteProps {
     children: React.ReactNode
-    allowedRoles?: ('admin' | 'user')[]
+    allowedRoles?: ('admin' | 'user' | 'supplier')[]
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
@@ -15,15 +15,19 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     const hasHydrated = useUserStore((state) => state.hasHydrated)
 
     const fetchUserRole = async () => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/profile`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem("jwt")}`
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/profile`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem("jwt")}`
+                }
+            });
+            const data = await response.json();
+            if (allowedRoles && !allowedRoles.includes(data.role)) {
+                router.push('/login');
             }
-        });
-        const data = await response.json();        
-        if(data.role !== 'admin'){
+        } catch {
             router.push('/login');
         }
     }

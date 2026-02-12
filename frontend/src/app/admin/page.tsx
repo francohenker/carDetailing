@@ -23,7 +23,6 @@ import {
     Car,
     Building2,
     FileDown,
-    Mail,
     Send,
     TrendingUp,
     Activity,
@@ -55,6 +54,9 @@ import ActivitySummary from "@/components/auditoria/ActivitySummary"
 import HourlyActivity from "@/components/auditoria/HourlyActivity"
 import PaginationControls from "@/components/auditoria/PaginationControls"
 import RecordsSummary from "@/components/auditoria/RecordsSummary"
+
+// Componente de espacios de trabajo
+import WorkspaceManagement from "@/components/WorkspaceManagement"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -124,7 +126,7 @@ interface User {
     lastname: string
     email: string
     phone: string
-    role: 'admin' | 'user'
+    role: 'admin' | 'user' | 'supplier'
 }
 
 interface Turno {
@@ -297,7 +299,7 @@ export default function AdminPage() {
         email: '',
         phone: '',
         password: '',
-        role: 'user' as 'admin' | 'user'
+        role: 'user' as 'admin' | 'user' | 'supplier'
     })
 
     // Estados para turnos
@@ -411,9 +413,9 @@ export default function AdminPage() {
     } | null>(null)
     const [detailedLoading, setDetailedLoading] = useState(false)
     const { generateReport, isGenerating } = useReportGenerator()
-    
+
     // Estado para usuario actual
-    const [currentUser, setCurrentUser] = useState<{firstname: string; lastname: string; email: string} | null>(null)
+    const [currentUser, setCurrentUser] = useState<{ firstname: string; lastname: string; email: string } | null>(null)
 
     // Estados para auditoría detallada
     interface AuditoriaRecord {
@@ -514,13 +516,13 @@ export default function AdminPage() {
         try {
             const token = localStorage.getItem('jwt')
             if (!token) return
-            
+
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/profile`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             })
-            
+
             if (response.ok) {
                 const userData = await response.json()
                 setCurrentUser({
@@ -533,7 +535,7 @@ export default function AdminPage() {
             console.error('Error fetching user:', error)
         }
     }
-    
+
     const checkTokenValidity = () => {
         const token = localStorage.getItem('jwt')
         if (!token) return false
@@ -1006,7 +1008,7 @@ export default function AdminPage() {
         })
     }
 
-    const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user') => {
+    const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user' | 'supplier') => {
         setActionLoading(`change-role-${userId}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/change-role/${userId}`, {
@@ -1412,24 +1414,35 @@ export default function AdminPage() {
         if (!detailedStatistics) return
 
         try {
-            // Si no hay período en las estadísticas, agregar el período por defecto (últimos 30 días)
-            const statsWithPeriod = { ...detailedStatistics };
-            
-            if (!statsWithPeriod.period) {
-                const endDate = new Date();
-                const startDate = new Date();
-                startDate.setDate(endDate.getDate() - 30);
-                
-                const days = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                
-                statsWithPeriod.period = {
+            // Preparar período por defecto si no existe
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 30);
+            const days = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            // Transformar los datos al formato esperado por generateReport
+            const reportData = {
+                period: detailedStatistics.period ?? {
                     startDate: startDate.toISOString().split('T')[0],
                     endDate: endDate.toISOString().split('T')[0],
                     days: days
-                };
-            }
-            
-            await generateReport(statsWithPeriod, currentUser)
+                },
+                periodRevenue: detailedStatistics.periodRevenue,
+                periodTurnos: detailedStatistics.periodTurnos,
+                newUsers: detailedStatistics.newUsers,
+                // Convertir popularServices: count de number a string
+                popularServices: detailedStatistics.popularServices?.map(s => ({
+                    name: s.name,
+                    count: String(s.count ?? 0),
+                    realizados: s.realizados !== undefined ? String(s.realizados) : undefined,
+                    pendientes: s.pendientes !== undefined ? String(s.pendientes) : undefined,
+                    cancelados: s.cancelados !== undefined ? String(s.cancelados) : undefined,
+                    total: s.total
+                })),
+                topClients: detailedStatistics.topClients
+            };
+
+            await generateReport(reportData, currentUser)
         } catch (err) {
             console.error('Error generando informe:', err)
             toast.error("Error", {
@@ -1577,12 +1590,12 @@ export default function AdminPage() {
             toast.error("El precio debe ser mayor a 0")
             return
         }
-        
+
         setOrderForm({
             ...orderForm,
             items: [...orderForm.items, currentOrderItem]
         })
-        
+
         setCurrentOrderItem({
             productId: '',
             unitPrice: '',
@@ -1600,17 +1613,17 @@ export default function AdminPage() {
 
     const handleSubmitPurchaseOrder = async (e: React.FormEvent) => {
         e.preventDefault()
-        
+
         if (!orderForm.supplierId || orderForm.supplierId === '') {
             toast.error("Selecciona un proveedor")
             return
         }
-        
+
         if (orderForm.items.length === 0) {
             toast.error("Agrega al menos un producto")
             return
         }
-        
+
         setActionLoading('submit-order')
         try {
             // Convertir los campos string a number para el backend
@@ -1624,7 +1637,7 @@ export default function AdminPage() {
                 })),
                 notes: orderForm.notes
             }
-            
+
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/purchase-orders`, {
                 method: 'POST',
                 headers: {
@@ -1633,9 +1646,9 @@ export default function AdminPage() {
                 },
                 body: JSON.stringify(orderData)
             })
-            
+
             if (!response.ok) throw new Error('Error creating order')
-            
+
             toast.success("Orden de compra creada correctamente")
             setIsOrderDialogOpen(false)
             resetOrderForm()
@@ -1663,9 +1676,9 @@ export default function AdminPage() {
                     receivedAt: new Date()
                 })
             })
-            
+
             if (!response.ok) throw new Error('Error updating order status')
-            
+
             toast.success("Orden marcada como recibida, stock actualizado y cotización finalizada")
             await fetchPurchaseOrders()
             await fetchQuotationRequests() // Actualizar cotizaciones también
@@ -1684,7 +1697,7 @@ export default function AdminPage() {
 
     const handleDeletePurchaseOrder = async (orderId: number) => {
         if (!confirm('¿Estás seguro de eliminar esta orden?')) return
-        
+
         setActionLoading(`delete-order-${orderId}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/purchase-orders/${orderId}`, {
@@ -1693,9 +1706,9 @@ export default function AdminPage() {
                     'Authorization': `Bearer ${localStorage.getItem('jwt')}`
                 }
             })
-            
+
             if (!response.ok) throw new Error('Error deleting order')
-            
+
             toast.success("Orden eliminada correctamente")
             await fetchPurchaseOrders()
         } catch (error) {
@@ -1735,7 +1748,7 @@ export default function AdminPage() {
         }
     }
 
-    const filteredPurchaseOrders = purchaseOrders.filter(order => 
+    const filteredPurchaseOrders = purchaseOrders.filter(order =>
         filterOrderStatus === 'all' || order.status === filterOrderStatus
     )
 
@@ -1811,7 +1824,7 @@ export default function AdminPage() {
             if (!response.ok) throw new Error('Error sending email')
 
             toast.success("Éxito", {
-                description: "Email enviado correctamente al proveedor.",
+                description: "Solicitud de cotización enviada al proveedor.",
             })
 
             setIsEmailDialogOpen(false)
@@ -1820,7 +1833,7 @@ export default function AdminPage() {
         } catch (error) {
             console.error('Error sending email:', error)
             toast.error("Error", {
-                description: "No se pudo enviar el email.",
+                description: "No se pudo enviar la solicitud de cotización.",
             })
         } finally {
             setLoading(false)
@@ -1841,7 +1854,7 @@ export default function AdminPage() {
         );
 
         // Separar productos con stock bajo
-        const lowStockSupplierProducts = allSupplierProducts.filter((p: Product) => 
+        const lowStockSupplierProducts = allSupplierProducts.filter((p: Product) =>
             Number(p.stock_actual) <= Number(p.stock_minimo)
         );
 
@@ -2185,7 +2198,7 @@ export default function AdminPage() {
                     </div>
 
                     <Tabs defaultValue="services" className="space-y-6">
-                        <TabsList className="grid w-full grid-cols-10">
+                        <TabsList className="grid w-full grid-cols-11">
                             <TabsTrigger value="services" className="flex items-center gap-2">
                                 <Wrench className="h-4 w-4" />
                                 Servicios
@@ -2213,6 +2226,10 @@ export default function AdminPage() {
                             <TabsTrigger value="turnos" className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4" />
                                 Turnos
+                            </TabsTrigger>
+                            <TabsTrigger value="workspaces" className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4" />
+                                Espacios
                             </TabsTrigger>
                             <TabsTrigger value="statistics" className="flex items-center gap-2">
                                 <TrendingUp className="h-4 w-4" />
@@ -2398,132 +2415,132 @@ export default function AdminPage() {
                                             </Button>
                                         </div>
                                     </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Estado</TableHead>
-                                                <TableHead>Nombre</TableHead>
-                                                {/* <TableHead>Descripción</TableHead> */}
-                                                <TableHead>Precio</TableHead>
-                                                <TableHead className="text-center">Stock</TableHead>
-                                                <TableHead className="text-center">Stock Mínimo</TableHead>
-                                                <TableHead className="text-center">Rendimiento</TableHead>
-                                                <TableHead>Proveedores</TableHead>
-                                                <TableHead>Acciones</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {products.map((product) => (
-                                                <TableRow key={product.id} className={product.isDeleted ? 'opacity-60 bg-gray-50' : ''}>
-                                                    <TableCell>
-                                                        {product.isDeleted ? (
-                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                                                                Eliminado
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                                                Activo
-                                                            </span>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="font-medium">{product.name}</TableCell>
-                                                    {/* <TableCell>{product.description}</TableCell> */}
-                                                    <TableCell>${product.price.toLocaleString()}</TableCell>
-                                                    <TableCell className="text-center">
-                                                        <div className="flex flex-col items-center gap-1">
-                                                            <span className={
-                                                                Number(product.stock_actual) <= 0 ? "font-semibold text-red-600" :
-                                                                    Number(product.stock_actual) <= Number(product.stock_minimo) ? "font-semibold text-amber-600" :
-                                                                        "font-semibold"
-                                                            }>
-                                                                {Number(product.stock_actual).toFixed(2)}
-                                                            </span>
-                                                            {Number(product.stock_actual) <= 0 && (
-                                                                <span className="text-xs text-red-600 font-medium">Sin stock</span>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-center">
-                                                        <div className="flex flex-col items-center">
-                                                            <span className="font-semibold text-orange-600">{Number(product.stock_minimo).toFixed(2)}</span>
-                                                            <span className="text-xs text-muted-foreground">mínimo</span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-center">
-                                                        <div className="flex flex-col items-center">
-                                                            <span className="font-bold text-blue-600 text-lg">{product.servicios_por_producto || 1}</span>
-                                                            <span className="text-xs text-muted-foreground">por servicio</span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {product.suppliers && product.suppliers.length > 0 ? (
-                                                            <div className="space-y-1">
-                                                                {product.suppliers.map((supplier) => (
-                                                                    <div key={supplier.id} className="text-xs bg-base-200 px-2 py-1 rounded flex items-center justify-between">
-                                                                        <span className="font-medium">{supplier.name}</span>
-                                                                        {/* <span className="text-muted-foreground">{supplier.email}</span> */}
-                                                                    </div>
-                                                                ))}
-                                                                <div className="text-xs text-muted-foreground mt-1 px-2">
-                                                                    Total: {product.suppliers.length} proveedor{product.suppliers.length !== 1 ? 'es' : ''}
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="text-xs text-muted-foreground italic">
-                                                                Sin proveedores asociados
-                                                            </div>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex gap-2">
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Estado</TableHead>
+                                                    <TableHead>Nombre</TableHead>
+                                                    {/* <TableHead>Descripción</TableHead> */}
+                                                    <TableHead>Precio</TableHead>
+                                                    <TableHead className="text-center">Stock</TableHead>
+                                                    <TableHead className="text-center">Stock Mínimo</TableHead>
+                                                    <TableHead className="text-center">Rendimiento</TableHead>
+                                                    <TableHead>Proveedores</TableHead>
+                                                    <TableHead>Acciones</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {products.map((product) => (
+                                                    <TableRow key={product.id} className={product.isDeleted ? 'opacity-60 bg-gray-50' : ''}>
+                                                        <TableCell>
                                                             {product.isDeleted ? (
-                                                                <Button
-                                                                    variant="default"
-                                                                    size="sm"
-                                                                    onClick={() => handleRestoreProduct(product.id)}
-                                                                    disabled={actionLoading === `restore-product-${product.id}`}
-                                                                >
-                                                                    {actionLoading === `restore-product-${product.id}` ? (
-                                                                        <span className="loading loading-spinner loading-xs"></span>
-                                                                    ) : (
-                                                                        <>
-                                                                            <RefreshCw className="h-4 w-4 mr-1" />
-                                                                            Restaurar
-                                                                        </>
-                                                                    )}
-                                                                </Button>
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                                                    Eliminado
+                                                                </span>
                                                             ) : (
-                                                                <>
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                                                    Activo
+                                                                </span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="font-medium">{product.name}</TableCell>
+                                                        {/* <TableCell>{product.description}</TableCell> */}
+                                                        <TableCell>${product.price.toLocaleString()}</TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <span className={
+                                                                    Number(product.stock_actual) <= 0 ? "font-semibold text-red-600" :
+                                                                        Number(product.stock_actual) <= Number(product.stock_minimo) ? "font-semibold text-amber-600" :
+                                                                            "font-semibold"
+                                                                }>
+                                                                    {Number(product.stock_actual).toFixed(2)}
+                                                                </span>
+                                                                {Number(product.stock_actual) <= 0 && (
+                                                                    <span className="text-xs text-red-600 font-medium">Sin stock</span>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="flex flex-col items-center">
+                                                                <span className="font-semibold text-orange-600">{Number(product.stock_minimo).toFixed(2)}</span>
+                                                                <span className="text-xs text-muted-foreground">mínimo</span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="flex flex-col items-center">
+                                                                <span className="font-bold text-blue-600 text-lg">{product.servicios_por_producto || 1}</span>
+                                                                <span className="text-xs text-muted-foreground">por servicio</span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {product.suppliers && product.suppliers.length > 0 ? (
+                                                                <div className="space-y-1">
+                                                                    {product.suppliers.map((supplier) => (
+                                                                        <div key={supplier.id} className="text-xs bg-base-200 px-2 py-1 rounded flex items-center justify-between">
+                                                                            <span className="font-medium">{supplier.name}</span>
+                                                                            {/* <span className="text-muted-foreground">{supplier.email}</span> */}
+                                                                        </div>
+                                                                    ))}
+                                                                    <div className="text-xs text-muted-foreground mt-1 px-2">
+                                                                        Total: {product.suppliers.length} proveedor{product.suppliers.length !== 1 ? 'es' : ''}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs text-muted-foreground italic">
+                                                                    Sin proveedores asociados
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex gap-2">
+                                                                {product.isDeleted ? (
                                                                     <Button
-                                                                        variant="outline"
+                                                                        variant="default"
                                                                         size="sm"
-                                                                        onClick={() => handleEditProduct(product)}
+                                                                        onClick={() => handleRestoreProduct(product.id)}
+                                                                        disabled={actionLoading === `restore-product-${product.id}`}
                                                                     >
-                                                                        <Edit2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="destructive"
-                                                                        size="sm"
-                                                                        onClick={() => openDeleteConfirm('product', product.id, product.name)}
-                                                                        disabled={actionLoading === `delete-product-${product.id}`}
-                                                                    >
-                                                                        {actionLoading === `delete-product-${product.id}` ? (
+                                                                        {actionLoading === `restore-product-${product.id}` ? (
                                                                             <span className="loading loading-spinner loading-xs"></span>
                                                                         ) : (
-                                                                            <Trash2 className="h-4 w-4" />
+                                                                            <>
+                                                                                <RefreshCw className="h-4 w-4 mr-1" />
+                                                                                Restaurar
+                                                                            </>
                                                                         )}
                                                                     </Button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
+                                                                ) : (
+                                                                    <>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => handleEditProduct(product)}
+                                                                        >
+                                                                            <Edit2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="destructive"
+                                                                            size="sm"
+                                                                            onClick={() => openDeleteConfirm('product', product.id, product.name)}
+                                                                            disabled={actionLoading === `delete-product-${product.id}`}
+                                                                        >
+                                                                            {actionLoading === `delete-product-${product.id}` ? (
+                                                                                <span className="loading loading-spinner loading-xs"></span>
+                                                                            ) : (
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            )}
+                                                                        </Button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
                             ) : (
                                 <>
                                     {/* Vista de Órdenes de Compra */}
@@ -2539,7 +2556,7 @@ export default function AdminPage() {
                                                 </div>
                                             </CardContent>
                                         </Card>
-                                        
+
                                         <Card>
                                             <CardContent className="p-6">
                                                 <div className="flex items-center justify-between">
@@ -2551,7 +2568,7 @@ export default function AdminPage() {
                                                 </div>
                                             </CardContent>
                                         </Card>
-                                        
+
                                         <Card>
                                             <CardContent className="p-6">
                                                 <div className="flex items-center justify-between">
@@ -2563,7 +2580,7 @@ export default function AdminPage() {
                                                 </div>
                                             </CardContent>
                                         </Card>
-                                        
+
                                         {/* <Card>
                                             <CardContent className="p-6">
                                                 <div className="flex items-center justify-between">
@@ -2972,11 +2989,11 @@ export default function AdminPage() {
                                                 {/* Lista de proveedores con scroll */}
                                                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                                                     {suppliers
-                                                        .filter(s => 
-                                                            s.isActive && 
+                                                        .filter(s =>
+                                                            s.isActive &&
                                                             (s.name.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
-                                                            s.email.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
-                                                            s.contactPerson?.toLowerCase().includes(supplierSearchQuery.toLowerCase()))
+                                                                s.email.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
+                                                                s.contactPerson?.toLowerCase().includes(supplierSearchQuery.toLowerCase()))
                                                         )
                                                         .map((supplier) => (
                                                             <div key={supplier.id} className="border rounded-lg p-3 hover:bg-blue-50 transition-colors">
@@ -2999,24 +3016,24 @@ export default function AdminPage() {
                                                                         {actionLoading === 'opening-email-dialog' ? (
                                                                             <span className="loading loading-spinner loading-xs mr-2"></span>
                                                                         ) : (
-                                                                            <Mail className="h-4 w-4 mr-2" />
+                                                                            <FileText className="h-4 w-4 mr-2" />
                                                                         )}
-                                                                        Enviar Email
+                                                                        Solicitar Cotización
                                                                     </Button>
                                                                 </div>
                                                             </div>
                                                         ))}
-                                                    {suppliers.filter(s => 
-                                                        s.isActive && 
+                                                    {suppliers.filter(s =>
+                                                        s.isActive &&
                                                         (s.name.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
-                                                        s.email.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
-                                                        s.contactPerson?.toLowerCase().includes(supplierSearchQuery.toLowerCase()))
+                                                            s.email.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
+                                                            s.contactPerson?.toLowerCase().includes(supplierSearchQuery.toLowerCase()))
                                                     ).length === 0 && (
-                                                        <div className="text-center py-8 text-muted-foreground">
-                                                            <Building2 className="h-12 w-12 mx-auto mb-2" />
-                                                            <p>No se encontraron proveedores con ese criterio de búsqueda.</p>
-                                                        </div>
-                                                    )}
+                                                            <div className="text-center py-8 text-muted-foreground">
+                                                                <Building2 className="h-12 w-12 mx-auto mb-2" />
+                                                                <p>No se encontraron proveedores con ese criterio de búsqueda.</p>
+                                                            </div>
+                                                        )}
                                                 </div>
                                             </div>
                                         )}
@@ -3088,11 +3105,16 @@ export default function AdminPage() {
                                                     <TableCell>{user.email}</TableCell>
                                                     <TableCell>{user.phone}</TableCell>
                                                     <TableCell>
-                                                        <Badge variant={user.role === 'admin' ? "default" : "secondary"}>
+                                                        <Badge variant={user.role === 'admin' ? "default" : user.role === 'supplier' ? "outline" : "secondary"}>
                                                             {user.role === 'admin' ? (
                                                                 <>
                                                                     <ShieldCheck className="h-3 w-3 mr-1" />
                                                                     Administrador
+                                                                </>
+                                                            ) : user.role === 'supplier' ? (
+                                                                <>
+                                                                    <Package className="h-3 w-3 mr-1" />
+                                                                    Proveedor
                                                                 </>
                                                             ) : (
                                                                 <>
@@ -3105,7 +3127,7 @@ export default function AdminPage() {
                                                     <TableCell>
                                                         <Select
                                                             value={user.role}
-                                                            onValueChange={(newRole: 'admin' | 'user') =>
+                                                            onValueChange={(newRole: 'admin' | 'user' | 'supplier') =>
                                                                 handleChangeUserRole(user.id, newRole)
                                                             }
                                                         >
@@ -3115,6 +3137,7 @@ export default function AdminPage() {
                                                             <SelectContent>
                                                                 <SelectItem value="user">Usuario</SelectItem>
                                                                 <SelectItem value="admin">Admin</SelectItem>
+                                                                <SelectItem value="supplier">Proveedor</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </TableCell>
@@ -3489,13 +3512,13 @@ export default function AdminPage() {
                                     <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
                                         <CardContent className="p-6">
                                             {detailedStatistics?.monthlyRevenue ? (
-                                                <RevenueChart 
-                                                    monthlyRevenue={detailedStatistics.monthlyRevenue} 
+                                                <RevenueChart
+                                                    monthlyRevenue={detailedStatistics.monthlyRevenue}
                                                     period={detailedStatistics.period}
                                                 />
                                             ) : detailedStatistics?.dailyRevenue ? (
-                                                <RevenueChart 
-                                                    monthlyRevenue={detailedStatistics.dailyRevenue.map(d => ({ month: d.day, revenue: d.revenue }))} 
+                                                <RevenueChart
+                                                    monthlyRevenue={detailedStatistics.dailyRevenue.map(d => ({ month: d.day, revenue: d.revenue }))}
                                                     period={detailedStatistics.period}
                                                 />
                                             ) : (
@@ -3558,16 +3581,15 @@ export default function AdminPage() {
 
                                                     {detailedStatistics.topClients.slice(0, 10).map((client: any, index) => {
                                                         const turnosRealizados = client.turnosRealizados || client.turnosCount || 0;
-                                                        
+
                                                         return (
                                                             <div key={`${client.clientEmail}-${index}`} className="grid grid-cols-4 gap-2 items-center p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
                                                                 <div className="col-span-2 flex items-center gap-3">
-                                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${
-                                                                        index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
                                                                         index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
-                                                                        index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
-                                                                        'bg-gradient-to-r from-blue-400 to-blue-600'
-                                                                    }`}>
+                                                                            index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
+                                                                                'bg-gradient-to-r from-blue-400 to-blue-600'
+                                                                        }`}>
                                                                         {index + 1}
                                                                     </div>
                                                                     <div>
@@ -3609,22 +3631,21 @@ export default function AdminPage() {
                                                             <div className="text-center">Cancelados</div>
                                                             <div className="text-center">TOTAL</div>
                                                         </div>
-                                                        
+
                                                         {detailedStatistics.popularServices.map((service, index) => {
                                                             const realizados = service.realizados ?? 0;
                                                             const pendientes = service.pendientes ?? 0;
                                                             const cancelados = service.cancelados ?? 0;
                                                             const total = service.total ?? service.count ?? 0;
-                                                            
+
                                                             return (
                                                                 <div key={service.name} className="grid grid-cols-6 gap-2 items-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-100">
                                                                     <div className="col-span-2 flex items-center gap-3">
-                                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 ${
-                                                                            index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 ${index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
                                                                             index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
-                                                                            index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
-                                                                            'bg-gradient-to-r from-blue-400 to-blue-600'
-                                                                        }`}>
+                                                                                index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
+                                                                                    'bg-gradient-to-r from-blue-400 to-blue-600'
+                                                                            }`}>
                                                                             {index + 1}
                                                                         </div>
                                                                         <div>
@@ -3977,6 +3998,11 @@ export default function AdminPage() {
                                     )}
                                 </CardContent>
                             </Card>
+                        </TabsContent>
+
+                        {/* PESTAÑA DE ESPACIOS DE TRABAJO */}
+                        <TabsContent value="workspaces" className="space-y-6">
+                            <WorkspaceManagement />
                         </TabsContent>
 
                         {/* PESTAÑA DE CONFIGURACIÓN */}
@@ -5151,16 +5177,16 @@ export default function AdminPage() {
                     </DialogContent>
                 </Dialog >
 
-                {/* DIALOG PARA ENVIAR EMAIL A PROVEEDORES */}
+                {/* DIALOG PARA SOLICITAR COTIZACIÓN A PROVEEDORES */}
                 < Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen} >
                     <DialogContent className="max-w-2xl">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
-                                <Mail className="h-5 w-5 text-blue-500" />
-                                Enviar Email a Proveedor
+                                <FileText className="h-5 w-5 text-blue-500" />
+                                Solicitar Cotización al Proveedor
                             </DialogTitle>
                             <DialogDescription>
-                                Redacta un mensaje para contactar al proveedor {selectedSupplier?.name}
+                                Crea una solicitud de cotización para el proveedor {selectedSupplier?.name}. La solicitud aparecerá en su panel de proveedor.
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleSendSupplierEmail} className="space-y-4">
@@ -5246,10 +5272,9 @@ export default function AdminPage() {
                                                     return (
                                                         <div
                                                             key={product.id}
-                                                            className={`bg-white p-3 rounded border transition-all ${
-                                                                isSelected ? 'border-blue-300 bg-blue-50' : 
+                                                            className={`bg-white p-3 rounded border transition-all ${isSelected ? 'border-blue-300 bg-blue-50' :
                                                                 isLowStock ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <div className="flex items-start gap-3">
                                                                 <input
@@ -5266,15 +5291,13 @@ export default function AdminPage() {
                                                                 >
                                                                     <div className="flex justify-between items-start">
                                                                         <div>
-                                                                            <span className={`font-medium ${
-                                                                                isSelected ? 'text-blue-900' : 
+                                                                            <span className={`font-medium ${isSelected ? 'text-blue-900' :
                                                                                 isLowStock ? 'text-red-900' : 'text-gray-900'
-                                                                            }`}>
+                                                                                }`}>
                                                                                 {product.name}
                                                                             </span>
-                                                                            <div className={`flex gap-4 text-xs mt-1 ${
-                                                                                isLowStock ? 'text-red-700' : 'text-gray-600'
-                                                                            }`}>
+                                                                            <div className={`flex gap-4 text-xs mt-1 ${isLowStock ? 'text-red-700' : 'text-gray-600'
+                                                                                }`}>
                                                                                 <span>Stock: <strong className={isLowStock ? 'text-red-600' : ''}>{product.stock_actual}</strong></span>
                                                                                 <span>Mínimo: <strong>{product.stock_minimo}</strong></span>
                                                                                 <span>Por servicio: <strong>{product.servicios_por_producto || 1}</strong></span>
@@ -5304,7 +5327,7 @@ export default function AdminPage() {
                                                     <div className="flex items-center gap-2">
                                                         <CheckCircle className="h-4 w-4 text-blue-600" />
                                                         <span className="text-sm font-medium text-blue-800">
-                                                            {selectedProducts.length} producto(s) seleccionado(s) para incluir en el email
+                                                            {selectedProducts.length} producto(s) seleccionado(s) para incluir en la solicitud
                                                         </span>
                                                     </div>
                                                 </div>
@@ -5331,7 +5354,7 @@ export default function AdminPage() {
                                     {loading ? (
                                         <span className="loading loading-spinner loading-sm"></span>
                                     ) : (
-                                        "Enviar Email"
+                                        "Enviar Solicitud"
                                     )}
                                 </Button>
                             </DialogFooter>
@@ -5413,10 +5436,10 @@ export default function AdminPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="order-supplier">Proveedor *</Label>
-                                    <Select 
-                                        value={orderForm.supplierId} 
+                                    <Select
+                                        value={orderForm.supplierId}
                                         onValueChange={(value) => {
-                                            setOrderForm({...orderForm, supplierId: value})
+                                            setOrderForm({ ...orderForm, supplierId: value })
                                             // Limpiar el producto seleccionado al cambiar de proveedor
                                             setCurrentOrderItem({
                                                 productId: '',
@@ -5447,7 +5470,7 @@ export default function AdminPage() {
                                     <Input
                                         id="order-notes"
                                         value={orderForm.notes}
-                                        onChange={(e) => setOrderForm({...orderForm, notes: e.target.value})}
+                                        onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
                                         placeholder="Notas adicionales"
                                     />
                                 </div>
@@ -5465,9 +5488,9 @@ export default function AdminPage() {
                                         <div className="grid grid-cols-12 gap-4 items-end">
                                             <div className="col-span-5 space-y-2">
                                                 <Label>Producto</Label>
-                                                <Select 
-                                                    value={currentOrderItem.productId} 
-                                                    onValueChange={(value) => setCurrentOrderItem({...currentOrderItem, productId: value})}
+                                                <Select
+                                                    value={currentOrderItem.productId}
+                                                    onValueChange={(value) => setCurrentOrderItem({ ...currentOrderItem, productId: value })}
                                                     disabled={!orderForm.supplierId}
                                                 >
                                                     <SelectTrigger>
@@ -5475,10 +5498,10 @@ export default function AdminPage() {
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {products
-                                                            .filter(product => 
-                                                                !product.isDeleted && 
-                                                                orderForm.supplierId && 
-                                                                product.suppliers && 
+                                                            .filter(product =>
+                                                                !product.isDeleted &&
+                                                                orderForm.supplierId &&
+                                                                product.suppliers &&
                                                                 product.suppliers.some(s => s.id === parseInt(orderForm.supplierId))
                                                             )
                                                             .map((product) => (
@@ -5488,15 +5511,15 @@ export default function AdminPage() {
                                                             ))}
                                                     </SelectContent>
                                                 </Select>
-                                                {orderForm.supplierId && products.filter(p => 
-                                                    !p.isDeleted && 
-                                                    p.suppliers && 
+                                                {orderForm.supplierId && products.filter(p =>
+                                                    !p.isDeleted &&
+                                                    p.suppliers &&
                                                     p.suppliers.some(s => s.id === parseInt(orderForm.supplierId))
                                                 ).length === 0 && (
-                                                    <p className="text-xs text-amber-600 mt-1">
-                                                        No hay productos asociados a este proveedor
-                                                    </p>
-                                                )}
+                                                        <p className="text-xs text-amber-600 mt-1">
+                                                            No hay productos asociados a este proveedor
+                                                        </p>
+                                                    )}
                                             </div>
 
                                             <div className="col-span-2 space-y-2">
@@ -5505,7 +5528,7 @@ export default function AdminPage() {
                                                     type="number"
                                                     min="1"
                                                     value={currentOrderItem.quantity}
-                                                    onChange={(e) => setCurrentOrderItem({...currentOrderItem, quantity: e.target.value})}
+                                                    onChange={(e) => setCurrentOrderItem({ ...currentOrderItem, quantity: e.target.value })}
                                                 />
                                             </div>
 
@@ -5516,7 +5539,7 @@ export default function AdminPage() {
                                                     step="0.01"
                                                     min="0"
                                                     value={currentOrderItem.unitPrice}
-                                                    onChange={(e) => setCurrentOrderItem({...currentOrderItem, unitPrice: e.target.value})}
+                                                    onChange={(e) => setCurrentOrderItem({ ...currentOrderItem, unitPrice: e.target.value })}
                                                 />
                                             </div>
 
@@ -5584,7 +5607,7 @@ export default function AdminPage() {
                                                     <TableRow>
                                                         <TableCell colSpan={3} className="text-right font-bold">Total:</TableCell>
                                                         <TableCell className="text-right font-bold text-lg">
-                                                            ${orderForm.items.reduce((sum, item) => 
+                                                            ${orderForm.items.reduce((sum, item) =>
                                                                 sum + (parseInt(item.quantity) * parseFloat(item.unitPrice)), 0
                                                             ).toLocaleString('es-AR')}
                                                         </TableCell>

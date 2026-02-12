@@ -4,11 +4,13 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  Unique,
 } from 'typeorm';
 import { PurchaseOrder } from './purchase-order.entity';
 import { Producto } from '../../producto/entities/producto.entity';
 
 @Entity('purchase_order_items')
+@Unique(['purchaseOrder', 'producto'])
 export class PurchaseOrderItem {
   @PrimaryGeneratedColumn()
   id: number;

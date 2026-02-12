@@ -53,6 +53,7 @@ interface Turno {
     servicio: { id: string, name: string }[]
     car: { id: string, marca: string, model: string, type: string }
     totalPrice: number
+    pago?: { id: number, monto: number, estado: string }[]
     estado: 'pendiente' | 'finalizado' | 'cancelado'
 }
 
@@ -106,6 +107,9 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess, suggest
     const [loading, setLoading] = useState(false)
     const [slotsLoading, setSlotsLoading] = useState(false)
     const [servicesLoading, setServicesLoading] = useState(false)
+
+    // Verificar si el turno tiene pagos registrados (bloquea cambio de servicios)
+    const hasPago = turno?.pago?.some(p => p.estado === 'PAGADO') || false
 
     // Validaciones de fecha
     const today = startOfDay(new Date())
@@ -245,6 +249,10 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess, suggest
 
     // Manejar selección de servicios
     const handleServiceToggle = (service: Service) => {
+        if (hasPago) {
+            toast.error("No se pueden modificar los servicios de un turno que ya tiene pagos registrados")
+            return
+        }
         const isSelected = selectedServices.some(s => s.id === service.id)
 
         let updatedServices: Service[]
@@ -414,7 +422,17 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess, suggest
                             <CardTitle className="flex items-center gap-2">
                                 <Wrench className="h-5 w-5" />
                                 Servicios
+                                {hasPago && (
+                                    <Badge variant="destructive" className="ml-2 text-xs">
+                                        🔒 Bloqueado por pago
+                                    </Badge>
+                                )}
                             </CardTitle>
+                            {hasPago && (
+                                <p className="text-sm text-amber-600">
+                                    Los servicios no pueden modificarse porque el turno ya tiene pagos registrados. Solo puede cambiar la fecha.
+                                </p>
+                            )}
                         </CardHeader>
                         <CardContent>
                             {servicesLoading ? (
@@ -424,7 +442,7 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess, suggest
                                     ))}
                                 </div>
                             ) : (
-                                <div className="space-y-3 max-h-60 overflow-y-auto">
+                                <div className={`space-y-3 max-h-60 overflow-y-auto ${hasPago ? 'opacity-60 pointer-events-none' : ''}`}>
                                     {services.map((service) => {
                                         const isSelected = selectedServices.some(s => s.id === service.id)
                                         const servicePrice = getPriceForCarType(service, turno.car.type)

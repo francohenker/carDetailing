@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 interface User {
     name: string
-    role: 'admin' | 'user' 
+    role: 'admin' | 'user' | 'supplier'
 }
 
 interface UserStore {

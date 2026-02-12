@@ -1,16 +1,24 @@
-import { HttpCode, HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Car } from './entities/car.entity';
 import { Repository } from 'typeorm';
 import { createCarDto } from './dto/create-car.dto';
 import { Users } from '../users/entities/users.entity';
 import { modifyCarDto } from './dto/modify-car.dto';
+import { SystemConfigService } from '../config/system-config.service';
+import { Turno } from '../turno/entities/turno.entity';
+import { estado_turno } from '../enums/estado_turno.enum';
+import { MailService } from '../mail.services';
 
 @Injectable()
 export class CarService {
   constructor(
     @InjectRepository(Car)
     private carRepository: Repository<Car>,
+    @InjectRepository(Turno)
+    private turnoRepository: Repository<Turno>,
+    private systemConfigService: SystemConfigService,
+    private mailService: MailService,
   ) {}
 
   async create(createCarDto: createCarDto, user: Users): Promise<Car> {
@@ -18,6 +26,15 @@ export class CarService {
 
     if (!patenteRegex.test(createCarDto.patente)) {
       throw new Error('Patente inválida');
+    }
+
+    // Validar tipo de vehículo activo
+    const activeTypes = await this.systemConfigService.getActiveVehicleTypes();
+    if (!activeTypes.includes(createCarDto.type)) {
+      throw new HttpException(
+        `El tipo de vehículo '${createCarDto.type}' no está activo en el sistema`,
+        400,
+      );
     }
 
     const car = new Car(
@@ -64,18 +81,102 @@ export class CarService {
     return await this.carRepository.save(car);
   }
 
-  // turn True isDelete property car
+  // turn True isDelete property car and cancel pending turnos
   async deleteCar(user: Users, carId: number) {
     const car = await this.carRepository.findOne({
       where: { id: carId, user: { id: user.id } },
+      relations: ['user'],
     });
 
     if (!car) {
       throw new HttpException('Car not found or does not belong to user', 404);
     }
 
+    // Cancelar todos los turnos pendientes asociados al auto
+    const pendingTurnos = await this.turnoRepository.find({
+      where: {
+        car: { id: carId },
+        estado: estado_turno.PENDIENTE,
+      },
+      relations: ['car', 'car.user', 'servicio'],
+    });
+
+    for (const turno of pendingTurnos) {
+      turno.estado = estado_turno.CANCELADO;
+      await this.turnoRepository.save(turno);
+
+      // Enviar email de cancelación
+      try {
+        this.mailService.sendHtmlMail(
+          turno.car.user.email,
+          '❌ Turno Cancelado - Vehículo dado de baja',
+          `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h2>Turno Cancelado</h2>
+            </div>
+            <div style="padding: 20px; border: 1px solid #ddd; border-radius: 0 0 8px 8px;">
+              <p>Su turno del <strong>${turno.fechaHora}</strong> para el vehículo 
+              <strong>${car.marca} ${car.model} (${car.patente})</strong> ha sido cancelado 
+              porque el vehículo fue dado de baja del sistema.</p>
+              <p>Si desea reagendar, por favor registre el vehículo nuevamente.</p>
+            </div>
+          </div>`,
+          `Turno cancelado por baja de vehículo ${car.patente}`,
+        );
+      } catch (e) {
+        // No fallar si el email falla
+      }
+    }
+
     car.isDeleted = true;
     await this.carRepository.save(car);
-    return HttpCode(200);
+    return {
+      message: 'Vehículo dado de baja',
+      cancelledTurnos: pendingTurnos.length,
+    };
+  }
+
+  // Buscar vehículo por patente (para transferencia)
+  async checkPatente(
+    patente: string,
+  ): Promise<{ exists: boolean; isDeleted?: boolean; carId?: number }> {
+    const car = await this.carRepository.findOne({
+      where: { patente: patente.toUpperCase() },
+      relations: ['user'],
+    });
+
+    if (!car) {
+      return { exists: false };
+    }
+
+    return {
+      exists: true,
+      isDeleted: car.isDeleted,
+      carId: car.id,
+    };
+  }
+
+  // Reclamar un auto dado de baja por patente (transferir a nuevo usuario)
+  async claimCar(user: Users, patente: string): Promise<Car> {
+    const car = await this.carRepository.findOne({
+      where: { patente: patente.toUpperCase() },
+      relations: ['user'],
+    });
+
+    if (!car) {
+      throw new HttpException('Vehículo no encontrado con esa patente', 404);
+    }
+
+    if (!car.isDeleted) {
+      throw new HttpException(
+        'Este vehículo está activo y pertenece a otro usuario. No se puede reclamar.',
+        400,
+      );
+    }
+
+    // Transferir el auto al nuevo usuario
+    car.user = user;
+    car.isDeleted = false;
+    return await this.carRepository.save(car);
   }
 }

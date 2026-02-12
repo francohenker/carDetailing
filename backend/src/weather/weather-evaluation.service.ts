@@ -6,6 +6,7 @@ import { fetchWeatherApi } from 'openmeteo';
 import { Turno } from '../turno/entities/turno.entity';
 import { MailService } from '../mail.services';
 import { estado_turno } from '../enums/estado_turno.enum';
+import { WorkspaceService } from '../turno/workspace.service';
 
 export interface WeatherForecast {
   date: Date;
@@ -32,6 +33,7 @@ export class WeatherEvaluationService {
     @InjectRepository(Turno)
     private readonly turnoRepository: Repository<Turno>,
     private readonly mailService: MailService,
+    private readonly workspaceService: WorkspaceService,
   ) {}
 
   // Cronjob que se ejecuta todos los días a las 8:00 AM
@@ -129,69 +131,55 @@ export class WeatherEvaluationService {
         throw new Error(`Turno con ID ${turnoId} no encontrado`);
       }
 
-      // Generar pronósticos simulados para los próximos 15 días
-      const mockWeatherForecasts: WeatherForecast[] = [];
-      const today = new Date();
+      // Obtener pronósticos REALES de la API Open-Meteo
+      const weatherForecasts = await this.getWeatherForecast(15);
 
-      for (let i = 0; i < 15; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-
-        // Simular mal tiempo para el día del turno
-        const isTurnoDay =
-          new Date(turno.fechaHora).toDateString() === date.toDateString();
-
-        // Lógica mejorada: mal tiempo los primeros 3 días, luego buen tiempo
-        const daysSinceTurno = Math.floor(
-          (date.getTime() - new Date(turno.fechaHora).getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
-
-        // Día del turno y 2 días después: mal tiempo
-        // Días 3-15: buen tiempo (para que haya opciones disponibles)
-        const isBadWeather = isTurnoDay || (daysSinceTurno >= 0 && daysSinceTurno < 3);
-
-        mockWeatherForecasts.push({
-          date,
-          weatherCode: isBadWeather ? 61 : 1, // 61 = lluvia, 1 = despejado
-          precipitation: isBadWeather ? Math.random() * 5 + 2 : 0, // 2-7mm si llueve
-          temperature: 15 + Math.random() * 10, // 15-25°C
-        });
-      }
-
-      // Crear evaluación simulada
       const turnoDate = new Date(turno.fechaHora);
+      const today = new Date();
       const daysUntilTurno = Math.ceil(
         (turnoDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
       );
 
       // Encontrar el pronóstico específico del día del turno
+      const turnoDateOnly = turnoDate.toISOString().split('T')[0];
       const turnoDayForecast =
-        mockWeatherForecasts.find(
-          (f) => f.date.toDateString() === turnoDate.toDateString(),
-        ) || mockWeatherForecasts[0];
+        weatherForecasts.find(
+          (f) => f.date.toISOString().split('T')[0] === turnoDateOnly,
+        ) || weatherForecasts[0];
 
       // Encontrar una fecha sugerida con buen clima Y horarios disponibles
       const suggestedDate = await this.findDateWithGoodWeatherAndAvailability(
-        mockWeatherForecasts,
+        weatherForecasts,
         turnoDate,
         turno.duration,
       );
 
-      const mockEvaluation: TurnoWeatherEvaluation = {
+      // Calcular días consecutivos de mal tiempo
+      let consecutiveBadDays = 0;
+      let currentConsecutive = 0;
+      for (const forecast of weatherForecasts) {
+        if (this.isBadWeatherForCarDetailing(forecast)) {
+          currentConsecutive++;
+          consecutiveBadDays = Math.max(consecutiveBadDays, currentConsecutive);
+        } else {
+          currentConsecutive = 0;
+        }
+      }
+
+      const evaluation: TurnoWeatherEvaluation = {
         turno,
-        badWeatherDays: mockWeatherForecasts.filter((f) =>
+        badWeatherDays: weatherForecasts.filter((f) =>
           this.isBadWeatherForCarDetailing(f),
         ).length,
-        consecutiveBadDays: 2,
+        consecutiveBadDays,
         daysUntilTurno,
-        weatherForecasts: mockWeatherForecasts,
+        weatherForecasts,
         turnoDayForecast,
         suggestedDate,
       };
 
       // Enviar el correo de prueba
-      await this.sendWeatherRescheduleEmail(mockEvaluation, emailType);
+      await this.sendWeatherRescheduleEmail(evaluation, emailType);
 
       this.logger.log(
         `✅ Correo de prueba enviado exitosamente a ${turno.car.user.email}`,
@@ -204,7 +192,7 @@ export class WeatherEvaluationService {
         emailType,
         userEmail: turno.car.user.email,
         daysUntilTurno,
-        weatherSimulated: {
+        weatherReal: {
           turnoDayWeather: {
             description: this.getWeatherDescription(
               turnoDayForecast.weatherCode,
@@ -212,7 +200,8 @@ export class WeatherEvaluationService {
             precipitation: turnoDayForecast.precipitation,
             temperature: turnoDayForecast.temperature,
           },
-          totalBadDays: mockEvaluation.badWeatherDays,
+          totalBadDays: evaluation.badWeatherDays,
+          source: 'Open-Meteo API (datos reales)',
         },
       };
     } catch (error) {
@@ -449,7 +438,7 @@ export class WeatherEvaluationService {
       });
 
       // Verificar si hay al menos un slot disponible
-      const hasAvailableSlot = this.checkIfDateHasAvailableSlots(
+      const hasAvailableSlot = await this.checkIfDateHasAvailableSlots(
         existingTurnos,
         duration,
         forecast.date,
@@ -474,15 +463,20 @@ export class WeatherEvaluationService {
 
   /**
    * Verifica si una fecha tiene al menos un horario disponible.
+   * Considera la cantidad de espacios de trabajo activos.
    */
-  private checkIfDateHasAvailableSlots(
+  private async checkIfDateHasAvailableSlots(
     existingTurnos: Turno[],
     duration: number,
     targetDate: Date,
-  ): boolean {
+  ): Promise<boolean> {
     const workStartHour = 8;
     const workEndHour = 19;
     const slotInterval = 60;
+
+    // Obtener cantidad de espacios activos
+    const activeWorkspaces = await this.workspaceService.getActiveCount();
+    const maxConcurrent = activeWorkspaces > 0 ? activeWorkspaces : 1;
 
     // Crear todos los slots posibles
     const allSlots: Date[] = [];
@@ -499,21 +493,20 @@ export class WeatherEvaluationService {
       const slotEnd = new Date(slot);
       slotEnd.setMinutes(slotEnd.getMinutes() + duration);
 
-      // Verificar si este slot no se solapa con ningún turno existente
-      let hasConflict = false;
+      // Contar cuántos turnos se solapan con este slot
+      let overlappingCount = 0;
       for (const turno of existingTurnos) {
         const turnoStart = new Date(turno.fechaHora);
         const turnoEnd = new Date(turno.fechaHora);
         turnoEnd.setMinutes(turnoEnd.getMinutes() + (turno.duration || 60));
 
         if (slot < turnoEnd && slotEnd > turnoStart) {
-          hasConflict = true;
-          break;
+          overlappingCount++;
         }
       }
 
-      if (!hasConflict) {
-        return true; // Encontramos al menos un slot disponible
+      if (overlappingCount < maxConcurrent) {
+        return true; // Encontramos al menos un slot con espacio disponible
       }
     }
 

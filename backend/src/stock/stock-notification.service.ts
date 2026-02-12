@@ -543,26 +543,7 @@ Equipo de Car Detailing`;
       throw new Error('Proveedor no encontrado');
     }
 
-    // Obtener productos seleccionados
-    const products = await this.productoRepository.findBy({
-      id: In(productIds),
-    });
-
-    const emailContent = this.generateSupplierEmailContent(
-      supplier,
-      products,
-      message,
-    );
-
-    // Enviar email al proveedor
-    // await this.mailService.sendHtmlMail(
-    //   supplier.email,
-    //   'Solicitud de Cotización - Car Detailing',
-    //   emailContent,
-    //   `Solicitud de cotización para ${products.length} producto(s). Por favor revise el detalle en el email.`,
-    // );
-
-    // Crear solicitud de cotización en el sistema y generar respuestas automáticas
+    // Crear solicitud de cotización en el sistema (aparece en el panel del proveedor)
     await this.quotationService.createQuotationRequest({
       productIds,
       supplierIds: [supplierId],
@@ -571,93 +552,7 @@ Equipo de Car Detailing`;
     });
 
     console.log(
-      `Email enviado y cotización creada con respuesta automática para proveedor ${supplier.name}`,
+      `Solicitud de cotización creada para proveedor ${supplier.name}`,
     );
-  }
-
-  private generateSupplierEmailContent(
-    supplier: any,
-    products: Producto[],
-    customMessage: string,
-  ): string {
-    const productList = products
-      .map(
-        (product) => `
-        <tr>
-          <td style="padding: 8px; border: 1px solid #ddd;">${product.name}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${product.stock_actual}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${product.stock_minimo}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
-            ${Math.max(Number(product.stock_minimo) - Number(product.stock_actual) + 5, 10)}
-          </td>
-        </tr>
-      `,
-      )
-      .join('');
-
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #007bff; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th { background-color: #f8f9fa; padding: 10px; border: 1px solid #ddd; }
-            td { padding: 8px; border: 1px solid #ddd; }
-            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 style="margin: 0;">Solicitud de Cotización</h1>
-              <p style="margin: 10px 0 0 0;">Car Detailing</p>
-            </div>
-            
-            <p>Estimado/a ${supplier.name},</p>
-            
-            <p>Esperamos que se encuentre bien. Nos dirigimos a usted para solicitar una cotización de los siguientes productos:</p>
-            
-            ${customMessage ? `<div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;"><strong>Mensaje adicional:</strong><br>${customMessage}</div>` : ''}
-            
-            <table>
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Stock Actual</th>
-                  <th>Stock Mínimo</th>
-                  <th>Cantidad Sugerida</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${productList}
-              </tbody>
-            </table>
-            
-            <p>Agradecemos si pudiera proporcionarnos:</p>
-            <ul>
-              <li>Precios unitarios actualizados</li>
-              <li>Disponibilidad de stock</li>
-              <li>Tiempos de entrega</li>
-              <li>Condiciones de pago</li>
-            </ul>
-            
-            <p>Quedamos a la espera de su respuesta.</p>
-            
-            <p>Saludos cordiales,<br>
-            <strong>Equipo de Car Detailing</strong></p>
-            
-            <div class="footer">
-              <p>Car Detailing - Servicio profesional de lavado y detailing</p>
-              <p>Email: info@cardetailing.com | Teléfono: +54 11 1234-5678</p>
-              <p>Fecha: ${new Date().toLocaleString('es-AR')}</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
   }
 }

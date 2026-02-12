@@ -10,12 +10,40 @@ import {
   TipoAccion,
   TipoEntidad,
 } from '../auditoria/entities/auditoria.entity';
+import { empresaInfo } from './empresa.config';
+import { TIPO_AUTO } from '../enums/tipo_auto.enum';
 
 @Controller('config')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 export class SystemConfigController {
   constructor(private readonly systemConfigService: SystemConfigService) {}
+
+  @Get('empresa')
+  async getEmpresaInfo() {
+    return empresaInfo;
+  }
+
+  @Get('vehicle-types')
+  async getActiveVehicleTypes() {
+    return this.systemConfigService.getActiveVehicleTypes();
+  }
+
+  @Get('vehicle-types/all')
+  async getAllVehicleTypes() {
+    return Object.values(TIPO_AUTO);
+  }
+
+  @Auditar({
+    accion: TipoAccion.MODIFICAR,
+    entidad: TipoEntidad.SISTEMA,
+    descripcion: 'Actualización de tipos de vehículos activos',
+    capturarDatosAnteriores: true,
+  })
+  @Put('vehicle-types')
+  async updateActiveVehicleTypes(@Body('types') types: TIPO_AUTO[]) {
+    return this.systemConfigService.updateActiveVehicleTypes(types);
+  }
 
   @Get('quotation-thresholds')
   async getQuotationThresholds() {

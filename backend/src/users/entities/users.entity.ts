@@ -3,12 +3,14 @@ import {
   Column,
   Entity,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
 import { Role } from '../../roles/role.enum';
 import { Car } from '../../car/entities/car.entity';
+import { Supplier } from '../../supplier/entities/supplier.entity';
 
 @Entity()
 export class Users {
@@ -42,6 +44,9 @@ export class Users {
 
   @OneToMany(() => Car, (car) => car.user)
   cars: Car[];
+
+  @OneToOne(() => Supplier, (supplier) => supplier.user, { nullable: true })
+  supplier: Supplier;
 
   async validatePassword(password: string): Promise<boolean> {
     return await bcrypt.compareSync(password, this.password);

@@ -38,8 +38,37 @@ interface UserInfo {
   email: string;
 }
 
+interface EmpresaInfo {
+  razonSocial: string;
+  cuit: string;
+  email: string;
+  telefono: string;
+  web?: string;
+  sucursal: {
+    nombre: string;
+    direccion: string;
+    localidad: string;
+    provincia: string;
+    codigoPostal: string;
+    telefono?: string;
+  };
+}
+
 export function useReportGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const fetchEmpresaInfo = async (): Promise<EmpresaInfo | null> => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/empresa`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.error('Error fetching empresa info:', e);
+    }
+    return null;
+  };
 
   const generateReport = async (data: StatisticsData, userInfo: UserInfo | null = null) => {
     setIsGenerating(true);
@@ -54,7 +83,36 @@ export function useReportGenerator() {
       // Configurar fuentes y colores
       pdf.setFont('helvetica');
 
-      // Header del informe
+      // Obtener datos de la empresa
+      const empresaInfo = await fetchEmpresaInfo();
+
+      // Header del informe con datos de la empresa
+      if (empresaInfo) {
+        pdf.setFontSize(18);
+        pdf.setTextColor(37, 99, 235); // Blue-600
+        pdf.text(empresaInfo.razonSocial.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
+        yPosition += 7;
+
+        pdf.setFontSize(9);
+        pdf.setTextColor(107, 114, 128); // Gray-500
+        pdf.text(`CUIT: ${empresaInfo.cuit}`, pageWidth / 2, yPosition, { align: 'center' });
+        yPosition += 5;
+        pdf.text(
+          `${empresaInfo.sucursal.direccion} - ${empresaInfo.sucursal.localidad}, ${empresaInfo.sucursal.provincia} (${empresaInfo.sucursal.codigoPostal})`,
+          pageWidth / 2, yPosition, { align: 'center' }
+        );
+        yPosition += 5;
+        const contactLine = [empresaInfo.email, empresaInfo.telefono, empresaInfo.web].filter(Boolean).join(' | ');
+        pdf.text(contactLine, pageWidth / 2, yPosition, { align: 'center' });
+        yPosition += 8;
+
+        // Línea separadora
+        pdf.setDrawColor(37, 99, 235);
+        pdf.setLineWidth(0.5);
+        pdf.line(20, yPosition, pageWidth - 20, yPosition);
+        yPosition += 8;
+      }
+
       pdf.setFontSize(20);
       pdf.setTextColor(37, 99, 235); // Blue-600
       pdf.text('INFORME DE ESTADÍSTICAS', pageWidth / 2, yPosition, { align: 'center' });
