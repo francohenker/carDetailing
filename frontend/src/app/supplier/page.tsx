@@ -262,10 +262,11 @@ export default function SupplierDashboard() {
                     <p className="font-medium mb-2">{pq.productName}</p>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="text-sm text-gray-600">
+                        <label htmlFor={`unitPrice-${pq.productId}`} className="text-sm text-gray-600">
                             Precio unitario
                         </label>
                         <input
+                          id={`unitPrice-${pq.productId}`}
                           type="number"
                           step="0.01"
                           min="0"
@@ -279,8 +280,9 @@ export default function SupplierDashboard() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm text-gray-600">Cantidad</label>
+                        <label htmlFor={`quantity-${pq.productId}`} className="text-sm text-gray-600">Cantidad</label>
                         <input
+                          id={`quantity-${pq.productId}`}
                           type="number"
                           min="1"
                           value={pq.quantity}
@@ -293,8 +295,9 @@ export default function SupplierDashboard() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm text-gray-600">Disponibilidad</label>
+                        <label htmlFor={`availability-${pq.productId}`} className="text-sm text-gray-600">Disponibilidad</label>
                         <select
+                          id={`availability-${pq.productId}`}
                           value={pq.availability}
                           onChange={(e) => {
                             const updated = [...respondForm.productQuotes];
@@ -314,10 +317,11 @@ export default function SupplierDashboard() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">
+                    <label htmlFor="deliveryDays" className="text-sm font-medium text-gray-700">
                       Días de entrega
                     </label>
                     <input
+                      id="deliveryDays"
                       type="number"
                       min="1"
                       value={respondForm.deliveryDays}
@@ -331,10 +335,11 @@ export default function SupplierDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">
+                    <label htmlFor="paymentTerms" className="text-sm font-medium text-gray-700">
                       Condiciones de pago
                     </label>
                     <select
+                      id="paymentTerms"
                       value={respondForm.paymentTerms}
                       onChange={(e) =>
                         setRespondForm({ ...respondForm, paymentTerms: e.target.value })
@@ -351,8 +356,9 @@ export default function SupplierDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Notas</label>
+                  <label htmlFor="notes" className="text-sm font-medium text-gray-700">Notas</label>
                   <textarea
+                    id="notes"
                     value={respondForm.notes}
                     onChange={(e) =>
                       setRespondForm({ ...respondForm, notes: e.target.value })
