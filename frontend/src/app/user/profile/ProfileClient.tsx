@@ -359,9 +359,10 @@ export default function ProfileClient() {
                 Authorization: `Bearer ${localStorage.getItem("jwt")}`,
             },
         })
-            .then((response) => {
+            .then(async (response) => {
                 if (!response.ok) {
-                    throw new Error("Error al eliminar el vehículo");
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.message || "Error al eliminar el vehículo");
                 }
                 return response.json();
             })

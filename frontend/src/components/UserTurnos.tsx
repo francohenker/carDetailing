@@ -600,6 +600,17 @@ export default function UserTurnos() {
                               <CreditCard className="mr-2 h-4 w-4" /> Pagar
                             </Button>
                           )}
+                        {isTurnoPagado(turno) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadFactura(turno.id)}
+                            className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                          >
+                            <FileDown className="mr-2 h-4 w-4" />
+                            Comprobante
+                          </Button>
+                        )}
                         {canModifyTurno(turno) && (
                           <Button
                             variant="outline"
@@ -732,7 +743,7 @@ export default function UserTurnos() {
                           className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
                         >
                           <FileDown className="mr-2 h-4 w-4" />
-                          Descargar Factura
+                          Descargar Comprobante de pago
                         </Button>
                       ) : (
                         <Button

@@ -8,6 +8,7 @@ import { modifyCarDto } from './dto/modify-car.dto';
 import { SystemConfigService } from '../config/system-config.service';
 import { Turno } from '../turno/entities/turno.entity';
 import { estado_turno } from '../enums/estado_turno.enum';
+import { estado_pago } from '../enums/estado_pago.enum';
 import { MailService } from '../mail.services';
 
 @Injectable()
@@ -92,14 +93,35 @@ export class CarService {
       throw new HttpException('Car not found or does not belong to user', 404);
     }
 
-    // Cancelar todos los turnos pendientes asociados al auto
+    // Buscar turnos pendientes con sus pagos
     const pendingTurnos = await this.turnoRepository.find({
       where: {
         car: { id: carId },
         estado: estado_turno.PENDIENTE,
       },
-      relations: ['car', 'car.user', 'servicio'],
+      relations: ['car', 'car.user', 'servicio', 'pago'],
     });
+
+    // Verificar si algún turno pendiente tiene pagos realizados
+    const turnosConPago = pendingTurnos.filter(
+      (turno) =>
+        turno.pago && turno.pago.some((p) => p.estado === estado_pago.PAGADO),
+    );
+
+    if (turnosConPago.length > 0) {
+      const turnosInfo = turnosConPago
+        .map(
+          (t) =>
+            `Turno del ${new Date(t.fechaHora).toLocaleDateString('es-AR')}`,
+        )
+        .join(', ');
+      throw new HttpException(
+        `No se puede eliminar el vehículo porque tiene ${turnosConPago.length} turno(s) pendiente(s) con pago realizado: ${turnosInfo}. Cancele o finalice esos turnos primero.`,
+        400,
+      );
+    }
+
+    // Cancelar todos los turnos pendientes (ninguno tiene pago realizado)
 
     for (const turno of pendingTurnos) {
       turno.estado = estado_turno.CANCELADO;
