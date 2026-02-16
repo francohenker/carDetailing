@@ -23,6 +23,7 @@ interface TurnoWeatherEvaluation {
   weatherForecasts: WeatherForecast[];
   turnoDayForecast?: WeatherForecast; // Pronóstico específico para el día del turno
   suggestedDate?: Date; // Fecha sugerida para reprogramación
+  allDaysBadWeather?: boolean; // Indica si todos los días posteriores tienen mal clima
 }
 
 @Injectable()
@@ -71,7 +72,10 @@ export class WeatherEvaluationService {
       const evaluations: TurnoWeatherEvaluation[] = [];
 
       for (const turno of turnos) {
-        const evaluation = this.evaluateTurnoWeather(turno, weatherForecasts);
+        const evaluation = await this.evaluateTurnoWeather(
+          turno,
+          weatherForecasts,
+        );
         evaluations.push(evaluation);
       }
 
@@ -166,6 +170,14 @@ export class WeatherEvaluationService {
         }
       }
 
+      // Determinar si todos los días posteriores tienen mal clima
+      const futureDaysWithGoodWeather = weatherForecasts.filter(
+        (f) =>
+          new Date(f.date) > turnoDate && !this.isBadWeatherForCarDetailing(f),
+      );
+      const allDaysBadWeather =
+        !suggestedDate && futureDaysWithGoodWeather.length === 0;
+
       const evaluation: TurnoWeatherEvaluation = {
         turno,
         badWeatherDays: weatherForecasts.filter((f) =>
@@ -176,6 +188,7 @@ export class WeatherEvaluationService {
         weatherForecasts,
         turnoDayForecast,
         suggestedDate,
+        allDaysBadWeather,
       };
 
       // Enviar el correo de prueba
@@ -308,10 +321,10 @@ export class WeatherEvaluationService {
     }
   }
 
-  private evaluateTurnoWeather(
+  private async evaluateTurnoWeather(
     turno: Turno,
     forecasts: WeatherForecast[],
-  ): TurnoWeatherEvaluation {
+  ): Promise<TurnoWeatherEvaluation> {
     const turnoDate = new Date(turno.fechaHora);
     const today = new Date();
     const daysUntilTurno = Math.ceil(
@@ -347,10 +360,32 @@ export class WeatherEvaluationService {
       }
     }
 
-    // Buscar fecha alternativa si hay mal clima
+    // Buscar fecha alternativa con buen clima Y disponibilidad solo si el día del turno tiene mal clima
     let suggestedDate: Date | undefined;
-    if (badWeatherDays > 0 || (turnoDayForecast && this.isBadWeatherForCarDetailing(turnoDayForecast))) {
-      suggestedDate = this.findBestAlternativeDate(forecasts, turnoDate);
+    let allDaysBadWeather = false;
+
+    if (
+      turnoDayForecast &&
+      this.isBadWeatherForCarDetailing(turnoDayForecast)
+    ) {
+      suggestedDate = await this.findDateWithGoodWeatherAndAvailability(
+        forecasts,
+        turnoDate,
+        turno.duration,
+      );
+
+      if (!suggestedDate) {
+        // Verificar si todos los días posteriores tienen mal clima
+        const futureDaysWithGoodWeather = forecasts.filter(
+          (f) =>
+            new Date(f.date) > turnoDate &&
+            !this.isBadWeatherForCarDetailing(f),
+        );
+        allDaysBadWeather = futureDaysWithGoodWeather.length === 0;
+        this.logger.warn(
+          `Turno ${turno.id}: No se encontró fecha con buen clima. Todos los días con mal tiempo: ${allDaysBadWeather}`,
+        );
+      }
     }
 
     return {
@@ -359,51 +394,10 @@ export class WeatherEvaluationService {
       consecutiveBadDays,
       daysUntilTurno,
       weatherForecasts: relevantForecasts,
-      turnoDayForecast, // Agregamos el pronóstico específico del día del turno
+      turnoDayForecast,
       suggestedDate,
+      allDaysBadWeather,
     };
-  }
-
-  private findBestAlternativeDate(
-    forecasts: WeatherForecast[],
-    turnoDate: Date,
-  ): Date | undefined {
-    // 1. Buscar la fecha más cercana con buen clima en los próximos 15 días (posterior al turno)
-    for (const forecast of forecasts) {
-      const forecastDate = new Date(forecast.date);
-      // Solo buscar fechas futuras respecto al turno original
-      if (forecastDate <= turnoDate) continue;
-
-      if (!this.isBadWeatherForCarDetailing(forecast)) {
-        return forecastDate;
-      }
-    }
-
-    // 2. Si no hay buen clima, buscar desde día 7 la fecha con menor probabilidad de lluvia (<= 10mm)
-    // Solo si el turno es cercano (para dar tiempo)
-    const today = new Date();
-    const daysUntilTurno = Math.ceil(
-      (turnoDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    // Si faltan menos de 7 días, buscamos en el rango extendido (7-15 días desde hoy)
-    const fallbackStartIndex = 7;
-    if (forecasts.length > fallbackStartIndex) {
-      const fallbackForecasts = forecasts.slice(fallbackStartIndex);
-      
-      // Buscar el mejor día (menor precipitación) que cumpla con el criterio relajado (<= 10mm)
-      const validFallbackDays = fallbackForecasts.filter(
-        (f) => f.precipitation <= 10.0,
-      );
-
-      if (validFallbackDays.length > 0) {
-        // Ordenar por precipitación ascendente
-        validFallbackDays.sort((a, b) => a.precipitation - b.precipitation);
-        return validFallbackDays[0].date;
-      }
-    }
-
-    return undefined;
   }
 
   /**
@@ -456,9 +450,7 @@ export class WeatherEvaluationService {
     this.logger.warn(
       '⚠️ No se encontró fecha con buen clima Y disponibilidad. Usando primera fecha con buen clima.',
     );
-    return goodWeatherDates.length > 0
-      ? goodWeatherDates[0].date
-      : undefined;
+    return goodWeatherDates.length > 0 ? goodWeatherDates[0].date : undefined;
   }
 
   /**
@@ -512,7 +504,6 @@ export class WeatherEvaluationService {
 
     return false; // No hay slots disponibles
   }
-
 
   private isBadWeatherForCarDetailing(forecast: WeatherForecast): boolean {
     // Códigos de clima malo para car detailing:
@@ -592,8 +583,14 @@ export class WeatherEvaluationService {
     evaluation: TurnoWeatherEvaluation,
     type: 'advance' | 'urgent',
   ): string {
-    const { turno, daysUntilTurno, turnoDayForecast, weatherForecasts, suggestedDate } =
-      evaluation;
+    const {
+      turno,
+      daysUntilTurno,
+      turnoDayForecast,
+      weatherForecasts,
+      suggestedDate,
+      allDaysBadWeather,
+    } = evaluation;
 
     const isAdvance = type === 'advance';
     const weatherSummary = this.generateWeatherSummary(weatherForecasts);
@@ -609,27 +606,28 @@ export class WeatherEvaluationService {
       : null;
 
     // Información de la fecha sugerida
-    let suggestedDateInfo = null;
+    const suggestedDateInfo = null;
     if (suggestedDate) {
-      const suggestedForecast = weatherForecasts.find(
-        (f) => f.date.toDateString() === suggestedDate.toDateString(),
-      ) || 
-      // Si no está en weatherForecasts (porque puede ser posterior), buscar en el array original si lo tuviéramos
-      // O simplemente no mostrar info detallada si no tenemos el forecast a mano.
-      // En evaluateTurnoWeather pasamos relevantForecasts que son hasta el día del turno.
-      // Necesitamos buscar en todos los forecasts disponibles.
-      // FIX: evaluateTurnoWeather devuelve relevantForecasts en weatherForecasts property.
-      // Deberíamos pasar el forecast de la fecha sugerida en la evaluación también o buscarlo de nuevo.
-      // Para simplificar, vamos a asumir que el forecast de la fecha sugerida no está en 'weatherForecasts' (que es relevantForecasts)
-      // y por lo tanto solo mostraremos la fecha.
-      // MEJORA: Modificar TurnoWeatherEvaluation para incluir el forecast de la fecha sugerida.
-      null;
-      
+      const suggestedForecast =
+        weatherForecasts.find(
+          (f) => f.date.toDateString() === suggestedDate.toDateString(),
+        ) ||
+        // Si no está en weatherForecasts (porque puede ser posterior), buscar en el array original si lo tuviéramos
+        // O simplemente no mostrar info detallada si no tenemos el forecast a mano.
+        // En evaluateTurnoWeather pasamos relevantForecasts que son hasta el día del turno.
+        // Necesitamos buscar en todos los forecasts disponibles.
+        // FIX: evaluateTurnoWeather devuelve relevantForecasts en weatherForecasts property.
+        // Deberíamos pasar el forecast de la fecha sugerida en la evaluación también o buscarlo de nuevo.
+        // Para simplificar, vamos a asumir que el forecast de la fecha sugerida no está en 'weatherForecasts' (que es relevantForecasts)
+        // y por lo tanto solo mostraremos la fecha.
+        // MEJORA: Modificar TurnoWeatherEvaluation para incluir el forecast de la fecha sugerida.
+        null;
+
       // Como no tenemos el forecast de la fecha sugerida en 'weatherForecasts' (porque está filtrado),
       // vamos a formatear solo la fecha por ahora.
       // Si quisiéramos el forecast, tendríamos que haberlo guardado en la evaluación.
     }
-    
+
     // URL para modificar turno con fecha sugerida
     const modifyUrl = `${process.env.URL_FRONTEND}/user/profile?tab=turnos&modify=${turno.id}${suggestedDate ? `&suggestedDate=${suggestedDate.toISOString()}` : ''}`;
 
@@ -829,7 +827,15 @@ export class WeatherEvaluationService {
               </p>
             </div>
             `
-                : ''
+                : allDaysBadWeather
+                  ? `
+            <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h4 style="margin-top: 0; color: #c2410c;">⛅ Sin días con buen clima disponibles</h4>
+              <p style="margin: 5px 0;">Lamentablemente, el pronóstico indica condiciones climáticas adversas para todos los próximos días disponibles en nuestro rango de previsión.</p>
+              <p style="margin: 5px 0;">Te recomendamos estar atento a las actualizaciones del pronóstico. Te notificaremos cuando detectemos una ventana de buen tiempo para reprogramar tu turno.</p>
+            </div>
+            `
+                  : ''
             }
 
             <div class="weather-forecast">
@@ -842,7 +848,11 @@ export class WeatherEvaluationService {
                 ? `
               <div class="contact-info">
                 <h4 style="margin-top: 0; color: #059669;">💡 Nuestra Recomendación</h4>
-                <p>Te sugerimos reprogramar tu turno para garantizar los mejores resultados. Tenés tiempo suficiente para elegir una fecha con mejores condiciones climáticas.</p>
+                <p>${
+                  allDaysBadWeather
+                    ? 'El pronóstico no muestra días con buen clima próximamente, pero podés reprogramar tu turno para más adelante cuando las condiciones mejoren.'
+                    : 'Te sugerimos reprogramar tu turno para garantizar los mejores resultados. Tenés tiempo suficiente para elegir una fecha con mejores condiciones climáticas.'
+                }</p>
                 <p><strong>¿Querés reprogramar tu turno?</strong></p>
                 <div style="text-align: center; margin: 25px 0;">
                   <a href="${modifyUrl}" class="btn btn-primary" style="font-size: 16px; padding: 15px 30px;">
@@ -857,7 +867,11 @@ export class WeatherEvaluationService {
                 : `
               <div class="contact-info">
                 <h4 style="margin-top: 0; color: #d97706;">⚠️ Aviso Importante</h4>
-                <p>Tu turno está próximo y las condiciones climáticas no son ideales. Te contactaremos para evaluar las opciones disponibles.</p>
+                <p>${
+                  allDaysBadWeather
+                    ? 'Tu turno está próximo y lamentablemente no encontramos días con buen clima en el pronóstico actual. Te contactaremos para evaluar las opciones disponibles.'
+                    : 'Tu turno está próximo y las condiciones climáticas no son ideales. Te contactaremos para evaluar las opciones disponibles.'
+                }</p>
                 <div style="text-align: center; margin: 25px 0;">
                   <a href="${modifyUrl}" class="btn btn-warning" style="font-size: 16px; padding: 15px 30px;">
                     ⚡ Modificar Turno Urgente ${suggestedDate ? '(Fecha Sugerida)' : ''}
