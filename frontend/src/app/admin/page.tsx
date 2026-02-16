@@ -1808,30 +1808,36 @@ export default function AdminPage() {
         }
     }
 
-    const handleSendSupplierEmail = async (e: React.FormEvent) => {
+    const handleSendQuotationRequest = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/stock/send-supplier-email`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/quotation/requests`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('jwt')}`
                 },
-                body: JSON.stringify(emailForm)
+                body: JSON.stringify({
+                    productIds: selectedProducts,
+                    supplierIds: [emailForm.supplierId],
+                    notes: emailForm.message || 'Solicitud de cotización desde control de stock',
+                    isAutomatic: false,
+                })
             })
 
-            if (!response.ok) throw new Error('Error sending email')
+            if (!response.ok) throw new Error('Error al crear solicitud de cotización')
 
-            toast.success("Éxito", {
-                description: "Solicitud de cotización enviada al proveedor.",
+            toast.success("Solicitud enviada", {
+                description: "La solicitud de cotización fue enviada al panel del proveedor. El proveedor podrá responder con precios y condiciones.",
             })
 
             setIsEmailDialogOpen(false)
             resetEmailForm()
+            fetchQuotationRequests()
             fetchDetailedAuditoriaRecords()
         } catch (error) {
-            console.error('Error sending email:', error)
+            console.error('Error creating quotation request:', error)
             toast.error("Error", {
                 description: "No se pudo enviar la solicitud de cotización.",
             })
@@ -1861,25 +1867,13 @@ export default function AdminPage() {
         // Seleccionar solo los productos con stock bajo por defecto
         setSelectedProducts(lowStockSupplierProducts.map((p: Product) => p.id))
 
-        // Generar mensaje inicial con productos de stock bajo
-        const generateInitialMessage = (products: Product[]) => {
-            if (products.length === 0) {
-                return `Estimado/a ${supplier.contactPerson || supplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para consultar sobre disponibilidad de productos.\n\nSaludos cordiales,\nEquipo de Car Detailing`
-            }
-
-            const productList = products.map((p: Product) =>
-                // `• ${p.name} - Stock actual: ${p.stock_actual}, Stock mínimo: ${p.stock_minimo}, Consumo por servicio: ${p.servicios_por_producto || 1}`
-                `• ${p.name}, cantidad: ${p.stock_minimo * 2}`
-            ).join('\n')
-
-            return `Estimado/a ${supplier.contactPerson || supplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para solicitar información sobre la disponibilidad y precios de los siguientes productos que requieren reposición:\n\n${productList}\n\nPor favor, envíenos información sobre:\n- Disponibilidad actual\n- Precios unitarios\n- Tiempo de entrega\n- Cantidades mínimas de pedido\n\nAgradecemos su pronta respuesta.\n\nSaludos cordiales,\nEquipo de Car Detailing`
-        }
-
         setEmailForm({
             supplierId: supplier.id,
-            subject: `Solicitud de reposición de stock - ${new Date().toLocaleDateString()}`,
+            subject: '',
             productIds: lowStockSupplierProducts.map((p: Product) => p.id),
-            message: generateInitialMessage(lowStockSupplierProducts)
+            message: lowStockSupplierProducts.length > 0
+                ? `Solicitud de reposición de productos con stock bajo. Se requiere cotización para ${lowStockSupplierProducts.length} producto(s).`
+                : 'Solicitud de cotización de productos.'
         })
         setActionLoading(null)
         setIsEmailDialogOpen(true)
@@ -1890,22 +1884,13 @@ export default function AdminPage() {
 
         const selectedProductsList = products.filter(p => !p.isDeleted && productIds.includes(p.id));
 
-        const generateMessage = (products: Product[]) => {
-            if (products.length === 0) {
-                return `Estimado/a ${selectedSupplier.contactPerson || selectedSupplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para consultar sobre disponibilidad de productos.\n\nSaludos cordiales,\nEquipo de Car Detailing`
-            }
-
-            const productList = products.map(p =>
-                // `• ${p.name} - Stock actual: ${p.stock_actual}, Stock mínimo: ${p.stock_minimo}, Consumo por servicio: ${p.servicios_por_producto || 1}`
-                `• ${p.name}, cantidad: ${p.stock_minimo * 2}`
-            ).join('\n')
-
-            return `Estimado/a ${selectedSupplier.contactPerson || selectedSupplier.name},\n\nEsperamos que se encuentre bien. Nos ponemos en contacto con usted para solicitar información sobre la disponibilidad y precios de los siguientes productos que requieren reposición:\n\n${productList}\n\nPor favor, envíenos información sobre:\n- Disponibilidad actual\n- Precios unitarios\n- Tiempo de entrega\n- Cantidades mínimas de pedido\n\nAgradecemos su pronta respuesta.\n\nSaludos cordiales,\nEquipo de Car Detailing`
-        }
+        const message = selectedProductsList.length > 0
+            ? `Solicitud de reposición de ${selectedProductsList.length} producto(s) con stock bajo.`
+            : 'Solicitud de cotización de productos.';
 
         setEmailForm(prev => ({
             ...prev,
-            message: generateMessage(selectedProductsList)
+            message
         }))
     }
 
@@ -2956,15 +2941,15 @@ export default function AdminPage() {
                                     </CardContent>
                                 </Card>
 
-                                {/* COMUNICACIÓN CON PROVEEDORES */}
+                                {/* SOLICITAR COTIZACIÓN A PROVEEDORES */}
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <Send className="h-5 w-5 text-blue-500" />
-                                            Contactar Proveedores
+                                            Solicitar Cotización a Proveedores
                                         </CardTitle>
                                         <CardDescription>
-                                            Envía emails a proveedores para solicitar reposición
+                                            Envía solicitudes al panel del proveedor para que realice la cotización
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
@@ -3779,13 +3764,23 @@ export default function AdminPage() {
                                                                 <Badge variant={
                                                                     request.status === 'COMPLETED' ? 'default' :
                                                                         request.status === 'FINISHED' ? 'outline' :
-                                                                            request.status === 'PENDING' ? 'secondary' :
-                                                                                'destructive'
-                                                                }>
+                                                                            request.status === 'PENDING'
+                                                                                ? (request.responses && request.responses.length > 0 ? 'secondary' : 'destructive')
+                                                                                : 'destructive'
+                                                                }
+                                                                    className={
+                                                                        request.status === 'PENDING' && (!request.responses || request.responses.length === 0)
+                                                                            ? 'bg-red-600 text-white animate-pulse'
+                                                                            : ''
+                                                                    }
+                                                                >
                                                                     {request.status === 'COMPLETED' ? 'Completada' :
                                                                         request.status === 'FINISHED' ? 'Finalizada' :
-                                                                            request.status === 'PENDING' ? 'Pendiente' :
-                                                                                'Cancelada'}
+                                                                            request.status === 'PENDING'
+                                                                                ? (request.responses && request.responses.length > 0
+                                                                                    ? `Respondida (${request.responses.length})`
+                                                                                    : 'Sin respuesta')
+                                                                                : 'Cancelada'}
                                                                 </Badge>
                                                                 {request.status === 'PENDING' && (
                                                                     <Button
@@ -3883,8 +3878,12 @@ export default function AdminPage() {
                                                             }}
                                                             className="w-full"
                                                             variant={selectedQuotationRequest?.id === request.id ? "secondary" : "default"}
+                                                            disabled={!request.responses || request.responses.length === 0}
                                                         >
-                                                            {selectedQuotationRequest?.id === request.id ? 'Ocultar' : 'Ver'} Cotizaciones ({request.responses?.length || 0})
+                                                            {!request.responses || request.responses.length === 0
+                                                                ? 'Esperando respuesta del proveedor...'
+                                                                : `${selectedQuotationRequest?.id === request.id ? 'Ocultar' : 'Ver'} Cotizaciones (${request.responses.length})`
+                                                            }
                                                         </Button>
 
                                                         {/* Mostrar cotizaciones inline debajo de cada solicitud */}
@@ -5186,10 +5185,10 @@ export default function AdminPage() {
                                 Solicitar Cotización al Proveedor
                             </DialogTitle>
                             <DialogDescription>
-                                Crea una solicitud de cotización para el proveedor {selectedSupplier?.name}. La solicitud aparecerá en su panel de proveedor.
+                                La solicitud será enviada al panel del proveedor {selectedSupplier?.name}. El proveedor podrá responder con precios, cantidades y condiciones de entrega desde su panel.
                             </DialogDescription>
                         </DialogHeader>
-                        <form onSubmit={handleSendSupplierEmail} className="space-y-4">
+                        <form onSubmit={handleSendQuotationRequest} className="space-y-4">
                             <div className="grid gap-4">
                                 <div className="bg-blue-50 p-3 rounded-lg">
                                     <div className="flex items-center gap-2 mb-2">
@@ -5205,25 +5204,23 @@ export default function AdminPage() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="email-subject">Asunto</Label>
-                                    <Input
-                                        id="email-subject"
-                                        value={emailForm.subject}
-                                        onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
-                                        required
-                                    />
+                                <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle className="h-4 w-4 text-green-600" />
+                                        <span className="text-sm text-green-800">
+                                            La solicitud aparecerá en el panel del proveedor. El proveedor podrá completar la cotización con precios y condiciones.
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="email-message">Mensaje</Label>
+                                    <Label htmlFor="email-message">Notas / Instrucciones para el proveedor</Label>
                                     <Textarea
                                         id="email-message"
                                         value={emailForm.message}
                                         onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })}
-                                        rows={8}
-                                        required
-                                        placeholder="Escriba su mensaje aquí..."
+                                        rows={4}
+                                        placeholder="Agregue notas o instrucciones adicionales para el proveedor (opcional)..."
                                     />
                                 </div>
 
@@ -5349,12 +5346,12 @@ export default function AdminPage() {
                                     <X className="h-4 w-4 mr-2" />
                                     Cancelar
                                 </Button>
-                                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                                <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={selectedProducts.length === 0 || loading}>
                                     <Send className="h-4 w-4 mr-2" />
                                     {loading ? (
                                         <span className="loading loading-spinner loading-sm"></span>
                                     ) : (
-                                        "Enviar Solicitud"
+                                        "Enviar al Panel del Proveedor"
                                     )}
                                 </Button>
                             </DialogFooter>

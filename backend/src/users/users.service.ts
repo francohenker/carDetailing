@@ -6,12 +6,15 @@ import { Repository } from 'typeorm';
 import { Role } from '../roles/role.enum';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from '../auth/auth.service';
+import { Supplier } from '../supplier/entities/supplier.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(Users)
     private userRepository: Repository<Users>,
+    @InjectRepository(Supplier)
+    private supplierRepository: Repository<Supplier>,
     private authService: AuthService,
   ) {}
 
@@ -45,7 +48,45 @@ export class UserService {
       throw new HttpException('User not found', 404);
     }
     user.role = role;
-    return await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    // Si el nuevo rol es supplier, vincular automáticamente con un Supplier existente por email
+    if (role === Role.SUPPLIER) {
+      const existingSupplier = await this.supplierRepository.findOne({
+        where: { email: user.email },
+      });
+
+      if (existingSupplier && !existingSupplier.userId) {
+        // Vincular el supplier existente con este usuario
+        existingSupplier.userId = user.id;
+        await this.supplierRepository.save(existingSupplier);
+      } else if (!existingSupplier) {
+        // Crear un nuevo supplier vinculado a este usuario
+        const newSupplier = this.supplierRepository.create({
+          name: `${user.firstname} ${user.lastname || ''}`.trim(),
+          email: user.email,
+          phone: user.phone || '',
+          address: '',
+          contactPerson: `${user.firstname} ${user.lastname || ''}`.trim(),
+          isActive: true,
+          userId: user.id,
+        });
+        await this.supplierRepository.save(newSupplier);
+      }
+    }
+
+    // Si se cambia de supplier a otro rol, desvincular el supplier
+    if (role !== Role.SUPPLIER) {
+      const linkedSupplier = await this.supplierRepository.findOne({
+        where: { userId: user.id },
+      });
+      if (linkedSupplier) {
+        linkedSupplier.userId = null;
+        await this.supplierRepository.save(linkedSupplier);
+      }
+    }
+
+    return savedUser;
   }
 
   async login(email: string, password: string): Promise<any> {

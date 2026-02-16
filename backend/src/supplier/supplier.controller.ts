@@ -95,4 +95,9 @@ export class SupplierController {
   ) {
     return await this.supplierService.createSupplierAccount(id, password);
   }
+
+  @Post('link-users')
+  async linkSuppliersWithUsers() {
+    return await this.supplierService.linkSuppliersWithUsers();
+  }
 }

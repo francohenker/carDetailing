@@ -55,6 +55,7 @@ export default function SupplierDashboard() {
   const [respondingTo, setRespondingTo] = useState<QuotationRequest | null>(null);
   const [respondForm, setRespondForm] = useState<RespondForm | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<number | null>(null);
 
   const API = process.env.NEXT_PUBLIC_BACKEND_URL;
   const getToken = () => localStorage.getItem("jwt");
@@ -213,34 +214,125 @@ export default function SupplierDashboard() {
               </div>
             ) : (
               history.map((item) => (
-                <div key={item.id} className="bg-white rounded-lg shadow p-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold">
-                        Cotización #{item.quotationRequestId}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Enviada: {new Date(item.receivedAt).toLocaleDateString("es-AR")}
-                      </p>
-                      <p className="text-sm mt-1">
-                        <strong>Total:</strong> ${item.totalAmount?.toLocaleString("es-AR")}
-                      </p>
-                      <p className="text-sm">
-                        <strong>Entrega:</strong> {item.deliveryDays} días
-                      </p>
+                <div key={item.id} className="bg-white rounded-lg shadow">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => setExpandedHistoryId(expandedHistoryId === item.id ? null : item.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedHistoryId(expandedHistoryId === item.id ? null : item.id); } }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold">
+                          Cotización #{item.quotationRequestId}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Enviada: {new Date(item.receivedAt).toLocaleDateString("es-AR")}
+                        </p>
+                        <p className="text-sm mt-1">
+                          <strong>Total:</strong> ${item.totalAmount?.toLocaleString("es-AR")}
+                        </p>
+                        <p className="text-sm">
+                          <strong>Entrega:</strong> {item.deliveryDays} días
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            item.isWinner
+                              ? "bg-green-100 text-green-800"
+                              : item.status === "REJECTED"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {item.isWinner ? "Ganadora" : item.status === "REJECTED" ? "Rechazada" : "Pendiente"}
+                        </span>
+                        <svg
+                          className={`h-5 w-5 text-gray-400 transition-transform ${expandedHistoryId === item.id ? 'rotate-180' : ''}`}
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
                     </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        item.isWinner
-                          ? "bg-green-100 text-green-800"
-                          : item.status === "REJECTED"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {item.isWinner ? "Ganadora" : item.status === "REJECTED" ? "Rechazada" : "Pendiente"}
-                    </span>
                   </div>
+
+                  {expandedHistoryId === item.id && (
+                    <div className="border-t px-6 pb-6 pt-4 space-y-4">
+                      {/* Productos cotizados */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Detalle por producto</h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-gray-100 text-gray-600">
+                                <th className="text-left px-3 py-2 rounded-tl-lg">Producto</th>
+                                <th className="text-right px-3 py-2">Precio unitario</th>
+                                <th className="text-right px-3 py-2">Cantidad</th>
+                                <th className="text-right px-3 py-2">Subtotal</th>
+                                <th className="text-left px-3 py-2 rounded-tr-lg">Disponibilidad</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {item.productQuotes.map((pq, idx) => (
+                                <tr key={idx} className="border-b last:border-0">
+                                  <td className="px-3 py-2 font-medium">{pq.productName}</td>
+                                  <td className="px-3 py-2 text-right">${pq.unitPrice?.toLocaleString("es-AR")}</td>
+                                  <td className="px-3 py-2 text-right">{pq.quantity}</td>
+                                  <td className="px-3 py-2 text-right font-medium">
+                                    ${(pq.unitPrice * pq.quantity)?.toLocaleString("es-AR")}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <span className="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
+                                      {pq.availability}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Condiciones */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">Total</p>
+                          <p className="text-lg font-bold text-gray-900">${item.totalAmount?.toLocaleString("es-AR")}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">Días de entrega</p>
+                          <p className="text-lg font-bold text-gray-900">{item.deliveryDays} días</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">Condiciones de pago</p>
+                          <p className="text-lg font-bold text-gray-900">{item.paymentTerms}</p>
+                        </div>
+                      </div>
+
+                      {/* Notas */}
+                      {item.notes && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-xs font-medium text-blue-800 mb-1">Notas</p>
+                          <p className="text-sm text-blue-700 whitespace-pre-line">{item.notes}</p>
+                        </div>
+                      )}
+
+                      {/* Productos solicitados originalmente */}
+                      {item.quotationRequest?.products && item.quotationRequest.products.length > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <p className="text-xs font-medium text-amber-800 mb-1">Productos solicitados originalmente</p>
+                          <ul className="list-disc list-inside text-sm text-amber-700">
+                            {item.quotationRequest.products.map((p) => (
+                              <li key={p.id}>{p.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))
             )}

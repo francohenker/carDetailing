@@ -17,6 +17,15 @@ export class SupplierService {
 
   async create(createSupplierDto: CreateSupplierDto): Promise<Supplier> {
     const supplier = this.supplierRepository.create(createSupplierDto);
+
+    // Buscar si existe un usuario con el mismo email y rol supplier para vincularlo automáticamente
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: createSupplierDto.email, role: Role.SUPPLIER },
+    });
+    if (existingUser) {
+      supplier.userId = existingUser.id;
+    }
+
     return await this.supplierRepository.save(supplier);
   }
 
@@ -89,5 +98,33 @@ export class SupplierService {
     await this.supplierRepository.save(supplier);
 
     return { supplier, message: 'Cuenta de proveedor creada exitosamente' };
+  }
+
+  /**
+   * Vincula automáticamente todos los suppliers sin userId
+   * con usuarios que tengan el mismo email y rol supplier.
+   */
+  async linkSuppliersWithUsers(): Promise<{ linked: number; details: string[] }> {
+    const unlinkedSuppliers = await this.supplierRepository.find({
+      where: { userId: null as any },
+    });
+
+    const details: string[] = [];
+    let linked = 0;
+
+    for (const supplier of unlinkedSuppliers) {
+      const user = await this.usersRepository.findOne({
+        where: { email: supplier.email, role: Role.SUPPLIER },
+      });
+
+      if (user) {
+        supplier.userId = user.id;
+        await this.supplierRepository.save(supplier);
+        details.push(`Supplier "${supplier.name}" vinculado con usuario "${user.email}" (ID: ${user.id})`);
+        linked++;
+      }
+    }
+
+    return { linked, details };
   }
 }
