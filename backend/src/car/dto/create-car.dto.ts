@@ -1,5 +1,4 @@
 import { IsString } from 'class-validator';
-import { TIPO_AUTO } from '../../enums/tipo_auto.enum';
 export class createCarDto {
   @IsString()
   marca: string;
@@ -9,5 +8,6 @@ export class createCarDto {
   patente: string;
   @IsString()
   color: string;
-  type: TIPO_AUTO;
+  @IsString()
+  type: string;
 }

@@ -6,9 +6,11 @@ import Name from "@/components/Name";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+type TipoVehiculo = string
+
 interface Precio {
     id?: number;
-    tipoVehiculo: 'AUTO' | 'CAMIONETA';
+    tipoVehiculo: string;
     precio: number;
 }
 
@@ -28,19 +30,30 @@ export default function Servicios() {
     const [services, setServices] = useState<Service[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [vehicleTypeLabels, setVehicleTypeLabels] = useState<Record<string, { label: string; emoji: string }>>({})
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true)
-                const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/getAll`)
+                const [servicesRes, vtRes] = await Promise.all([
+                    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/services/getAll`),
+                    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types/all`)
+                ])
                 
-                if (!response.ok) {
+                if (!servicesRes.ok) {
                     throw new Error('Error al cargar servicios')
                 }
                 
-                const data = await response.json()
+                const data = await servicesRes.json()
                 setServices(data)
+
+                if (vtRes.ok) {
+                    const vtData: { key: string; label: string; emoji: string }[] = await vtRes.json()
+                    const labels: Record<string, { label: string; emoji: string }> = {}
+                    vtData.forEach((vt) => { labels[vt.key] = { label: vt.label, emoji: vt.emoji } })
+                    setVehicleTypeLabels(labels)
+                }
             } catch (error) {
                 console.error("Error fetching services:", error)
                 setError('Error al cargar los servicios')
@@ -149,15 +162,12 @@ export default function Servicios() {
                                 <div className="mb-4">
                                     <h4 className="font-semibold text-sm mb-2">Precios por tipo de vehículo:</h4>
                                     <div className="grid grid-cols-2 gap-2 text-xs">
-                                        {[
-                                            { tipo: 'AUTO', label: '🚗 Auto' },
-                                            { tipo: 'CAMIONETA', label: '🚙 Camioneta' },
-                                        ].map(({ tipo, label }) => {
-                                            const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
+                                        {(service.precio || []).map((p) => {
+                                            const vt = vehicleTypeLabels[p.tipoVehiculo]
                                             return (
-                                                <div key={tipo} className="flex justify-between p-2 bg-base-200 rounded">
-                                                    <span>{label}:</span>
-                                                    <span className="font-bold">${(precio?.precio || 0).toLocaleString()}</span>
+                                                <div key={p.tipoVehiculo} className="flex justify-between p-2 bg-base-200 rounded">
+                                                    <span>{vt?.emoji || '🚗'} {vt?.label || p.tipoVehiculo}:</span>
+                                                    <span className="font-bold">${p.precio.toLocaleString()}</span>
                                                 </div>
                                             )
                                         })}

@@ -37,7 +37,7 @@ interface Service {
 
 interface Precio {
     id?: number
-    tipoVehiculo: 'AUTO' | 'CAMIONETA'
+    tipoVehiculo: string
     precio: number
 }
 

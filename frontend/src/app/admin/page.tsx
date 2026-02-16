@@ -92,9 +92,15 @@ import { Checkbox } from "@/components/ui/checkbox"
 import ProtectedRoute from "@/components/ProtectedRoutes"
 
 // Tipos de datos
+interface VehicleTypeDefinition {
+    key: string
+    label: string
+    emoji: string
+}
+
 interface Precio {
     id?: number
-    tipoVehiculo: 'AUTO' | 'CAMIONETA'
+    tipoVehiculo: string
     precio: number
 }
 
@@ -263,13 +269,11 @@ export default function AdminPage() {
     const [serviceForm, setServiceForm] = useState({
         name: '',
         description: '',
-        precio: [
-            { tipoVehiculo: 'AUTO' as const, precio: 0 },
-            { tipoVehiculo: 'CAMIONETA' as const, precio: 0 },
-        ],
+        precio: [] as { tipoVehiculo: string; precio: number }[],
         duration: 30,
         productId: [] as number[]
     })
+    const [selectedVehicleTypes, setSelectedVehicleTypes] = useState<string[]>([])
 
     // Estados para productos
     const [products, setProducts] = useState<Product[]>([])
@@ -355,6 +359,10 @@ export default function AdminPage() {
         medium: 2,
         low: 3
     })
+    const [activeVehicleTypes, setActiveVehicleTypes] = useState<string[]>([])
+    const [allVehicleTypes, setAllVehicleTypes] = useState<VehicleTypeDefinition[]>([])
+    const [pendingVehicleTypes, setPendingVehicleTypes] = useState<string[]>([])
+    const [newVehicleType, setNewVehicleType] = useState({ key: '', label: '', emoji: '🚗' })
 
     // Estados para estadísticas
     const [statistics, setStatistics] = useState<{
@@ -615,6 +623,7 @@ export default function AdminPage() {
                 fetchDetailedAuditoriaStats(),
                 fetchQuotationRequests(),
                 fetchQuotationThresholds(),
+                fetchVehicleTypes(),
                 fetchPurchaseOrders(),
                 fetchCurrentUser()
             ])
@@ -647,6 +656,12 @@ export default function AdminPage() {
 
     const handleServiceSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (serviceForm.precio.length === 0) {
+            toast.error("Error", {
+                description: "Debes seleccionar al menos un tipo de vehículo.",
+            })
+            return
+        }
         setLoading(true)
         setActionLoading('service-submit')
         try {
@@ -688,19 +703,18 @@ export default function AdminPage() {
     const handleEditService = (service: Service) => {
         setEditingService(service)
 
-        // Extraer precios del servicio o usar valores por defecto
-        const getPrecioByTipo = (tipo: string) => {
-            const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
-            return precio ? precio.precio : 0
-        }
+        // Extraer precios del servicio
+        const existingPrecios = service.precio || []
+        const existingTypes = existingPrecios.map(p => p.tipoVehiculo)
 
+        setSelectedVehicleTypes(existingTypes)
         setServiceForm({
             name: service.name,
             description: service.description,
-            precio: [
-                { tipoVehiculo: 'AUTO' as const, precio: getPrecioByTipo('AUTO') },
-                { tipoVehiculo: 'CAMIONETA' as const, precio: getPrecioByTipo('CAMIONETA') },
-            ],
+            precio: existingPrecios.map(p => ({
+                tipoVehiculo: p.tipoVehiculo,
+                precio: p.precio
+            })),
             duration: service.duration,
             productId: service.Producto?.map(p => p.id) || []
         })
@@ -739,13 +753,11 @@ export default function AdminPage() {
         setServiceForm({
             name: '',
             description: '',
-            precio: [
-                { tipoVehiculo: 'AUTO' as const, precio: 0 },
-                { tipoVehiculo: 'CAMIONETA' as const, precio: 0 },
-            ],
+            precio: [],
             duration: 30,
             productId: []
         })
+        setSelectedVehicleTypes([])
         setEditingService(null)
     }
 
@@ -1343,6 +1355,114 @@ export default function AdminPage() {
             toast.error("Error", {
                 description: "No se pudieron actualizar los umbrales.",
             })
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
+    // ============ TIPOS DE VEHÍCULO ============
+    const fetchVehicleTypes = async () => {
+        try {
+            const [activeRes, allRes] = await Promise.all([
+                fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt')}` }
+                }),
+                fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types/all`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt')}` }
+                })
+            ])
+            if (!activeRes.ok || !allRes.ok) throw new Error('Error fetching vehicle types')
+            const activeData: string[] = await activeRes.json()
+            const allData: VehicleTypeDefinition[] = await allRes.json()
+            setActiveVehicleTypes(activeData)
+            setPendingVehicleTypes(activeData)
+            setAllVehicleTypes(allData)
+        } catch (error) {
+            console.error('Error fetching vehicle types:', error)
+        }
+    }
+
+    const handleUpdateVehicleTypes = async () => {
+        if (pendingVehicleTypes.length === 0) {
+            toast.error("Error", {
+                description: "Debes tener al menos un tipo de vehículo activo.",
+            })
+            return
+        }
+        setActionLoading('update-vehicle-types')
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify({ types: pendingVehicleTypes })
+            })
+            if (!response.ok) throw new Error('Error updating vehicle types')
+            toast.success("Éxito", {
+                description: "Tipos de vehículo actualizados correctamente.",
+            })
+            await fetchVehicleTypes()
+            fetchDetailedAuditoriaRecords()
+        } catch (error) {
+            console.error('Error updating vehicle types:', error)
+            toast.error("Error", {
+                description: "No se pudieron actualizar los tipos de vehículo.",
+            })
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
+    const handleAddVehicleType = async () => {
+        if (!newVehicleType.label.trim()) {
+            toast.error("Error", { description: "Ingresa un nombre para el tipo de vehículo." })
+            return
+        }
+        const key = newVehicleType.key.trim() || newVehicleType.label.trim().toUpperCase().replace(/\s+/g, '_')
+        setActionLoading('add-vehicle-type')
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify({ key, label: newVehicleType.label.trim(), emoji: newVehicleType.emoji || '🚗' })
+            })
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}))
+                throw new Error(err.message || 'Error adding vehicle type')
+            }
+            toast.success("Éxito", { description: `Tipo de vehículo "${newVehicleType.label.trim()}" agregado correctamente.` })
+            setNewVehicleType({ key: '', label: '', emoji: '🚗' })
+            await fetchVehicleTypes()
+            fetchDetailedAuditoriaRecords()
+        } catch (error: any) {
+            console.error('Error adding vehicle type:', error)
+            toast.error("Error", { description: error.message || "No se pudo agregar el tipo de vehículo." })
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
+    const handleRemoveVehicleType = async (key: string) => {
+        setActionLoading(`remove-vehicle-type-${key}`)
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types/${key}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                }
+            })
+            if (!response.ok) throw new Error('Error removing vehicle type')
+            toast.success("Éxito", { description: "Tipo de vehículo eliminado correctamente." })
+            await fetchVehicleTypes()
+            fetchDetailedAuditoriaRecords()
+        } catch (error) {
+            console.error('Error removing vehicle type:', error)
+            toast.error("Error", { description: "No se pudo eliminar el tipo de vehículo." })
         } finally {
             setActionLoading(null)
         }
@@ -2260,11 +2380,6 @@ export default function AdminPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {services.map((service) => {
-                                                const getPrecio = (tipo: string): number => {
-                                                    const precio = service.precio?.find(p => p.tipoVehiculo === tipo)
-                                                    return precio ? precio.precio : 0
-                                                }
-
                                                 return (
                                                     <TableRow key={service.id} className={service.isDeleted ? 'opacity-60 bg-gray-50' : ''}>
                                                         <TableCell>
@@ -2302,8 +2417,18 @@ export default function AdminPage() {
                                                         </TableCell>
                                                         <TableCell>
                                                             <div className="text-xs space-y-1">
-                                                                <div>🚗 Auto: ${getPrecio('AUTO').toLocaleString()}</div>
-                                                                <div>🚙 Camioneta: ${getPrecio('CAMIONETA').toLocaleString()}</div>
+                                                                {service.precio && service.precio.length > 0 ? (
+                                                                    service.precio.map(p => {
+                                                                        const vt = allVehicleTypes.find(v => v.key === p.tipoVehiculo)
+                                                                        return (
+                                                                            <div key={p.tipoVehiculo}>
+                                                                                {vt?.emoji || '🚗'} {vt?.label || p.tipoVehiculo}: ${p.precio.toLocaleString()}
+                                                                            </div>
+                                                                        )
+                                                                    })
+                                                                ) : (
+                                                                    <span className="text-muted-foreground italic">Sin precios</span>
+                                                                )}
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>
@@ -4121,6 +4246,138 @@ export default function AdminPage() {
                                     </form>
                                 </CardContent>
                             </Card>
+
+                            {/* CONFIGURACIÓN DE TIPOS DE VEHÍCULO */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Car className="h-5 w-5 text-primary" />
+                                        Tipos de Vehículo del Sistema
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Configura qué tipos de vehículo están habilitados en el sistema. Puedes agregar nuevos tipos personalizados.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    {/* Toggle de tipos existentes */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                        {allVehicleTypes.map((vt) => {
+                                            const isActive = pendingVehicleTypes.includes(vt.key)
+                                            return (
+                                                <div key={vt.key} className="relative group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (isActive) {
+                                                                setPendingVehicleTypes(prev => prev.filter(t => t !== vt.key))
+                                                            } else {
+                                                                setPendingVehicleTypes(prev => [...prev, vt.key])
+                                                            }
+                                                        }}
+                                                        className={`w-full rounded-xl border-2 p-4 text-center transition-all hover:shadow-md ${
+                                                            isActive
+                                                                ? 'border-primary bg-primary/5 shadow-sm'
+                                                                : 'border-gray-200 bg-gray-50 opacity-60'
+                                                        }`}
+                                                    >
+                                                        <div className="text-3xl mb-2">{vt.emoji || '🚗'}</div>
+                                                        <div className="font-semibold text-sm">{vt.label}</div>
+                                                        <Badge variant={isActive ? 'default' : 'secondary'} className="mt-2">
+                                                            {isActive ? 'Activo' : 'Inactivo'}
+                                                        </Badge>
+                                                    </button>
+                                                    {/* Botón eliminar para tipos personalizados */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveVehicleType(vt.key)}
+                                                        disabled={actionLoading === `remove-vehicle-type-${vt.key}`}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                        title={`Eliminar ${vt.label}`}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+
+                                    {pendingVehicleTypes.length === 0 && (
+                                        <div className="text-center text-amber-600 text-sm p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                            ⚠️ Debes tener al menos un tipo de vehículo activo
+                                        </div>
+                                    )}
+
+                                    {/* Formulario para agregar nuevo tipo */}
+                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-3">
+                                        <h4 className="font-semibold text-sm flex items-center gap-2">
+                                            <Plus className="h-4 w-4" />
+                                            Agregar Nuevo Tipo de Vehículo
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            <div className="space-y-1">
+                                                <Label htmlFor="new-vt-label" className="text-xs">Nombre</Label>
+                                                <Input
+                                                    id="new-vt-label"
+                                                    placeholder="Ej: Van, SUV, Pickup..."
+                                                    value={newVehicleType.label}
+                                                    onChange={(e) => setNewVehicleType(prev => ({ ...prev, label: e.target.value }))}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="new-vt-emoji" className="text-xs">Emoji</Label>
+                                                <Input
+                                                    id="new-vt-emoji"
+                                                    placeholder="🚗"
+                                                    value={newVehicleType.emoji}
+                                                    onChange={(e) => setNewVehicleType(prev => ({ ...prev, emoji: e.target.value }))}
+                                                    className="w-20"
+                                                />
+                                            </div>
+                                            <div className="flex items-end">
+                                                <Button
+                                                    type="button"
+                                                    onClick={handleAddVehicleType}
+                                                    disabled={!newVehicleType.label.trim() || actionLoading === 'add-vehicle-type'}
+                                                    size="sm"
+                                                >
+                                                    {actionLoading === 'add-vehicle-type' ? (
+                                                        <span className="loading loading-spinner loading-sm mr-2"></span>
+                                                    ) : (
+                                                        <Plus className="h-4 w-4 mr-1" />
+                                                    )}
+                                                    Agregar
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                                        <h4 className="font-semibold text-blue-900 mb-2">ℹ️ ¿Cómo funciona?</h4>
+                                        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                                            <li>Los tipos activos aparecen como opciones al crear servicios y asignar precios</li>
+                                            <li>Los clientes solo pueden registrar vehículos de los tipos activos</li>
+                                            <li>Al reservar un turno, solo se muestran servicios compatibles con el tipo de vehículo del cliente</li>
+                                            <li>Desactivar un tipo <strong>no elimina</strong> los vehículos ni servicios existentes</li>
+                                            <li>Los turnos ya registrados con un tipo desactivado se cumplirán normalmente</li>
+                                            <li>Puedes agregar tipos personalizados con el nombre que desees</li>
+                                        </ul>
+                                    </div>
+
+                                    <Button
+                                        onClick={handleUpdateVehicleTypes}
+                                        className="w-full"
+                                        size="lg"
+                                        disabled={actionLoading === 'update-vehicle-types' || JSON.stringify(pendingVehicleTypes.sort()) === JSON.stringify(activeVehicleTypes.sort())}
+                                    >
+                                        {actionLoading === 'update-vehicle-types' ? (
+                                            <span className="loading loading-spinner loading-sm mr-2"></span>
+                                        ) : (
+                                            <Save className="h-4 w-4 mr-2" />
+                                        )}
+                                        Guardar Tipos de Vehículo
+                                    </Button>
+                                </CardContent>
+                            </Card>
                         </TabsContent >
 
                         {/* PESTAÑA DE AUDITORÍA */}
@@ -4540,34 +4797,65 @@ export default function AdminPage() {
                                 </div>
                                 <div className="space-y-4">
                                     <div className="border rounded-lg p-4 space-y-3 bg-base-200">
-                                        <Label className="text-sm font-semibold">Precios por Tipo de Vehículo</Label>
-                                        <p className="text-xs text-muted-foreground">Define el precio para cada tipo de vehículo</p>
+                                        <Label className="text-sm font-semibold">Tipos de Vehículo Habilitados</Label>
+                                        <p className="text-xs text-muted-foreground">Selecciona los tipos de vehículo y define el precio para cada uno</p>
 
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {serviceForm.precio.map((precio, index) => (
-                                                <div key={precio.tipoVehiculo} className="space-y-1">
-                                                    <Label htmlFor={`service-price-${precio.tipoVehiculo}`} className="text-xs">
-                                                        {precio.tipoVehiculo === 'AUTO' && '🚗 Auto ($)'}
-                                                        {precio.tipoVehiculo === 'CAMIONETA' && '🚙 Camioneta ($)'}
-                                                    </Label>
-                                                    <Input
-                                                        id={`service-price-${precio.tipoVehiculo}`}
-                                                        type="number"
-                                                        value={precio.precio}
-                                                        onChange={(e) => {
-                                                            const newPrecio = [...serviceForm.precio]
-                                                            newPrecio[index] = {
-                                                                ...newPrecio[index],
-                                                                precio: Number(e.target.value)
-                                                            }
-                                                            setServiceForm({ ...serviceForm, precio: newPrecio })
-                                                        }}
-                                                        placeholder="0"
-                                                        required
-                                                    />
-                                                </div>
-                                            ))}
+                                        <div className="space-y-3">
+                                            {activeVehicleTypes.map((typeValue) => {
+                                                const vt = allVehicleTypes.find(v => v.key === typeValue) || { key: typeValue, label: typeValue, emoji: '🚗' }
+                                                const isSelected = selectedVehicleTypes.includes(vt.key)
+                                                const precioEntry = serviceForm.precio.find(p => p.tipoVehiculo === vt.key)
+
+                                                return (
+                                                    <div key={vt.key} className={`flex items-center gap-3 p-2 rounded-md transition-colors ${isSelected ? 'bg-primary/5 border border-primary/20' : ''}`}>
+                                                        <Checkbox
+                                                            id={`vehicle-type-${vt.key}`}
+                                                            checked={isSelected}
+                                                            onCheckedChange={(checked) => {
+                                                                if (checked) {
+                                                                    setSelectedVehicleTypes(prev => [...prev, vt.key])
+                                                                    setServiceForm(prev => ({
+                                                                        ...prev,
+                                                                        precio: [...prev.precio, { tipoVehiculo: vt.key, precio: 0 }]
+                                                                    }))
+                                                                } else {
+                                                                    setSelectedVehicleTypes(prev => prev.filter(t => t !== vt.key))
+                                                                    setServiceForm(prev => ({
+                                                                        ...prev,
+                                                                        precio: prev.precio.filter(p => p.tipoVehiculo !== vt.key)
+                                                                    }))
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Label htmlFor={`vehicle-type-${vt.key}`} className="text-sm font-normal flex-shrink-0 w-32 cursor-pointer">
+                                                            {vt.emoji} {vt.label}
+                                                        </Label>
+                                                        {isSelected && (
+                                                            <Input
+                                                                type="number"
+                                                                value={precioEntry?.precio ?? 0}
+                                                                onChange={(e) => {
+                                                                    setServiceForm(prev => ({
+                                                                        ...prev,
+                                                                        precio: prev.precio.map(p =>
+                                                                            p.tipoVehiculo === vt.key
+                                                                                ? { ...p, precio: Number(e.target.value) }
+                                                                                : p
+                                                                        )
+                                                                    }))
+                                                                }}
+                                                                placeholder="Precio ($)"
+                                                                className="w-32"
+                                                                required
+                                                            />
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
+                                        {selectedVehicleTypes.length === 0 && (
+                                            <p className="text-xs text-amber-600 mt-1">⚠️ Selecciona al menos un tipo de vehículo</p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">

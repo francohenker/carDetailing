@@ -3,7 +3,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SystemConfig } from './entities/system-config.entity';
 import { UpdateQuotationThresholdsDto } from './dto/update-quotation-thresholds.dto';
-import { TIPO_AUTO } from '../enums/tipo_auto.enum';
+
+const DEFAULT_VEHICLE_TYPES = [
+  { key: 'AUTO', label: 'Auto', emoji: '🚗' },
+  { key: 'CAMIONETA', label: 'Camioneta', emoji: '🚙' },
+  { key: 'MOTO', label: 'Moto', emoji: '🏍️' },
+  { key: 'CAMION', label: 'Camión', emoji: '🚛' },
+  { key: 'UTILITARIO', label: 'Utilitario', emoji: '🚐' },
+];
+
+export interface VehicleTypeDefinition {
+  key: string;
+  label: string;
+  emoji: string;
+}
 
 @Injectable()
 export class SystemConfigService {
@@ -37,7 +50,18 @@ export class SystemConfigService {
     if (!vehicleTypesConfig) {
       await this.systemConfigRepository.save({
         key: 'active_vehicle_types',
-        value: [TIPO_AUTO.AUTO, TIPO_AUTO.CAMIONETA],
+        value: ['AUTO', 'CAMIONETA'],
+      });
+    }
+
+    const allVehicleTypesConfig = await this.systemConfigRepository.findOne({
+      where: { key: 'all_vehicle_types' },
+    });
+
+    if (!allVehicleTypesConfig) {
+      await this.systemConfigRepository.save({
+        key: 'all_vehicle_types',
+        value: DEFAULT_VEHICLE_TYPES,
       });
     }
   }
@@ -109,18 +133,66 @@ export class SystemConfigService {
     await this.systemConfigRepository.save(config);
   }
 
-  async getActiveVehicleTypes(): Promise<TIPO_AUTO[]> {
+  async getActiveVehicleTypes(): Promise<string[]> {
     const config = await this.systemConfigRepository.findOne({
       where: { key: 'active_vehicle_types' },
     });
     if (!config) {
-      return [TIPO_AUTO.AUTO, TIPO_AUTO.CAMIONETA];
+      return ['AUTO', 'CAMIONETA'];
     }
     return config.value;
   }
 
-  async updateActiveVehicleTypes(types: TIPO_AUTO[]): Promise<TIPO_AUTO[]> {
+  async updateActiveVehicleTypes(types: string[]): Promise<string[]> {
     await this.updateConfig('active_vehicle_types', types);
     return types;
+  }
+
+  async getAllVehicleTypes(): Promise<VehicleTypeDefinition[]> {
+    const config = await this.systemConfigRepository.findOne({
+      where: { key: 'all_vehicle_types' },
+    });
+    if (!config) {
+      return DEFAULT_VEHICLE_TYPES;
+    }
+    return config.value;
+  }
+
+  async addVehicleType(definition: VehicleTypeDefinition): Promise<VehicleTypeDefinition[]> {
+    const allTypes = await this.getAllVehicleTypes();
+    const exists = allTypes.find(
+      (t) => t.key.toUpperCase() === definition.key.toUpperCase(),
+    );
+    if (exists) {
+      throw new NotFoundException(
+        `El tipo de vehículo '${definition.key}' ya existe`,
+      );
+    }
+    definition.key = definition.key.toUpperCase();
+    allTypes.push(definition);
+    await this.updateConfig('all_vehicle_types', allTypes);
+    return allTypes;
+  }
+
+  async removeVehicleType(key: string): Promise<VehicleTypeDefinition[]> {
+    const allTypes = await this.getAllVehicleTypes();
+    const filtered = allTypes.filter(
+      (t) => t.key.toUpperCase() !== key.toUpperCase(),
+    );
+    if (filtered.length === allTypes.length) {
+      throw new NotFoundException(`El tipo de vehículo '${key}' no existe`);
+    }
+    await this.updateConfig('all_vehicle_types', filtered);
+
+    // Also remove from active types if present
+    const activeTypes = await this.getActiveVehicleTypes();
+    const filteredActive = activeTypes.filter(
+      (t) => t.toUpperCase() !== key.toUpperCase(),
+    );
+    if (filteredActive.length !== activeTypes.length) {
+      await this.updateConfig('active_vehicle_types', filteredActive);
+    }
+
+    return filtered;
   }
 }

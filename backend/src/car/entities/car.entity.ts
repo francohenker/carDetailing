@@ -1,4 +1,3 @@
-import { TIPO_AUTO } from '../../enums/tipo_auto.enum';
 import { Turno } from '../../turno/entities/turno.entity';
 import { Users } from '../../users/entities/users.entity';
 import {
@@ -29,8 +28,8 @@ export class Car {
   @Column()
   color: string;
 
-  @Column()
-  type: TIPO_AUTO;
+  @Column({ type: 'varchar', length: 100 })
+  type: string;
 
   @OneToMany(() => Turno, (Turno) => Turno.car)
   turno: Turno[];
@@ -44,7 +43,7 @@ export class Car {
     model: string,
     patente: string,
     color: string,
-    type: TIPO_AUTO,
+    type: string,
   ) {
     this.user = user;
     this.marca = marca;

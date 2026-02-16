@@ -15,7 +15,7 @@ import {
 
 interface Precio {
     id?: number
-    tipoVehiculo: 'AUTO' | 'CAMIONETA'
+    tipoVehiculo: string
     precio: number
 }
 
@@ -61,6 +61,10 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
     // Servicios filtrados y ordenados
     const filteredAndSortedServices = useMemo(() => {
         const filtered = services.filter(service => {
+            // Filtro por tipo de vehículo: excluir servicios que no tienen precio para este tipo
+            const hasVehicleType = service.precio?.some(p => p.tipoVehiculo === carType.toUpperCase())
+            if (!hasVehicleType) return false
+
             // Filtro por texto de búsqueda
             const matchesSearch = searchQuery === '' || 
                 service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -60,7 +60,7 @@ const endOfDay = (date: Date): Date => {
 // Tipos de datos
 interface Precio {
   id?: number;
-  tipoVehiculo: "AUTO" | "CAMIONETA";
+  tipoVehiculo: string;
   precio: number;
 }
 
@@ -122,6 +122,7 @@ function TurnoPageContent() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [vehicleLabels, setVehicleLabels] = useState<Record<string, string>>({});
 
   // Estados para el calendario
   const [selectedDate, setSelectedDate] = useState<Date>(getInitialDate());
@@ -179,6 +180,33 @@ function TurnoPageContent() {
     };
 
     fetchServices();
+  }, []);
+
+  // Cargar labels de tipos de vehículo
+  useEffect(() => {
+    const fetchVehicleLabels = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types/all`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+            },
+          },
+        );
+        if (response.ok) {
+          const data: { key: string; label: string; emoji: string }[] = await response.json();
+          const labels: Record<string, string> = {};
+          data.forEach((vt) => {
+            labels[vt.key] = `${vt.emoji} ${vt.label}`;
+          });
+          setVehicleLabels(labels);
+        }
+      } catch (error) {
+        console.error("Error fetching vehicle labels:", error);
+      }
+    };
+    fetchVehicleLabels();
   }, []);
 
   // Cargar vehículos del usuario
@@ -582,7 +610,7 @@ function TurnoPageContent() {
                                     {car.marca} {car.model}
                                   </h3>
                                   <p className="text-sm text-base-content/70">
-                                    • {car.color} • {car.type}
+                                    • {car.color} • {vehicleLabels[car.type] || car.type}
                                   </p>
                                   <div className="badge badge-outline mt-2">
                                     {car.patente}

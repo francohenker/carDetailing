@@ -1,5 +1,5 @@
-import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
-import { SystemConfigService } from './system-config.service';
+import { Controller, Get, Put, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { SystemConfigService, VehicleTypeDefinition } from './system-config.service';
 import { UpdateQuotationThresholdsDto } from './dto/update-quotation-thresholds.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { Roles } from '../roles/role.decorator';
@@ -11,7 +11,6 @@ import {
   TipoEntidad,
 } from '../auditoria/entities/auditoria.entity';
 import { empresaInfo } from './empresa.config';
-import { TIPO_AUTO } from '../enums/tipo_auto.enum';
 
 @Controller('config')
 @UseGuards(AuthGuard, RolesGuard)
@@ -25,13 +24,15 @@ export class SystemConfigController {
   }
 
   @Get('vehicle-types')
+  @Roles(Role.ADMIN, Role.USER, Role.SUPPLIER)
   async getActiveVehicleTypes() {
     return this.systemConfigService.getActiveVehicleTypes();
   }
 
   @Get('vehicle-types/all')
+  @Roles(Role.ADMIN, Role.USER, Role.SUPPLIER)
   async getAllVehicleTypes() {
-    return Object.values(TIPO_AUTO);
+    return this.systemConfigService.getAllVehicleTypes();
   }
 
   @Auditar({
@@ -41,8 +42,28 @@ export class SystemConfigController {
     capturarDatosAnteriores: true,
   })
   @Put('vehicle-types')
-  async updateActiveVehicleTypes(@Body('types') types: TIPO_AUTO[]) {
+  async updateActiveVehicleTypes(@Body('types') types: string[]) {
     return this.systemConfigService.updateActiveVehicleTypes(types);
+  }
+
+  @Auditar({
+    accion: TipoAccion.CREAR,
+    entidad: TipoEntidad.SISTEMA,
+    descripcion: 'Creación de nuevo tipo de vehículo',
+  })
+  @Post('vehicle-types')
+  async addVehicleType(@Body() definition: VehicleTypeDefinition) {
+    return this.systemConfigService.addVehicleType(definition);
+  }
+
+  @Auditar({
+    accion: TipoAccion.ELIMINAR,
+    entidad: TipoEntidad.SISTEMA,
+    descripcion: 'Eliminación de tipo de vehículo',
+  })
+  @Delete('vehicle-types/:key')
+  async removeVehicleType(@Param('key') key: string) {
+    return this.systemConfigService.removeVehicleType(key);
   }
 
   @Get('quotation-thresholds')

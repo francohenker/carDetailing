@@ -125,11 +125,55 @@ export default function ProfileClient() {
     const [claimLoading, setClaimLoading] = useState(false);
     const [claimCheckResult, setClaimCheckResult] = useState<{ exists: boolean; isDeleted?: boolean; marca?: string; model?: string; color?: string; type?: string; patente?: string } | null>(null);
 
+    // Estado para tipos de vehículo activos
+    const [activeVehicleTypes, setActiveVehicleTypes] = useState<{ value: string; label: string; emoji: string }[]>([]);
+
     // Estado de loading para prevenir doble click ya declarado arriba
 
     // Función para cambiar a la pestaña de historial
     const handleView = () => {
         setActiveTab("history");
+    };
+
+    // Mapa dinámico de labels para tipos de vehículo
+    const [vehicleLabelsMap, setVehicleLabelsMap] = useState<Record<string, { label: string; emoji: string }>>({});
+
+    const fetchActiveVehicleTypes = async () => {
+        try {
+            const [activeRes, allRes] = await Promise.all([
+                fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+                }),
+                fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types/all`, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+                }),
+            ]);
+            if (!activeRes.ok || !allRes.ok) throw new Error('Error fetching vehicle types');
+            const activeData: string[] = await activeRes.json();
+            const allData: { key: string; label: string; emoji: string }[] = await allRes.json();
+
+            // Build labels map from API data
+            const labelsMap: Record<string, { label: string; emoji: string }> = {};
+            allData.forEach((vt) => {
+                labelsMap[vt.key] = { label: vt.label, emoji: vt.emoji };
+            });
+            setVehicleLabelsMap(labelsMap);
+
+            setActiveVehicleTypes(
+                activeData.map((type) => ({
+                    value: type,
+                    label: labelsMap[type]?.label || type,
+                    emoji: labelsMap[type]?.emoji || '🚗',
+                }))
+            );
+        } catch (error) {
+            console.error('Error fetching vehicle types:', error);
+            // Fallback
+            setActiveVehicleTypes([
+                { value: 'AUTO', label: 'Auto', emoji: '🚗' },
+                { value: 'CAMIONETA', label: 'Camioneta', emoji: '🚙' },
+            ]);
+        }
     };
 
     // Lista de marcas predefinidas
@@ -552,6 +596,7 @@ export default function ProfileClient() {
         fetchVerifyPayment();
         fetchDataUser();
         fetchDataCars();
+        fetchActiveVehicleTypes();
 
         // Manejar parámetros URL del correo electrónico
         const tabParam = searchParams.get("tab");
@@ -906,10 +951,11 @@ export default function ProfileClient() {
                                                                     <SelectValue placeholder="Seleccionar tipo" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    <SelectItem value="AUTO">Auto</SelectItem>
-                                                                    <SelectItem value="CAMIONETA">
-                                                                        Camioneta
-                                                                    </SelectItem>
+                                                                    {activeVehicleTypes.map((vt) => (
+                                                                        <SelectItem key={vt.value} value={vt.value}>
+                                                                            {vt.emoji} {vt.label}
+                                                                        </SelectItem>
+                                                                    ))}
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
@@ -972,7 +1018,7 @@ export default function ProfileClient() {
                                                                                 {car.marca} {car.model}
                                                                             </h3>
                                                                             <Badge variant="outline">
-                                                                                {car.type}
+                                                                                {vehicleLabelsMap[car.type]?.emoji || '🚗'} {vehicleLabelsMap[car.type]?.label || car.type}
                                                                             </Badge>
                                                                         </div>
                                                                         <div className="mt-1 text-sm text-muted-foreground">
@@ -1088,10 +1134,11 @@ export default function ProfileClient() {
                                                                     <SelectValue placeholder="Seleccionar tipo" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    <SelectItem value="CAMIONETA">
-                                                                        Camioneta
-                                                                    </SelectItem>
-                                                                    <SelectItem value="AUTO">Auto</SelectItem>
+                                                                    {activeVehicleTypes.map((vt) => (
+                                                                        <SelectItem key={vt.value} value={vt.value}>
+                                                                            {vt.emoji} {vt.label}
+                                                                        </SelectItem>
+                                                                    ))}
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>

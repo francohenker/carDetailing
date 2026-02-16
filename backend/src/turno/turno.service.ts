@@ -13,6 +13,7 @@ import { ProductoService } from '../producto/producto.service';
 import { empresaInfo } from '../config/empresa.config';
 import { WorkspaceService } from './workspace.service';
 import { WorkSpace } from './entities/workspace.entity';
+import { SystemConfigService } from '../config/system-config.service';
 
 @Injectable()
 export class TurnoService {
@@ -23,9 +24,19 @@ export class TurnoService {
     private mailService: MailService,
     private productoService: ProductoService,
     private workspaceService: WorkspaceService,
+    private systemConfigService: SystemConfigService,
   ) {}
 
   async createTurno(car: Car, turnoView: CreateTurnoDto): Promise<Turno> {
+    // Validar que el tipo de vehículo esté activo
+    const activeTypes = await this.systemConfigService.getActiveVehicleTypes();
+    if (!activeTypes.includes(car.type)) {
+      throw new HttpException(
+        `El tipo de vehículo '${car.type}' no está activo. No se pueden registrar nuevos turnos con este tipo de vehículo.`,
+        400,
+      );
+    }
+
     // Validación mejorada que considera conflictos de tiempo basados en duración y espacios
     await this.validateTimeSlotAvailability(turnoView.date, turnoView.duration);
 
