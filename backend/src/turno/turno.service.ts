@@ -41,7 +41,10 @@ export class TurnoService {
     await this.validateTimeSlotAvailability(turnoView.date, turnoView.duration);
 
     // Buscar un espacio disponible para asignar
-    const workspace = await this.findAvailableWorkspace(turnoView.date, turnoView.duration);
+    const workspace = await this.findAvailableWorkspace(
+      turnoView.date,
+      turnoView.duration,
+    );
 
     const servicios = await this.servicioService.findByIds(turnoView.services);
     const newTurno = new Turno(
@@ -77,7 +80,7 @@ export class TurnoService {
     // Asegurarse de que sea un objeto Date válido
     const dateObj = new Date(requestedDateTime);
 
-    // Obtener la fecha sin la hora para buscar turnos del día
+    // Obtener la fecha para buscar turnos del día
     const dateString = dateObj.toISOString().split('T')[0];
 
     // Obtener todos los turnos del día
@@ -272,7 +275,7 @@ export class TurnoService {
 
     // Final del día: 23:59:59.999
     const endDate = new Date(baseDate);
-    // endDate.setHours(23, 59, 59, 999);
+    endDate.setHours(23, 59, 59, 999);
 
     const turnos = await this.turnoRepository.find({
       where: {
@@ -308,7 +311,9 @@ export class TurnoService {
     const endDate = new Date(dateObj);
     endDate.setHours(23, 59, 59, 999);
 
-    console.log(`🔍 Buscando turnos entre ${startDate} y ${endDate}`);
+    console.log(
+      `🔍 Buscando turnos entre ${startDate.toISOString()} y ${endDate.toISOString()}`,
+    );
 
     const turnos = await this.turnoRepository.find({
       where: {
@@ -334,7 +339,7 @@ export class TurnoService {
   ): Promise<any> {
     // Obtener todos los turnos del día especificado
     const turnos = await this.findTurnosByDate(
-      new Date(targetDate + 'T03:00:00'),
+      new Date(targetDate + 'T00:00:00'),
     );
 
     // Obtener cantidad de espacios activos
@@ -360,8 +365,6 @@ export class TurnoService {
 
     for (const turno of turnos) {
       const turnoStart = new Date(turno.fechaHora);
-      // Ajustar a UTC-3 para coincidir con la zona horaria local
-      turnoStart.setHours(turnoStart.getHours() - 3);
 
       const turnoStartTime = `${turnoStart.getHours().toString().padStart(2, '0')}:${turnoStart.getMinutes().toString().padStart(2, '0')}`;
 
@@ -374,14 +377,21 @@ export class TurnoService {
         for (let i = 0; i < slotsToBlock; i++) {
           if (startSlotIndex + i < allSlots.length) {
             const slotKey = allSlots[startSlotIndex + i];
-            occupiedSlotCounts.set(slotKey, (occupiedSlotCounts.get(slotKey) || 0) + 1);
+            occupiedSlotCounts.set(
+              slotKey,
+              (occupiedSlotCounts.get(slotKey) || 0) + 1,
+            );
           }
         }
       }
     }
 
     // Determinar slots disponibles considerando la duración solicitada y espacios
-    const availableSlots: { time: string; available: boolean; availableSpaces: number }[] = [];
+    const availableSlots: {
+      time: string;
+      available: boolean;
+      availableSpaces: number;
+    }[] = [];
     const slotsNeeded = Math.ceil(duration / slotInterval);
 
     for (let i = 0; i <= allSlots.length - slotsNeeded; i++) {
@@ -422,11 +432,9 @@ export class TurnoService {
       totalSpaces: maxConcurrent,
       slots: availableSlots,
       occupiedTurnos: turnos.map((t) => {
-        const adjustedDate = new Date(t.fechaHora);
-        adjustedDate.setHours(adjustedDate.getHours() - 3);
         return {
           id: t.id,
-          fechaHora: adjustedDate,
+          fechaHora: t.fechaHora,
           duration: t.duration,
           servicios: t.servicio.map((s) => s.name),
           workspace: t.workspace?.name || null,

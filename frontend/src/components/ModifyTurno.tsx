@@ -136,7 +136,10 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess, suggest
             }
             setSlotsLoading(true)
 
-            const dateString = date.toISOString().split('T')[0]
+            const year = date.getFullYear()
+            const month = String(date.getMonth() + 1).padStart(2, '0')
+            const day = String(date.getDate()).padStart(2, '0')
+            const dateString = `${year}-${month}-${day}`
 
             const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/available-slots?date=${dateString}&duration=${duration}`
             const resp = await fetch(url, {
@@ -312,9 +315,16 @@ export default function ModifyTurno({ turno, isOpen, onClose, onSuccess, suggest
             const combinedDateTime = new Date(selectedDate)
             combinedDateTime.setHours(hours, minutes, 0, 0)
 
+            // Construir fecha como string local sin conversión UTC
+            const y = combinedDateTime.getFullYear()
+            const mo = String(combinedDateTime.getMonth() + 1).padStart(2, '0')
+            const da = String(combinedDateTime.getDate()).padStart(2, '0')
+            const h = String(combinedDateTime.getHours()).padStart(2, '0')
+            const mi = String(combinedDateTime.getMinutes()).padStart(2, '0')
+
             const modifyPayload = {
                 turnoId: turno.id,
-                fechaHora: combinedDateTime.toISOString(),
+                fechaHora: `${y}-${mo}-${da}T${h}:${mi}:00`,
                 estado: turno.estado,
                 observacion: `Turno modificado - Servicios: ${selectedServices.map(s => s.name).join(', ')}`,
                 servicios: selectedServices.map(s => parseInt(s.id))

@@ -289,8 +289,11 @@ function TurnoPageContent() {
       );
       const duration = totalDuration > 0 ? totalDuration : 60; // Duración mínima de 60 minutos
 
-      // Formatear la fecha para el backend (YYYY-MM-DD)
-      const dateString = date.toISOString().split("T")[0];
+      // Formatear la fecha para el backend (YYYY-MM-DD) sin conversión UTC
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const dateString = `${year}-${month}-${day}`;
 
       const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/available-slots?date=${dateString}&duration=${duration}`;
       const resp = await fetch(url, {
@@ -449,10 +452,21 @@ function TurnoPageContent() {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Construir la fecha como string local sin conversión UTC
+      let dateToSend: string | null = null;
+      if (bookingData.date) {
+        const d = bookingData.date;
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, "0");
+        const da = String(d.getDate()).padStart(2, "0");
+        const h = String(d.getHours()).padStart(2, "0");
+        const mi = String(d.getMinutes()).padStart(2, "0");
+        dateToSend = `${y}-${mo}-${da}T${h}:${mi}:00`;
+      }
       const bookingPayload = {
         services: bookingData.services.map((s) => s.id),
         carId: bookingData.car?.id,
-        date: bookingData.date, // Enviar el Date completo con fecha y hora
+        date: dateToSend,
         totalPrice: bookingData.totalPrice,
         duration: bookingData.totalDuration,
         observacion: "",

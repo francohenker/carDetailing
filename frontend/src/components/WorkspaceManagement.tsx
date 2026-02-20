@@ -47,7 +47,7 @@ export default function WorkspaceManagement() {
 
   const fetchWorkspaces = async () => {
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token")
+      const token = localStorage.getItem("jwt")
       const res = await fetch(`${API_URL}/workspace`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -70,7 +70,7 @@ export default function WorkspaceManagement() {
       return
     }
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token")
+      const token = localStorage.getItem("jwt")
       const res = await fetch(`${API_URL}/workspace`, {
         method: "POST",
         headers: {
@@ -97,7 +97,7 @@ export default function WorkspaceManagement() {
   const handleUpdate = async () => {
     if (!editingWorkspace || !formName.trim()) return
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token")
+      const token = localStorage.getItem("jwt")
       const res = await fetch(`${API_URL}/workspace/${editingWorkspace.id}`, {
         method: "PUT",
         headers: {
@@ -123,7 +123,7 @@ export default function WorkspaceManagement() {
 
   const handleToggle = async (id: number) => {
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token")
+      const token = localStorage.getItem("jwt")
       const res = await fetch(`${API_URL}/workspace/${id}/toggle`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` }
@@ -140,7 +140,7 @@ export default function WorkspaceManagement() {
   const handleDelete = async (id: number) => {
     if (!confirm("¿Estás seguro de eliminar este espacio?")) return
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token")
+      const token = localStorage.getItem("jwt")
       const res = await fetch(`${API_URL}/workspace/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
@@ -187,7 +187,7 @@ export default function WorkspaceManagement() {
             <div className="text-center py-8 text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No hay espacios de trabajo configurados.</p>
-              <p className="text-sm">Sin espacios, solo se permite 1 turno por horario.</p>
+              <p className="text-sm">Sin espacios activos, no se podrán agendar turnos.</p>
             </div>
           ) : (
             <Table>
