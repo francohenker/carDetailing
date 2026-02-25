@@ -35,7 +35,7 @@ export class TurnoOwnerGuard implements CanActivate {
 
     // Verifica si el usuario del token es el mismo que el usuario del turno
     //EL ADMIN PUEDE MODIFICAR CUALQUIER TURNO
-    if (user.role === 'admin') return true; // si es admin puede modificar cualquier turno
+    if (user.role === 'admin' || user.role === 'trabajador') return true; // admin y trabajador pueden modificar cualquier turno
     if (!user || userTurno.id !== user.userId) {
       throw new HttpException(
         'You do not have permission to delete this turno',

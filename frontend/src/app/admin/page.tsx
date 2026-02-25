@@ -132,7 +132,7 @@ interface User {
     lastname: string
     email: string
     phone: string
-    role: 'admin' | 'user' | 'supplier'
+    role: 'admin' | 'user' | 'supplier' | 'trabajador'
 }
 
 interface Turno {
@@ -1020,7 +1020,7 @@ export default function AdminPage() {
         })
     }
 
-    const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user' | 'supplier') => {
+    const handleChangeUserRole = async (userId: number, newRole: 'admin' | 'user' | 'supplier' | 'trabajador') => {
         setActionLoading(`change-role-${userId}`)
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/change-role/${userId}`, {
@@ -3215,7 +3215,7 @@ export default function AdminPage() {
                                                     <TableCell>{user.email}</TableCell>
                                                     <TableCell>{user.phone}</TableCell>
                                                     <TableCell>
-                                                        <Badge variant={user.role === 'admin' ? "default" : user.role === 'supplier' ? "outline" : "secondary"}>
+                                                        <Badge variant={user.role === 'admin' ? "default" : user.role === 'supplier' ? "outline" : user.role === 'trabajador' ? "outline" : "secondary"}>
                                                             {user.role === 'admin' ? (
                                                                 <>
                                                                     <ShieldCheck className="h-3 w-3 mr-1" />
@@ -3225,6 +3225,11 @@ export default function AdminPage() {
                                                                 <>
                                                                     <Package className="h-3 w-3 mr-1" />
                                                                     Proveedor
+                                                                </>
+                                                            ) : user.role === 'trabajador' ? (
+                                                                <>
+                                                                    <Shield className="h-3 w-3 mr-1" />
+                                                                    Trabajador
                                                                 </>
                                                             ) : (
                                                                 <>
@@ -3237,7 +3242,7 @@ export default function AdminPage() {
                                                     <TableCell>
                                                         <Select
                                                             value={user.role}
-                                                            onValueChange={(newRole: 'admin' | 'user' | 'supplier') =>
+                                                            onValueChange={(newRole: 'admin' | 'user' | 'supplier' | 'trabajador') =>
                                                                 handleChangeUserRole(user.id, newRole)
                                                             }
                                                         >
@@ -3248,6 +3253,7 @@ export default function AdminPage() {
                                                                 <SelectItem value="user">Usuario</SelectItem>
                                                                 <SelectItem value="admin">Admin</SelectItem>
                                                                 <SelectItem value="supplier">Proveedor</SelectItem>
+                                                                <SelectItem value="trabajador">Trabajador</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </TableCell>

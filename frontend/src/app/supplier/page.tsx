@@ -390,10 +390,10 @@ export default function SupplierDashboard() {
                         <label htmlFor={`availability-${pq.productId}`} className="text-sm text-gray-600">Disponibilidad</label>
                         <select
                           id={`availability-${pq.productId}`}
-                          value={pq.availability}
+                          value={["Disponible inmediato", "Disponible en 2-3 días", "Bajo pedido (5-7 días)"].includes(pq.availability) ? pq.availability : "Otro"}
                           onChange={(e) => {
                             const updated = [...respondForm.productQuotes];
-                            updated[idx].availability = e.target.value;
+                            updated[idx].availability = e.target.value === "Otro" ? "" : e.target.value;
                             setRespondForm({ ...respondForm, productQuotes: updated });
                           }}
                           className="w-full border rounded px-3 py-2 mt-1"
@@ -401,7 +401,21 @@ export default function SupplierDashboard() {
                           <option>Disponible inmediato</option>
                           <option>Disponible en 2-3 días</option>
                           <option>Bajo pedido (5-7 días)</option>
+                          <option>Otro</option>
                         </select>
+                        {!["Disponible inmediato", "Disponible en 2-3 días", "Bajo pedido (5-7 días)"].includes(pq.availability) && (
+                          <input
+                            type="text"
+                            placeholder="Escriba la disponibilidad..."
+                            value={pq.availability}
+                            onChange={(e) => {
+                              const updated = [...respondForm.productQuotes];
+                              updated[idx].availability = e.target.value;
+                              setRespondForm({ ...respondForm, productQuotes: updated });
+                            }}
+                            className="w-full border rounded px-3 py-2 mt-2"
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -432,9 +446,9 @@ export default function SupplierDashboard() {
                     </label>
                     <select
                       id="paymentTerms"
-                      value={respondForm.paymentTerms}
+                      value={["Contado", "15 días", "30 días", "60 días", "50% adelanto, 50% contra entrega"].includes(respondForm.paymentTerms) ? respondForm.paymentTerms : "Otro"}
                       onChange={(e) =>
-                        setRespondForm({ ...respondForm, paymentTerms: e.target.value })
+                        setRespondForm({ ...respondForm, paymentTerms: e.target.value === "Otro" ? "" : e.target.value })
                       }
                       className="w-full border rounded px-3 py-2 mt-1"
                     >
@@ -443,7 +457,19 @@ export default function SupplierDashboard() {
                       <option>30 días</option>
                       <option>60 días</option>
                       <option>50% adelanto, 50% contra entrega</option>
+                      <option>Otro</option>
                     </select>
+                    {!["Contado", "15 días", "30 días", "60 días", "50% adelanto, 50% contra entrega"].includes(respondForm.paymentTerms) && (
+                      <input
+                        type="text"
+                        placeholder="Escriba sus condiciones de pago..."
+                        value={respondForm.paymentTerms}
+                        onChange={(e) =>
+                          setRespondForm({ ...respondForm, paymentTerms: e.target.value })
+                        }
+                        className="w-full border rounded px-3 py-2 mt-2"
+                      />
+                    )}
                   </div>
                 </div>
 

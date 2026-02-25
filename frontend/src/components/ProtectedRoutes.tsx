@@ -6,7 +6,7 @@ import { useUserStore } from '@/app/store/useUserStore'
 
 interface ProtectedRouteProps {
     children: React.ReactNode
-    allowedRoles?: ('admin' | 'user' | 'supplier')[]
+    allowedRoles?: ('admin' | 'user' | 'supplier' | 'trabajador')[]
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {

@@ -114,14 +114,14 @@ export class TurnoController {
   }
 
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TRABAJADOR)
   @Get('admin/getAll')
   async getAllTurnos(): Promise<Turno[]> {
     return this.turnoService.findAll();
   }
 
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TRABAJADOR)
   @Post('admin/mark-completed/:id')
   @Auditar({
     accion: TipoAccion.MARCAR_COMPLETADO,

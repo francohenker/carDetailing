@@ -111,6 +111,13 @@ export default function HeaderDefault() {
                                         </a>
                                     </li>
                                 }
+                                {user?.role === 'trabajador' &&
+                                    <li>
+                                        <a href="/trabajador" className="justify-between">
+                                            Panel Trabajador
+                                        </a>
+                                    </li>
+                                }
                                 <li><a href="/user/profile" className="justify-between">Perfil</a></li>
                                 {/* <li><a href="/user/settings">Configuración</a></li> */}
                                 <li><a href="#/logout" onClick={handlerLogout}>{'Cerrar sesión'}</a></li>

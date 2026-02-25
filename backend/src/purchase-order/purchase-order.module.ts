@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
 import { PurchaseOrderService } from './purchase-order.service';
 import { PurchaseOrderController } from './purchase-order.controller';
 import { PurchaseOrder } from './entities/purchase-order.entity';
@@ -19,6 +20,10 @@ import { QuotationRequest } from '../quotation/entities/quotation-request.entity
       QuotationResponse,
       QuotationRequest,
     ]),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '30d' },
+    }),
   ],
   controllers: [PurchaseOrderController],
   providers: [PurchaseOrderService],
