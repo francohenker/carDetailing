@@ -115,7 +115,7 @@ export class PurchaseOrderService {
 
   async findAll(): Promise<PurchaseOrder[]> {
     return await this.purchaseOrderRepository.find({
-      relations: ['supplier', 'items', 'items.producto', 'quotationResponse'],
+      relations: ['supplier', 'items', 'items.producto', 'quotationResponse', 'receivedBy'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -123,7 +123,7 @@ export class PurchaseOrderService {
   async findOne(id: number): Promise<PurchaseOrder> {
     const order = await this.purchaseOrderRepository.findOne({
       where: { id },
-      relations: ['supplier', 'items', 'items.producto', 'quotationResponse'],
+      relations: ['supplier', 'items', 'items.producto', 'quotationResponse', 'receivedBy'],
     });
 
     if (!order) {
@@ -140,6 +140,11 @@ export class PurchaseOrderService {
     const order = await this.findOne(id);
 
     order.status = updateStatusDto.status;
+
+    // Guardar quién recibió la orden
+    if (updateStatusDto.receivedById) {
+      order.receivedById = updateStatusDto.receivedById;
+    }
 
     // Si se marca como recibida, establecer la fecha
     if (
@@ -224,8 +229,16 @@ export class PurchaseOrderService {
         await this.productoRepository.save(producto);
       }
 
+      // Guardar el item ANTES de recalcular el estado de la orden
+      if (updateItemDto.notes !== undefined) {
+        item.notes = updateItemDto.notes;
+      }
+      await this.purchaseOrderItemRepository.save(item);
+
       // Actualizar estado de la orden si es necesario
-      await this.updateOrderStatusBasedOnItems(orderId);
+      await this.updateOrderStatusBasedOnItems(orderId, updateItemDto.receivedById);
+
+      return item;
     }
 
     if (updateItemDto.notes !== undefined) {
@@ -307,7 +320,7 @@ export class PurchaseOrderService {
     return `OC-${year}-${sequence.toString().padStart(5, '0')}`;
   }
 
-  private async updateOrderStatusBasedOnItems(orderId: number): Promise<void> {
+  private async updateOrderStatusBasedOnItems(orderId: number, receivedById?: number): Promise<void> {
     const order = await this.findOne(orderId);
 
     const totalOrdered = order.items.reduce(
@@ -323,10 +336,37 @@ export class PurchaseOrderService {
       order.status = PurchaseOrderStatus.PENDING;
     } else if (totalReceived < totalOrdered) {
       order.status = PurchaseOrderStatus.PARTIAL;
+      // Guardar quién hizo la recepción parcial
+      if (receivedById && !order.receivedById) {
+        order.receivedById = receivedById;
+      }
     } else {
       order.status = PurchaseOrderStatus.RECEIVED;
       if (!order.receivedAt) {
         order.receivedAt = new Date();
+      }
+      if (receivedById) {
+        order.receivedById = receivedById;
+      }
+
+      // Finalizar cotización vinculada si corresponde
+      if (order.quotationResponseId) {
+        try {
+          const quotationResponse = await this.quotationResponseRepository.findOne({
+            where: { id: order.quotationResponseId },
+            relations: ['quotationRequest'],
+          });
+
+          if (quotationResponse && quotationResponse.quotationRequest) {
+            const quotationRequest = quotationResponse.quotationRequest;
+            if (quotationRequest.status === QuotationRequestStatus.COMPLETED) {
+              quotationRequest.status = QuotationRequestStatus.FINISHED;
+              await this.quotationRequestRepository.save(quotationRequest);
+            }
+          }
+        } catch (error) {
+          console.error('Error al actualizar cotización relacionada:', error);
+        }
       }
     }
 

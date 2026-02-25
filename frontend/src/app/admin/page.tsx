@@ -241,6 +241,12 @@ interface PurchaseOrder {
     notes?: string
     isAutomatic: boolean
     receivedAt?: string
+    receivedBy?: {
+        id: number
+        firstname: string
+        lastname: string
+        email: string
+    }
     createdAt: string
     updatedAt: string
 }
@@ -503,6 +509,7 @@ export default function AdminPage() {
     })
     const [filterOrderStatus, setFilterOrderStatus] = useState<'all' | 'PENDIENTE' | 'RECIBIDA' | 'PARCIAL' | 'CANCELADA'>('all')
     const [supplierSearchQuery, setSupplierSearchQuery] = useState('')
+    const [itemReceiveQuantities, setItemReceiveQuantities] = useState<Record<number, number>>({})
 
     // Estados generales
     const [loading, setLoading] = useState(true)
@@ -1839,6 +1846,45 @@ export default function AdminPage() {
         }
     }
 
+    const handleUpdateOrderItem = async (orderId: number, itemId: number, quantityReceived: number) => {
+        setActionLoading(`update-item-${itemId}`)
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/purchase-orders/${orderId}/items/${itemId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                },
+                body: JSON.stringify({ quantityReceived })
+            })
+
+            if (!response.ok) throw new Error('Error updating item')
+
+            toast.success("Cantidad recibida actualizada")
+            setItemReceiveQuantities((prev) => {
+                const updated = { ...prev }
+                delete updated[itemId]
+                return updated
+            })
+            await fetchPurchaseOrders()
+            await fetchProducts()
+            setTimeout(() => { fetchLowStockProducts() }, 500)
+
+            // Update selected order if open
+            if (selectedPurchaseOrder?.id === orderId) {
+                const updatedOrder = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/purchase-orders/${orderId}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt')}` }
+                })
+                if (updatedOrder.ok) setSelectedPurchaseOrder(await updatedOrder.json())
+            }
+        } catch (error) {
+            console.error('Error updating item:', error)
+            toast.error("Error al actualizar el item")
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
     const resetOrderForm = () => {
         setOrderForm({
             supplierId: '',
@@ -2654,7 +2700,7 @@ export default function AdminPage() {
                             ) : (
                                 <>
                                     {/* Vista de Órdenes de Compra */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                                         <Card>
                                             <CardContent className="p-6">
                                                 <div className="flex items-center justify-between">
@@ -2691,7 +2737,7 @@ export default function AdminPage() {
                                             </CardContent>
                                         </Card>
 
-                                        {/* <Card>
+                                        <Card>
                                             <CardContent className="p-6">
                                                 <div className="flex items-center justify-between">
                                                     <div>
@@ -2701,7 +2747,7 @@ export default function AdminPage() {
                                                     <TrendingUp className="h-8 w-8 text-blue-500" />
                                                 </div>
                                             </CardContent>
-                                        </Card> */}
+                                        </Card>
                                     </div>
 
                                     <Card>
@@ -2721,7 +2767,7 @@ export default function AdminPage() {
                                                         <SelectItem value="all">Todas</SelectItem>
                                                         <SelectItem value="PENDIENTE">Pendientes</SelectItem>
                                                         <SelectItem value="RECIBIDA">Recibidas</SelectItem>
-                                                        {/* <SelectItem value="PARCIAL">Parciales</SelectItem> */}
+                                                        <SelectItem value="PARCIAL">Parciales</SelectItem>
                                                         <SelectItem value="CANCELADA">Canceladas</SelectItem>
                                                     </SelectContent>
                                                 </Select>
@@ -2757,6 +2803,7 @@ export default function AdminPage() {
                                                             <TableHead>Total</TableHead>
                                                             <TableHead>Estado</TableHead>
                                                             <TableHead>Fecha Recepción</TableHead>
+                                                            <TableHead>Recibido por</TableHead>
                                                             <TableHead>Acciones</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
@@ -2804,8 +2851,17 @@ export default function AdminPage() {
                                                                     )}
                                                                 </TableCell>
                                                                 <TableCell>
+                                                                    {order.receivedBy ? (
+                                                                        <div className="text-sm">
+                                                                            <div className="font-medium">{order.receivedBy.firstname} {order.receivedBy.lastname}</div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-muted-foreground">-</span>
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell>
                                                                     <div className="flex gap-2">
-                                                                        {order.status === 'PENDIENTE' && (
+                                                                        {(order.status === 'PENDIENTE' || order.status === 'PARCIAL') && (
                                                                             <Button
                                                                                 size="sm"
                                                                                 onClick={() => handleMarkOrderAsReceived(order.id)}
@@ -5993,6 +6049,12 @@ export default function AdminPage() {
                                                         {new Date(selectedPurchaseOrder.receivedAt).toLocaleString('es-AR')}
                                                     </p>
                                                 )}
+                                                {selectedPurchaseOrder.receivedBy && (
+                                                    <p>
+                                                        <strong>Recibido por:</strong>{' '}
+                                                        {selectedPurchaseOrder.receivedBy.firstname} {selectedPurchaseOrder.receivedBy.lastname}
+                                                    </p>
+                                                )}
                                                 <p>
                                                     <strong>Estado:</strong>{' '}
                                                     <Badge className={getOrderStatusColor(selectedPurchaseOrder.status)}>
@@ -6025,6 +6087,9 @@ export default function AdminPage() {
                                                     <TableHead className="text-right">Cant. Recibida</TableHead>
                                                     <TableHead className="text-right">Precio Unit.</TableHead>
                                                     <TableHead className="text-right">Subtotal</TableHead>
+                                                    {(selectedPurchaseOrder.status === 'PENDIENTE' || selectedPurchaseOrder.status === 'PARCIAL') && (
+                                                        <TableHead className="text-center">Recepción</TableHead>
+                                                    )}
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -6037,10 +6102,23 @@ export default function AdminPage() {
                                                         </TableCell>
                                                         <TableCell className="text-right">{item.quantityOrdered}</TableCell>
                                                         <TableCell className="text-right">
-                                                            {item.quantityReceived || 0}
-                                                            {item.quantityOrdered !== item.quantityReceived && (
+                                                            <span className={
+                                                                item.quantityReceived >= item.quantityOrdered
+                                                                    ? "text-green-600 font-medium"
+                                                                    : item.quantityReceived > 0
+                                                                    ? "text-orange-600 font-medium"
+                                                                    : ""
+                                                            }>
+                                                                {item.quantityReceived || 0}
+                                                            </span>
+                                                            {item.quantityReceived > 0 && item.quantityOrdered !== item.quantityReceived && (
                                                                 <Badge variant="outline" className="ml-2 text-xs">
                                                                     Parcial
+                                                                </Badge>
+                                                            )}
+                                                            {item.quantityReceived >= item.quantityOrdered && (
+                                                                <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700 border-green-200">
+                                                                    Completo
                                                                 </Badge>
                                                             )}
                                                         </TableCell>
@@ -6050,10 +6128,61 @@ export default function AdminPage() {
                                                         <TableCell className="text-right font-bold">
                                                             ${item.subtotal.toLocaleString('es-AR')}
                                                         </TableCell>
+                                                        {(selectedPurchaseOrder.status === 'PENDIENTE' || selectedPurchaseOrder.status === 'PARCIAL') && (
+                                                            <TableCell className="text-center">
+                                                                {item.quantityReceived < item.quantityOrdered ? (
+                                                                    <div className="flex items-center gap-1 justify-center">
+                                                                        <input
+                                                                            type="number"
+                                                                            min={item.quantityReceived}
+                                                                            max={item.quantityOrdered}
+                                                                            value={itemReceiveQuantities[item.id] ?? ""}
+                                                                            placeholder={`${item.quantityReceived}`}
+                                                                            onChange={(e) => {
+                                                                                const val = parseInt(e.target.value)
+                                                                                setItemReceiveQuantities((prev) => ({
+                                                                                    ...prev,
+                                                                                    [item.id]: isNaN(val) ? 0 : Math.min(val, item.quantityOrdered),
+                                                                                }))
+                                                                            }}
+                                                                            className="w-16 border rounded px-2 py-1 text-xs text-center"
+                                                                        />
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            className="text-xs h-7 px-2"
+                                                                            disabled={
+                                                                                actionLoading === `update-item-${item.id}` ||
+                                                                                !itemReceiveQuantities[item.id] ||
+                                                                                itemReceiveQuantities[item.id] <= item.quantityReceived
+                                                                            }
+                                                                            onClick={() => {
+                                                                                const qty = itemReceiveQuantities[item.id]
+                                                                                if (qty !== undefined && qty > item.quantityReceived && qty <= item.quantityOrdered) {
+                                                                                    handleUpdateOrderItem(selectedPurchaseOrder.id, item.id, qty)
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            Parcial
+                                                                        </Button>
+                                                                        <Button
+                                                                            size="sm"
+                                                                            className="text-xs h-7 px-2"
+                                                                            disabled={actionLoading === `update-item-${item.id}`}
+                                                                            onClick={() => handleUpdateOrderItem(selectedPurchaseOrder.id, item.id, item.quantityOrdered)}
+                                                                        >
+                                                                            Todo
+                                                                        </Button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-green-600 text-xs font-medium">✓ Completo</span>
+                                                                )}
+                                                            </TableCell>
+                                                        )}
                                                     </TableRow>
                                                 ))}
                                                 <TableRow>
-                                                    <TableCell colSpan={4} className="text-right font-bold text-lg">Total:</TableCell>
+                                                    <TableCell colSpan={selectedPurchaseOrder.status === 'PENDIENTE' || selectedPurchaseOrder.status === 'PARCIAL' ? 5 : 4} className="text-right font-bold text-lg">Total:</TableCell>
                                                     <TableCell className="text-right font-bold text-lg text-green-600">
                                                         ${selectedPurchaseOrder.totalAmount.toLocaleString('es-AR')}
                                                     </TableCell>

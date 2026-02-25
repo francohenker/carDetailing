@@ -12,6 +12,7 @@ import { Supplier } from '../../supplier/entities/supplier.entity';
 import { QuotationResponse } from '../../quotation/entities/quotation-response.entity';
 import { PurchaseOrderItem } from './purchase-order-item.entity';
 import { PurchaseOrderStatus } from '../../enums/purchase-order-status.enum';
+import { Users } from '../../users/entities/users.entity';
 
 @Entity('purchase_orders')
 export class PurchaseOrder {
@@ -58,6 +59,13 @@ export class PurchaseOrder {
 
   @Column({ type: 'timestamp', nullable: true })
   receivedAt: Date;
+
+  @ManyToOne(() => Users, { nullable: true })
+  @JoinColumn({ name: 'receivedById' })
+  receivedBy: Users;
+
+  @Column({ nullable: true })
+  receivedById: number;
 
   @CreateDateColumn()
   createdAt: Date;

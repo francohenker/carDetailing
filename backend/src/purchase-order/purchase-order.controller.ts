@@ -8,6 +8,7 @@ import {
   Delete,
   ParseIntPipe,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { PurchaseOrderService } from './purchase-order.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
@@ -16,10 +17,27 @@ import { UpdatePurchaseOrderItemDto } from './dto/update-purchase-order-item.dto
 import { RolesGuard } from '../roles/role.guard';
 import { Roles } from '../roles/role.decorator';
 import { Role } from '../roles/role.enum';
+import { JwtService } from '@nestjs/jwt';
 
 @Controller('purchase-orders')
 export class PurchaseOrderController {
-  constructor(private readonly purchaseOrderService: PurchaseOrderService) {}
+  constructor(
+    private readonly purchaseOrderService: PurchaseOrderService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  private getUserIdFromRequest(request: any): number | null {
+    try {
+      const token = request.headers.authorization?.split(' ')[1];
+      if (!token) return null;
+      const decoded = this.jwtService.verify(token, {
+        secret: process.env.JWT_SECRET,
+      });
+      return decoded.userId || null;
+    } catch {
+      return null;
+    }
+  }
 
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
@@ -48,7 +66,12 @@ export class PurchaseOrderController {
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateStatusDto: UpdatePurchaseOrderStatusDto,
+    @Req() request: any,
   ) {
+    const userId = this.getUserIdFromRequest(request);
+    if (userId) {
+      updateStatusDto.receivedById = userId;
+    }
     return this.purchaseOrderService.updateStatus(id, updateStatusDto);
   }
 
@@ -59,7 +82,12 @@ export class PurchaseOrderController {
     @Param('orderId', ParseIntPipe) orderId: number,
     @Param('itemId', ParseIntPipe) itemId: number,
     @Body() updateItemDto: UpdatePurchaseOrderItemDto,
+    @Req() request: any,
   ) {
+    const userId = this.getUserIdFromRequest(request);
+    if (userId) {
+      updateItemDto.receivedById = userId;
+    }
     return this.purchaseOrderService.updateItem(orderId, itemId, updateItemDto);
   }
 

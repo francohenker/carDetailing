@@ -43,6 +43,12 @@ interface PurchaseOrder {
   totalAmount: number;
   notes: string | null;
   receivedAt: string | null;
+  receivedBy?: {
+    id: number;
+    firstname: string;
+    lastname: string;
+    email: string;
+  };
   createdAt: string;
 }
 
@@ -55,6 +61,7 @@ export default function TrabajadorDashboard() {
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [filterTurnos, setFilterTurnos] = useState<"todos" | "pendiente" | "finalizado">("pendiente");
   const [filterOrdenes, setFilterOrdenes] = useState<"todas" | "PENDIENTE" | "PARCIAL" | "RECIBIDA">("PENDIENTE");
+  const [itemReceiveQuantities, setItemReceiveQuantities] = useState<Record<number, number>>({});
 
   const API = process.env.NEXT_PUBLIC_BACKEND_URL;
   const getToken = () => localStorage.getItem("jwt");
@@ -148,6 +155,7 @@ export default function TrabajadorDashboard() {
     itemId: number,
     quantityReceived: number
   ) => {
+    setActionLoading(`item-${itemId}`);
     try {
       const token = getToken();
       const res = await fetch(
@@ -162,6 +170,11 @@ export default function TrabajadorDashboard() {
         }
       );
       if (res.ok) {
+        setItemReceiveQuantities((prev) => {
+          const updated = { ...prev };
+          delete updated[itemId];
+          return updated;
+        });
         await fetchPurchaseOrders();
       } else {
         const err = await res.json();
@@ -170,6 +183,7 @@ export default function TrabajadorDashboard() {
     } catch {
       alert("Error de conexión");
     }
+    setActionLoading(null);
   };
 
   const filteredTurnos = turnos.filter((t) => {
@@ -579,21 +593,55 @@ export default function TrabajadorDashboard() {
                                       </td>
                                       {(order.status === "PENDIENTE" ||
                                         order.status === "PARCIAL") && (
-                                        <td className="px-3 py-2 text-center">
+                                        <td className="px-3 py-2">
                                           {item.quantityReceived <
                                           item.quantityOrdered ? (
-                                            <button
-                                              onClick={() =>
-                                                handleUpdateItemReceived(
-                                                  order.id,
-                                                  item.id,
-                                                  item.quantityOrdered
-                                                )
-                                              }
-                                              className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs hover:bg-blue-200"
-                                            >
-                                              Recibir todo
-                                            </button>
+                                            <div className="flex items-center gap-1 justify-end">
+                                              <input
+                                                type="number"
+                                                min={item.quantityReceived}
+                                                max={item.quantityOrdered}
+                                                value={itemReceiveQuantities[item.id] ?? ""}
+                                                placeholder={`${item.quantityReceived}`}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value);
+                                                  setItemReceiveQuantities((prev) => ({
+                                                    ...prev,
+                                                    [item.id]: isNaN(val) ? 0 : Math.min(val, item.quantityOrdered),
+                                                  }));
+                                                }}
+                                                className="w-16 border rounded px-2 py-1 text-xs text-center"
+                                              />
+                                              <button
+                                                onClick={() => {
+                                                  const qty = itemReceiveQuantities[item.id];
+                                                  if (qty !== undefined && qty > item.quantityReceived && qty <= item.quantityOrdered) {
+                                                    handleUpdateItemReceived(order.id, item.id, qty);
+                                                  }
+                                                }}
+                                                disabled={
+                                                  actionLoading === `item-${item.id}` ||
+                                                  !itemReceiveQuantities[item.id] ||
+                                                  itemReceiveQuantities[item.id] <= item.quantityReceived
+                                                }
+                                                className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs hover:bg-orange-200 disabled:opacity-50 whitespace-nowrap"
+                                              >
+                                                Parcial
+                                              </button>
+                                              <button
+                                                onClick={() =>
+                                                  handleUpdateItemReceived(
+                                                    order.id,
+                                                    item.id,
+                                                    item.quantityOrdered
+                                                  )
+                                                }
+                                                disabled={actionLoading === `item-${item.id}`}
+                                                className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs hover:bg-blue-200 disabled:opacity-50 whitespace-nowrap"
+                                              >
+                                                Todo
+                                              </button>
+                                            </div>
                                           ) : (
                                             <span className="text-green-600 text-xs font-medium">
                                               ✓ Completo
@@ -609,7 +657,7 @@ export default function TrabajadorDashboard() {
                           </div>
 
                           {/* Resumen */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="bg-gray-50 rounded-lg p-3">
                               <p className="text-xs text-gray-500 uppercase tracking-wide">
                                 Total
@@ -632,6 +680,16 @@ export default function TrabajadorDashboard() {
                               </p>
                               <p className="text-lg font-bold text-gray-900">
                                 {order.status}
+                              </p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-3">
+                              <p className="text-xs text-gray-500 uppercase tracking-wide">
+                                Recibido por
+                              </p>
+                              <p className="text-lg font-bold text-gray-900">
+                                {order.receivedBy
+                                  ? `${order.receivedBy.firstname} ${order.receivedBy.lastname}`
+                                  : "—"}
                               </p>
                             </div>
                           </div>

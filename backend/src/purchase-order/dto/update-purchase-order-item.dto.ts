@@ -8,4 +8,8 @@ export class UpdatePurchaseOrderItemDto {
 
   @IsOptional()
   notes?: string;
+
+  @IsOptional()
+  @IsInt()
+  receivedById?: number;
 }

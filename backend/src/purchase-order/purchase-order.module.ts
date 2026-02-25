@@ -9,6 +9,7 @@ import { Supplier } from '../supplier/entities/supplier.entity';
 import { Producto } from '../producto/entities/producto.entity';
 import { QuotationResponse } from '../quotation/entities/quotation-response.entity';
 import { QuotationRequest } from '../quotation/entities/quotation-request.entity';
+import { Users } from '../users/entities/users.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { QuotationRequest } from '../quotation/entities/quotation-request.entity
       Producto,
       QuotationResponse,
       QuotationRequest,
+      Users,
     ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
