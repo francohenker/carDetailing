@@ -26,7 +26,15 @@ export class UserService {
       email: createUserDto.email,
     });
     if (existingUser) {
-      throw new HttpException('Email already in use', 400);
+      throw new HttpException('El email ingresado ya está en uso', 400);
+    }
+    if (createUserDto.phone) {
+      const existingPhone = await this.userRepository.findOneBy({
+        phone: createUserDto.phone,
+      });
+      if (existingPhone) {
+        throw new HttpException('El número de teléfono ingresado ya está en uso', 400);
+      }
     }
     const user = new Users(
       createUserDto.firstname.slice(0, 1).toUpperCase() +

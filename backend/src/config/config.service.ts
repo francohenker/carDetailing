@@ -50,7 +50,7 @@ class ConfigService {
 
       //SINCRONIZAR LA BD (OSEA MIGRACIONES DE LAS ENTIDADES)
       dropSchema: false,
-      synchronize: true,
+      synchronize: false,
       // ssl: this.getValue('POSTGRES_SSL', false) === 'true',
       // ssl: true,
       ssl: {

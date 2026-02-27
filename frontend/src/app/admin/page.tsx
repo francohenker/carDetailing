@@ -309,7 +309,7 @@ export default function AdminPage() {
         email: '',
         phone: '',
         password: '',
-        role: 'user' as 'admin' | 'user' | 'supplier'
+        role: 'user' as 'admin' | 'user' | 'supplier' | 'trabajador'
     })
 
     // Estados para turnos
@@ -999,7 +999,12 @@ export default function AdminPage() {
                 body: JSON.stringify(userForm)
             })
 
-            if (!response.ok) throw new Error('Error creating user')
+            if (!response.ok) {
+                const err = await response.json().catch(() => null)
+                const msg = err?.message || 'No se pudo crear el usuario.'
+                toast.error(msg)
+                return
+            }
 
             toast.success("Usuario creado correctamente")
             setIsUserDialogOpen(false)
@@ -1008,9 +1013,7 @@ export default function AdminPage() {
             fetchDetailedAuditoriaRecords()
         } catch (error) {
             console.error('Error creating user:', error)
-            toast.error("Error", {
-                description: "No se pudo crear el usuario."
-            })
+            toast.error('No se pudo crear el usuario. Verificá los datos e intentá de nuevo.')
         } finally {
             setLoading(false)
         }
@@ -5388,7 +5391,7 @@ export default function AdminPage() {
                                         <Label htmlFor="user-role">Rol</Label>
                                         <Select
                                             value={userForm.role}
-                                            onValueChange={(value: 'admin' | 'user') =>
+                                            onValueChange={(value: 'admin' | 'user' | 'supplier' | 'trabajador') =>
                                                 setUserForm({ ...userForm, role: value })
                                             }
                                         >
@@ -5398,6 +5401,8 @@ export default function AdminPage() {
                                             <SelectContent>
                                                 <SelectItem value="user">Usuario</SelectItem>
                                                 <SelectItem value="admin">Administrador</SelectItem>
+                                                <SelectItem value="supplier">Proveedor</SelectItem>
+                                                <SelectItem value="trabajador">Trabajador</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

@@ -63,7 +63,9 @@ export default function Register() {
                 toast.success('Usuario creado con éxito')
                 window.location.href = '/login'
             } else {
-                toast.error('Error al crear el usuario')
+                const err = await res.json().catch(() => null)
+                const msg = err?.message || 'Error al crear el usuario'
+                toast.error(msg)
             }
         } catch (error) {
             toast.error('Error al crear el usuario: ' + error)

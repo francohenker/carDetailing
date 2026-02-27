@@ -29,6 +29,17 @@ export class CarService {
       throw new Error('Patente inválida');
     }
 
+    // Verificar si la patente ya existe en el sistema
+    const existingCar = await this.carRepository.findOne({
+      where: { patente: createCarDto.patente.toUpperCase() },
+    });
+    if (existingCar) {
+      throw new HttpException(
+        `La patente ${createCarDto.patente.toUpperCase()} ya está registrada en el sistema`,
+        400,
+      );
+    }
+
     // Validar tipo de vehículo activo
     const activeTypes = await this.systemConfigService.getActiveVehicleTypes();
     if (!activeTypes.includes(createCarDto.type)) {

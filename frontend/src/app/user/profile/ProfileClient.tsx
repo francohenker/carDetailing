@@ -289,9 +289,11 @@ export default function ProfileClient() {
             },
             body: JSON.stringify(car),
         })
-            .then((response) => {
+            .then(async (response) => {
                 if (!response.ok) {
-                    throw new Error("Error al agregar el vehículo");
+                    const err = await response.json().catch(() => null);
+                    const msg = err?.message || "Error al agregar el vehículo";
+                    throw new Error(msg);
                 }
                 return response.json();
             })

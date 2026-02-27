@@ -200,6 +200,8 @@ export default function TrabajadorDashboard() {
   const pendingOrdersCount = purchaseOrders.filter(
     (o) => o.status === "PENDIENTE" || o.status === "PARCIAL"
   ).length;
+  const pendienteOrdersCount = purchaseOrders.filter((o) => o.status === "PENDIENTE").length;
+  const parcialOrdersCount = purchaseOrders.filter((o) => o.status === "PARCIAL").length;
 
   return (
     <ProtectedRoute allowedRoles={["trabajador"]}>
@@ -397,7 +399,7 @@ export default function TrabajadorDashboard() {
                     <button
                       key={f}
                       onClick={() => setFilterOrdenes(f)}
-                      className={`px-3 py-1.5 rounded-md text-sm font-medium ${
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5 ${
                         filterOrdenes === f
                           ? "bg-gray-800 text-white"
                           : "bg-white text-gray-600 border hover:bg-gray-50"
@@ -410,6 +412,28 @@ export default function TrabajadorDashboard() {
                         : f === "RECIBIDA"
                         ? "Recibidas"
                         : "Todas"}
+                      {f === "PENDIENTE" && pendienteOrdersCount > 0 && (
+                        <span
+                          className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                            filterOrdenes === f
+                              ? "bg-white text-gray-800"
+                              : "bg-yellow-500 text-white"
+                          }`}
+                        >
+                          {pendienteOrdersCount}
+                        </span>
+                      )}
+                      {f === "PARCIAL" && parcialOrdersCount > 0 && (
+                        <span
+                          className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                            filterOrdenes === f
+                              ? "bg-white text-gray-800"
+                              : "bg-orange-500 text-white"
+                          }`}
+                        >
+                          {parcialOrdersCount}
+                        </span>
+                      )}
                     </button>
                   )
                 )}
