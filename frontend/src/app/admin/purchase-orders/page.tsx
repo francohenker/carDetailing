@@ -206,6 +206,16 @@ export default function PurchaseOrdersPage() {
             toast.error("La cantidad debe ser mayor a 0")
             return
         }
+
+        const isDuplicate = orderForm.items.some(
+            (item) => item.productoId === currentItem.productoId
+        )
+        if (isDuplicate) {
+            toast.error("Producto duplicado", {
+                description: "Este producto ya fue agregado a la orden. Eliminalo y volvé a agregarlo si querés modificar la cantidad."
+            })
+            return
+        }
         
         setOrderForm({
             ...orderForm,

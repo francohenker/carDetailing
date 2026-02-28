@@ -4828,7 +4828,7 @@ export default function AdminPage() {
 
                 {/* DIALOG PARA SERVICIOS */}
                 < Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen} >
-                    <DialogContent>
+                    <DialogContent className="flex flex-col max-h-[90vh]">
                         <DialogHeader>
                             <DialogTitle>
                                 {editingService ? 'Editar Servicio' : 'Nuevo Servicio'}
@@ -4840,8 +4840,8 @@ export default function AdminPage() {
                                 }
                             </DialogDescription>
                         </DialogHeader>
-                        <form onSubmit={handleServiceSubmit} className="space-y-4">
-                            <div className="grid gap-4">
+                        <form onSubmit={handleServiceSubmit} className="flex flex-col flex-1 overflow-hidden space-y-4">
+                            <div className="grid gap-4 overflow-y-auto flex-1 pr-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="service-name">Nombre del servicio</Label>
                                     <Input
@@ -4973,7 +4973,7 @@ export default function AdminPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div>
+                            <div className="flex gap-2 pt-2 border-t shrink-0">
                                 <Button
                                     type="button"
                                     variant="outline"
