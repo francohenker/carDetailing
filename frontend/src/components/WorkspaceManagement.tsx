@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus, Edit2, Trash2, Save, X, ToggleLeft, ToggleRight, Building2 } from "lucide-react"
+import { Plus, Edit2, Trash2, Save, X, ToggleLeft, ToggleRight, Building2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -42,6 +42,13 @@ export default function WorkspaceManagement() {
   const [editingWorkspace, setEditingWorkspace] = useState<WorkSpace | null>(null)
   const [formName, setFormName] = useState("")
   const [formDescription, setFormDescription] = useState("")
+
+  // Delete flow
+  const [deleteConfirmWorkspace, setDeleteConfirmWorkspace] = useState<WorkSpace | null>(null)
+  const [deleteBlockedModal, setDeleteBlockedModal] = useState(false)
+
+  // Toggle last-active-workspace warning
+  const [lastActiveWarnId, setLastActiveWarnId] = useState<number | null>(null)
 
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
 
@@ -121,7 +128,8 @@ export default function WorkspaceManagement() {
     }
   }
 
-  const handleToggle = async (id: number) => {
+  // Executes the toggle API call (called after any required confirmations)
+  const executeToggle = async (id: number) => {
     try {
       const token = localStorage.getItem("jwt")
       const res = await fetch(`${API_URL}/workspace/${id}/toggle`, {
@@ -131,14 +139,34 @@ export default function WorkspaceManagement() {
       if (res.ok) {
         toast.success("Estado actualizado")
         fetchWorkspaces()
+      } else {
+        const err = await res.json()
+        toast.error(err.message || "Error al cambiar estado")
       }
     } catch {
       toast.error("Error al cambiar estado")
     }
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar este espacio?")) return
+  const handleToggle = (ws: WorkSpace) => {
+    // If deactivating the last active workspace, show a warning confirmation first
+    if (ws.isActive && activeCount === 1) {
+      setLastActiveWarnId(ws.id)
+      return
+    }
+    executeToggle(ws.id)
+  }
+
+  const confirmLastActiveToggle = async () => {
+    if (lastActiveWarnId !== null) {
+      await executeToggle(lastActiveWarnId)
+    }
+    setLastActiveWarnId(null)
+  }
+
+  // Executes the delete API call after the "are you sure?" dialog is confirmed
+  const executeDelete = async (id: number) => {
+    setDeleteConfirmWorkspace(null)
     try {
       const token = localStorage.getItem("jwt")
       const res = await fetch(`${API_URL}/workspace/${id}`, {
@@ -146,8 +174,14 @@ export default function WorkspaceManagement() {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (res.ok) {
-        toast.success("Espacio eliminado")
+        toast.success("Espacio eliminado correctamente")
         fetchWorkspaces()
+      } else if (res.status === 409) {
+        // Workspace has assigned turnos — cannot delete, must deactivate
+        setDeleteBlockedModal(true)
+      } else {
+        const err = await res.json()
+        toast.error(err.message || "Error al eliminar espacio")
       }
     } catch {
       toast.error("Error al eliminar espacio")
@@ -212,14 +246,14 @@ export default function WorkspaceManagement() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleToggle(ws.id)}
+                      <Button variant="ghost" size="icon" onClick={() => handleToggle(ws)}
                         title={ws.isActive ? "Desactivar" : "Activar"}>
                         {ws.isActive ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4 text-gray-400" />}
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(ws)}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(ws.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteConfirmWorkspace(ws)}>
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     </TableCell>
@@ -281,6 +315,81 @@ export default function WorkspaceManagement() {
             </Button>
             <Button onClick={handleUpdate}>
               <Save className="h-4 w-4 mr-1" /> Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog confirmar eliminación */}
+      <Dialog open={!!deleteConfirmWorkspace} onOpenChange={(open) => { if (!open) setDeleteConfirmWorkspace(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar espacio de trabajo</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar{" "}
+              <span className="font-semibold text-foreground">{deleteConfirmWorkspace?.name}</span>?
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmWorkspace(null)}>
+              <X className="h-4 w-4 mr-1" /> Cancelar
+            </Button>
+            <Button variant="destructive" onClick={() => deleteConfirmWorkspace && executeDelete(deleteConfirmWorkspace.id)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: no se puede eliminar — tiene turnos asignados */}
+      <Dialog open={deleteBlockedModal} onOpenChange={setDeleteBlockedModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              No se puede eliminar este espacio
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-base text-foreground">
+              Este espacio tiene turnos asignados en el historial por lo que no puede eliminarse.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Si ya no deseas utilizarlo, podés cambiarlo a estado{" "}
+            <span className="font-semibold">Inactivo</span> desde la tabla. Los turnos ya registrados
+            con este espacio no se verán afectados.
+          </p>
+          <DialogFooter>
+            <Button onClick={() => setDeleteBlockedModal(false)}>
+              Entendido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: advertencia al desactivar el último espacio activo */}
+      <Dialog open={lastActiveWarnId !== null} onOpenChange={(open) => { if (!open) setLastActiveWarnId(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Atención: último espacio activo
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Este es el <span className="font-semibold text-foreground">único espacio de trabajo activo</span>.
+            Si lo desactivás, <span className="font-semibold text-destructive">no se podrán agendar nuevos turnos</span> dentro
+            del sistema hasta que vuelvas a activar al menos un espacio.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Los turnos ya registrados no se cancela.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLastActiveWarnId(null)}>
+              <X className="h-4 w-4 mr-1" /> Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmLastActiveToggle}>
+              Desactivar de todas formas
             </Button>
           </DialogFooter>
         </DialogContent>
