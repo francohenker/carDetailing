@@ -111,12 +111,15 @@ const AuditSummary: React.FC<AuditSummaryProps> = ({
     return names[action] || action;
   };
 
+  const SKIP_IN_COUNT = new Set(['id', 'createdAt', 'updatedAt', 'servicioId', 'userId', 'carId', 'turnoId']);
+
   const getChangesCount = () => {
     if (!datosAnteriores || !datosNuevos) return 0;
-
     let count = 0;
-    Object.keys(datosNuevos).forEach((key) => {
-      if (datosAnteriores[key] !== datosNuevos[key]) {
+    const allKeys = new Set([...Object.keys(datosNuevos || {}), ...Object.keys(datosAnteriores || {})]);
+    allKeys.forEach((key) => {
+      if (SKIP_IN_COUNT.has(key)) return;
+      if (JSON.stringify(datosAnteriores[key]) !== JSON.stringify(datosNuevos[key])) {
         count++;
       }
     });

@@ -48,91 +48,102 @@ export class AuditFormatter {
 
   private static formatServicio(data: any): string {
     const parts: string[] = [];
-    if (data.id) parts.push(`ID: ${data.id}`);
     if (data.name) parts.push(`Nombre: ${data.name}`);
     if (data.description) parts.push(`Descripción: ${data.description}`);
     if (data.duration) parts.push(`Duración: ${data.duration} min`);
+    if (data.precio && Array.isArray(data.precio) && data.precio.length > 0) {
+      const precios = data.precio
+        .map((p: any) => {
+          const tipo = p.tipoVehiculo ?? p.tipo ?? '?';
+          const monto = typeof p.precio === 'number'
+            ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(p.precio)
+            : `$${p.precio}`;
+          return `${tipo}: ${monto}`;
+        })
+        .join(', ');
+      parts.push(`Precios: ${precios}`);
+    }
+    if (data.Producto && Array.isArray(data.Producto) && data.Producto.length > 0) {
+      const productos = data.Producto.map((p: any) => p.name ?? p).join(', ');
+      parts.push(`Productos: ${productos}`);
+    }
     return parts.join(' | ');
   }
 
   private static formatProducto(data: any): string {
     const parts: string[] = [];
-    
-    // Destacar ID y nombre al inicio para mayor visibilidad
-    if (data.name) {
-      parts.push(`📦 Producto: ${data.name}`);
+    if (data.name) parts.push(`Nombre: ${data.name}`);
+    if (data.price !== undefined) {
+      const precio = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(data.price);
+      parts.push(`Precio: ${precio}`);
     }
-    if (data.id) {
-      parts.push(`ID: ${data.id}`);
-    }
-    
-    if (data.price !== undefined) parts.push(`Precio: $${data.price}`);
     if (data.stock_actual !== undefined) parts.push(`Stock: ${data.stock_actual}`);
     if (data.stock_minimo !== undefined) parts.push(`Stock Mínimo: ${data.stock_minimo}`);
-    
-    if (data.suppliers && Array.isArray(data.suppliers)) {
-      const proveedores = data.suppliers
-        .map((s: any) => `${s.name || 'Sin nombre'} (ID: ${s.id})`)
-        .join(', ');
+    if (data.suppliers && Array.isArray(data.suppliers) && data.suppliers.length > 0) {
+      const proveedores = data.suppliers.map((s: any) => s.name ?? 'Sin nombre').join(', ');
       parts.push(`Proveedores: ${proveedores}`);
     }
-    
     return parts.join(' | ');
   }
 
   private static formatProveedor(data: any): string {
     const parts: string[] = [];
-    if (data.id) parts.push(`ID: ${data.id}`);
     if (data.name) parts.push(`Nombre: ${data.name}`);
     if (data.email) parts.push(`Email: ${data.email}`);
     if (data.phone) parts.push(`Teléfono: ${data.phone}`);
+    if (data.address) parts.push(`Dirección: ${data.address}`);
     if (data.isActive !== undefined) parts.push(`Estado: ${data.isActive ? 'Activo' : 'Inactivo'}`);
     return parts.join(' | ');
   }
 
   private static formatTurno(data: any): string {
     const parts: string[] = [];
-    if (data.id) parts.push(`ID: ${data.id}`);
-    
     if (data.car?.user) {
       const user = data.car.user;
-      if(user.lastname === null) {
-        parts.push(`Cliente: ${user.firstname}`);
-      } else {
-      parts.push(`Cliente: ${user.firstname} ${user.lastname}`);
-      }
+      const nombre = user.lastname ? `${user.firstname} ${user.lastname}` : user.firstname;
+      parts.push(`Cliente: ${nombre}`);
     }
-    
     if (data.car) {
       const car = data.car;
       parts.push(`Vehículo: ${car.marca} ${car.model} (${car.patente})`);
     }
-    
-    if (data.servicio && Array.isArray(data.servicio)) {
-      const servicios = data.servicio.map((s: any) => `${s.name} (ID: ${s.id})`).join(', ');
+    if (data.fechaHora) {
+      const fecha = new Date(data.fechaHora);
+      parts.push(`Fecha: ${fecha.toLocaleString('es-AR')}`);
+    }
+    if (data.estado) parts.push(`Estado: ${data.estado}`);
+    if (data.servicio && Array.isArray(data.servicio) && data.servicio.length > 0) {
+      const servicios = data.servicio.map((s: any) => s.name ?? `Servicio ${s.id}`).join(', ');
       parts.push(`Servicios: ${servicios}`);
     }
-    
+    if (data.totalPrice !== undefined) {
+      const precio = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(data.totalPrice);
+      parts.push(`Total: ${precio}`);
+    }
     return parts.join(' | ');
   }
 
   private static formatUsuario(data: any): string {
     const parts: string[] = [];
-    if (data.id) parts.push(`ID: ${data.id}`);
-    if (data.firstname && data.lastname) {
-      parts.push(`Nombre: ${data.firstname} ${data.lastname}`);
+    if (data.firstname || data.lastname) {
+      const nombre = [data.firstname, data.lastname].filter(Boolean).join(' ');
+      parts.push(`Nombre: ${nombre}`);
     }
     if (data.email) parts.push(`Email: ${data.email}`);
+    if (data.phone) parts.push(`Teléfono: ${data.phone}`);
     if (data.role) parts.push(`Rol: ${data.role}`);
+    if (data.isActive !== undefined) parts.push(`Estado: ${data.isActive ? 'Activo' : 'Inactivo'}`);
     return parts.join(' | ');
   }
 
   private static formatCar(data: any): string {
     const parts: string[] = [];
-    if (data.id) parts.push(`ID: ${data.id}`);
     if (data.marca) parts.push(`Marca: ${data.marca}`);
     if (data.model) parts.push(`Modelo: ${data.model}`);
+    if (data.year) parts.push(`Año: ${data.year}`);
     if (data.patente) parts.push(`Patente: ${data.patente}`);
+    if (data.type) parts.push(`Tipo: ${data.type}`);
+    if (data.color) parts.push(`Color: ${data.color}`);
     return parts.join(' | ');
   }
 
@@ -198,22 +209,15 @@ export class AuditFormatter {
 
   private static formatGeneral(data: any): string {
     if (typeof data === 'object') {
-      // Intentar formatear de manera genérica
       const parts: string[] = [];
-      
-      if (data.id) parts.push(`ID: ${data.id}`);
       if (data.name) parts.push(`Nombre: ${data.name}`);
       if (data.description) parts.push(`Descripción: ${data.description}`);
-      
       if (parts.length > 0) return parts.join(' | ');
-      
-      // Si no hay campos reconocibles, hacer un resumen simple
-      const keys = Object.keys(data);
+      const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'createdAt' && k !== 'updatedAt');
       if (keys.length > 0) {
-        return `${keys.length} campos actualizados`;
+        return `${keys.length} campo${keys.length > 1 ? 's' : ''} actualizado${keys.length > 1 ? 's' : ''}`;
       }
     }
-    
     return String(data);
   }
 
