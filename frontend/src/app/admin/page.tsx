@@ -1721,6 +1721,13 @@ export default function AdminPage() {
             return
         }
 
+        // Verificar si el producto ya está en la lista
+        const isProductAlreadyAdded = orderForm.items.some(item => item.productId === currentOrderItem.productId)
+        if (isProductAlreadyAdded) {
+            toast.error("Este producto ya está incluido en la orden de compra")
+            return
+        }
+
         setOrderForm({
             ...orderForm,
             items: [...orderForm.items, currentOrderItem]
@@ -5854,7 +5861,8 @@ export default function AdminPage() {
                                                                 !product.isDeleted &&
                                                                 orderForm.supplierId &&
                                                                 product.suppliers &&
-                                                                product.suppliers.some(s => s.id === parseInt(orderForm.supplierId))
+                                                                product.suppliers.some(s => s.id === parseInt(orderForm.supplierId)) &&
+                                                                !orderForm.items.some(item => item.productId === product.id.toString())
                                                             )
                                                             .map((product) => (
                                                                 <SelectItem key={product.id} value={product.id.toString()}>
