@@ -92,12 +92,12 @@ const formatDate = (value: string): string => {
 
 // ─── Verificar si es un array de precios por tipo de vehículo ────────────────
 const isPriceArray = (value: any[]): boolean =>
-  value.length > 0 && value[0] != null && typeof value[0] === 'object' &&
+  value.length > 0 && value[0] !== null && typeof value[0] === 'object' &&
   ('tipoVehiculo' in value[0] || 'precio' in value[0]);
 
 // ─── Verificar si es un array de entidades con nombre ────────────────────────
 const isNamedEntityArray = (value: any[]): boolean =>
-  value.length > 0 && value[0] != null && typeof value[0] === 'object' && 'name' in value[0];
+  value.length > 0 && value[0] !== null && typeof value[0] === 'object' && 'name' in value[0];
 
 // ─── Formateo principal de un valor según su clave ───────────────────────────
 const formatValue = (value: any, key?: string): string => {
@@ -190,7 +190,7 @@ const getChangeColor = (oldValue: any, newValue: any) => {
 
 // ─── Verificar si el dato es un objeto válido (no array) ─────────────────────
 const isValidObject = (data: any): boolean =>
-  data != null && typeof data === 'object' && !Array.isArray(data);
+  data !== null && typeof data === 'object' && !Array.isArray(data);
 
 // ─── Obtener diferencias entre dos objetos ───────────────────────────────────
 const getDifferences = (oldData: any, newData: any) => {
