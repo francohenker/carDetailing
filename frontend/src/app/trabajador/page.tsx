@@ -326,13 +326,8 @@ export default function TrabajadorDashboard() {
                             </p>
                             <p>
                               <strong>Fecha:</strong>{" "}
-                              {new Date(turno.fechaHora).toLocaleDateString(
-                                "es-AR"
-                              )}{" "}
-                              {new Date(turno.fechaHora).toLocaleTimeString(
-                                "es-AR",
-                                { hour: "2-digit", minute: "2-digit" }
-                              )}
+                              {turno.fechaHora.split('T')[0].split('-').reverse().join('/')}{" "}
+                              {turno.fechaHora.split('T')[1]?.substring(0, 5)}
                             </p>
                             <p>
                               <strong>Vehículo:</strong> {turno.car?.marca}{" "}
