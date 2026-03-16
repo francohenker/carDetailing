@@ -3395,9 +3395,9 @@ export default function AdminPage() {
                                                             <div className="flex items-center gap-2">
                                                                 <Clock className="h-4 w-4 text-muted-foreground" />
                                                                 <div>
-                                                                    <div>{new Date(turno.fechaHora).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                                                                    <div>{turno.fechaHora.split('T')[0].split('-').reverse().join('/')}</div>
                                                                     <div className="text-sm text-muted-foreground">
-                                                                        {new Date(turno.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                        {turno.fechaHora.split('T')[1]?.substring(0, 5)}
                                                                     </div>
                                                                 </div>
                                                             </div>
