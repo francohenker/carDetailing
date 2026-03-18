@@ -45,7 +45,7 @@ export class ServicioService {
     // Crear los precios asociados
     if (servicio.precio && servicio.precio.length > 0) {
       const precios = servicio.precio.map((p) => {
-        const precio = new Precio(savedService.id, p.tipoVehiculo, p.precio);
+        const precio = new Precio(savedService.id, p.tipoVehiculo.toUpperCase(), p.precio);
         return precio;
       });
 
@@ -94,7 +94,7 @@ export class ServicioService {
     // Crear nuevos precios
     if (servicio.precio && servicio.precio.length > 0) {
       const nuevosPrecios = servicio.precio.map((p) => {
-        const precio = new Precio(id, p.tipoVehiculo, p.precio);
+        const precio = new Precio(id, p.tipoVehiculo.toUpperCase(), p.precio);
         return precio;
       });
 

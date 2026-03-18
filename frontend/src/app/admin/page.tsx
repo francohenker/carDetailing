@@ -1401,15 +1401,33 @@ export default function AdminPage() {
         }
         setActionLoading('update-vehicle-types')
         try {
+            // Detectar qué tipos se desactivaron
+            const deactivatedTypes = activeVehicleTypes.filter(
+                (type) => !pendingVehicleTypes.includes(type)
+            )
+
             const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/config/vehicle-types`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('jwt')}`
                 },
-                body: JSON.stringify({ types: pendingVehicleTypes })
+                body: JSON.stringify({ 
+                    types: pendingVehicleTypes,
+                    deactivatedTypes: deactivatedTypes
+                })
             })
             if (!response.ok) throw new Error('Error updating vehicle types')
+            
+            // Remover precios de tipos desactivados de la UI inmediatamente
+            if (deactivatedTypes.length > 0) {
+                const updatedServices = services.map(service => ({
+                    ...service,
+                    precio: service.precio ? service.precio.filter(p => !deactivatedTypes.includes(p.tipoVehiculo)) : []
+                }))
+                setServices(updatedServices)
+            }
+            
             toast.success("Éxito", {
                 description: "Tipos de vehículo actualizados correctamente.",
             })
@@ -1467,9 +1485,22 @@ export default function AdminPage() {
                 }
             })
             if (!response.ok) throw new Error('Error removing vehicle type')
+            
+            // Remove prices of this vehicle type from local state
+            const updatedServices = services.map(service => ({
+                ...service,
+                precio: service.precio ? service.precio.filter(p => p.tipoVehiculo !== key) : []
+            }))
+            setServices(updatedServices)
+            
             toast.success("Éxito", { description: "Tipo de vehículo eliminado correctamente." })
-            await fetchVehicleTypes()
-            fetchDetailedAuditoriaRecords()
+            
+            // Refresh all data to ensure consistency
+            await Promise.all([
+                fetchVehicleTypes(),
+                fetchServices(),
+                fetchDetailedAuditoriaRecords()
+            ])
         } catch (error) {
             console.error('Error removing vehicle type:', error)
             toast.error("Error", { description: "No se pudo eliminar el tipo de vehículo." })
@@ -4346,11 +4377,10 @@ export default function AdminPage() {
                                                                 setPendingVehicleTypes(prev => [...prev, vt.key])
                                                             }
                                                         }}
-                                                        className={`w-full rounded-xl border-2 p-4 text-center transition-all hover:shadow-md ${
-                                                            isActive
+                                                        className={`w-full rounded-xl border-2 p-4 text-center transition-all hover:shadow-md ${isActive
                                                                 ? 'border-primary bg-primary/5 shadow-sm'
                                                                 : 'border-gray-200 bg-gray-50 opacity-60'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <div className="text-3xl mb-2">{vt.emoji || '🚗'}</div>
                                                         <div className="font-semibold text-sm">{vt.label}</div>
@@ -6119,8 +6149,8 @@ export default function AdminPage() {
                                                                 item.quantityReceived >= item.quantityOrdered
                                                                     ? "text-green-600 font-medium"
                                                                     : item.quantityReceived > 0
-                                                                    ? "text-orange-600 font-medium"
-                                                                    : ""
+                                                                        ? "text-orange-600 font-medium"
+                                                                        : ""
                                                             }>
                                                                 {item.quantityReceived || 0}
                                                             </span>

@@ -42,8 +42,14 @@ export class SystemConfigController {
     capturarDatosAnteriores: true,
   })
   @Put('vehicle-types')
-  async updateActiveVehicleTypes(@Body('types') types: string[]) {
-    return this.systemConfigService.updateActiveVehicleTypes(types);
+  async updateActiveVehicleTypes(
+    @Body('types') types: string[],
+    @Body('deactivatedTypes') deactivatedTypes?: string[],
+  ) {
+    return this.systemConfigService.updateActiveVehicleTypes(
+      types,
+      deactivatedTypes,
+    );
   }
 
   @Auditar({
@@ -64,6 +70,17 @@ export class SystemConfigController {
   @Delete('vehicle-types/:key')
   async removeVehicleType(@Param('key') key: string) {
     return this.systemConfigService.removeVehicleType(key);
+  }
+
+  @Auditar({
+    accion: TipoAccion.MODIFICAR,
+    entidad: TipoEntidad.SISTEMA,
+    descripcion: 'Limpieza de precios huérfanos',
+  })
+  @Post('cleanup-orphaned-prices')
+  async cleanupOrphanedPrices() {
+    await this.systemConfigService.cleanupOrphanedPrices();
+    return { message: 'Precios huérfanos limpiados correctamente' };
   }
 
   @Get('quotation-thresholds')

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SystemConfig } from './entities/system-config.entity';
+import { Precio } from '../precio/entities/precio.entity';
 import { UpdateQuotationThresholdsDto } from './dto/update-quotation-thresholds.dto';
 
 const DEFAULT_VEHICLE_TYPES = [
@@ -23,6 +24,8 @@ export class SystemConfigService {
   constructor(
     @InjectRepository(SystemConfig)
     private systemConfigRepository: Repository<SystemConfig>,
+    @InjectRepository(Precio)
+    private precioRepository: Repository<Precio>,
   ) {
     this.initializeDefaultConfig();
   }
@@ -143,8 +146,32 @@ export class SystemConfigService {
     return config.value;
   }
 
-  async updateActiveVehicleTypes(types: string[]): Promise<string[]> {
+  async updateActiveVehicleTypes(
+    types: string[],
+    deactivatedTypes?: string[],
+  ): Promise<string[]> {
     await this.updateConfig('active_vehicle_types', types);
+
+    // If types were deactivated, remove their prices from services
+    if (deactivatedTypes && deactivatedTypes.length > 0) {
+      for (const deactivatedType of deactivatedTypes) {
+        const normalizedType = deactivatedType.toUpperCase();
+        const result = await this.precioRepository
+          .createQueryBuilder()
+          .delete()
+          .where('UPPER(tipoVehiculo) = UPPER(:tipoVehiculo)', {
+            tipoVehiculo: normalizedType,
+          })
+          .execute();
+
+        if (result.affected > 0) {
+          console.log(
+            `Se eliminaron ${result.affected} precios del tipo de vehículo desactivado '${normalizedType}'`,
+          );
+        }
+      }
+    }
+
     return types;
   }
 
@@ -158,7 +185,9 @@ export class SystemConfigService {
     return config.value;
   }
 
-  async addVehicleType(definition: VehicleTypeDefinition): Promise<VehicleTypeDefinition[]> {
+  async addVehicleType(
+    definition: VehicleTypeDefinition,
+  ): Promise<VehicleTypeDefinition[]> {
     const allTypes = await this.getAllVehicleTypes();
     const exists = allTypes.find(
       (t) => t.key.toUpperCase() === definition.key.toUpperCase(),
@@ -175,24 +204,69 @@ export class SystemConfigService {
   }
 
   async removeVehicleType(key: string): Promise<VehicleTypeDefinition[]> {
+    const normalizedKey = key.toUpperCase();
     const allTypes = await this.getAllVehicleTypes();
     const filtered = allTypes.filter(
-      (t) => t.key.toUpperCase() !== key.toUpperCase(),
+      (t) => t.key.toUpperCase() !== normalizedKey,
     );
+
     if (filtered.length === allTypes.length) {
       throw new NotFoundException(`El tipo de vehículo '${key}' no existe`);
     }
+
+    // Remove from all types
     await this.updateConfig('all_vehicle_types', filtered);
 
     // Also remove from active types if present
     const activeTypes = await this.getActiveVehicleTypes();
     const filteredActive = activeTypes.filter(
-      (t) => t.toUpperCase() !== key.toUpperCase(),
+      (t) => t.toUpperCase() !== normalizedKey,
     );
     if (filteredActive.length !== activeTypes.length) {
       await this.updateConfig('active_vehicle_types', filteredActive);
     }
 
+    // Remove all service prices associated with this vehicle type
+    // Use QueryBuilder for case-insensitive deletion to handle any data inconsistencies
+    const result = await this.precioRepository
+      .createQueryBuilder()
+      .delete()
+      .where('UPPER(tipoVehiculo) = UPPER(:tipoVehiculo)', {
+        tipoVehiculo: normalizedKey,
+      })
+      .execute();
+
+    if (result.affected === 0) {
+      console.warn(
+        `No se encontraron precios para el tipo de vehículo '${normalizedKey}'`,
+      );
+    } else {
+      console.log(
+        `Se eliminaron ${result.affected} precios del tipo de vehículo '${normalizedKey}'`,
+      );
+    }
+
     return filtered;
+  }
+
+  async cleanupOrphanedPrices(): Promise<void> {
+    const validTypes = await this.getAllVehicleTypes();
+    const validKeys = validTypes.map((t) => t.key.toUpperCase());
+
+    // Find all prices that don't match any valid vehicle type
+    const allPrices = await this.precioRepository.find();
+    const orphanedPrices = allPrices.filter(
+      (p) => !validKeys.includes(p.tipoVehiculo.toUpperCase()),
+    );
+
+    if (orphanedPrices.length > 0) {
+      console.log(
+        `Encontrados ${orphanedPrices.length} precios huérfanos. Eliminando...`,
+      );
+      await this.precioRepository.remove(orphanedPrices);
+      console.log(
+        `Se eliminaron ${orphanedPrices.length} precios de tipos de vehículos que no existen`,
+      );
+    }
   }
 }
