@@ -21,6 +21,12 @@ interface Turno {
     };
   };
   servicio: { id: number; name: string }[];
+  workspace?: {
+    id: number;
+    name: string;
+    description?: string;
+    isActive: boolean;
+  };
 }
 
 interface PurchaseOrderItem {
@@ -335,6 +341,10 @@ export default function TrabajadorDashboard() {
                             </p>
                             <p>
                               <strong>Duración:</strong> {turno.duration} min
+                            </p>
+                            <p>
+                              <strong>Espacio de Trabajo:</strong>{" "}
+                              {turno.workspace?.name || "Sin asignar"}
                             </p>
                             <p>
                               <strong>Precio:</strong> $

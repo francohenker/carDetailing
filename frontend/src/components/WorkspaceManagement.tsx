@@ -50,6 +50,10 @@ export default function WorkspaceManagement() {
   // Toggle last-active-workspace warning
   const [lastActiveWarnId, setLastActiveWarnId] = useState<number | null>(null)
 
+  // Toggle deactivation info modal
+  const [deactivationInfoWorkspace, setDeactivationInfoWorkspace] = useState<WorkSpace | null>(null)
+  const [turnosCount, setTurnosCount] = useState<number>(0)
+
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
 
   const fetchWorkspaces = async () => {
@@ -154,7 +158,32 @@ export default function WorkspaceManagement() {
       setLastActiveWarnId(ws.id)
       return
     }
+    
+    // If deactivating (not the last active), show info modal about turnos
+    if (ws.isActive) {
+      setDeactivationInfoWorkspace(ws)
+      // Fetch the turnos count for this workspace
+      fetchTurnosCount(ws.id)
+      return
+    }
+    
+    // If activating, just execute toggle directly
     executeToggle(ws.id)
+  }
+
+  const fetchTurnosCount = async (workspaceId: number) => {
+    try {
+      const token = localStorage.getItem("jwt")
+      const res = await fetch(`${API_URL}/workspace/${workspaceId}/turnos-count`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setTurnosCount(data.turnosCount)
+      }
+    } catch {
+      setTurnosCount(0)
+    }
   }
 
   const confirmLastActiveToggle = async () => {
@@ -390,6 +419,59 @@ export default function WorkspaceManagement() {
             </Button>
             <Button variant="destructive" onClick={confirmLastActiveToggle}>
               Desactivar de todas formas
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: información sobre desactivación de espacio */}
+      <Dialog open={!!deactivationInfoWorkspace} onOpenChange={(open) => { if (!open) setDeactivationInfoWorkspace(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-blue-500" />
+              Desactivar espacio de trabajo
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-base text-foreground">
+              Estás a punto de desactivar <span className="font-semibold">{deactivationInfoWorkspace?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                ℹ️ Información importante:
+              </p>
+              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">•</span>
+                  <span>Los <strong>{turnosCount} turno(s)</strong> asociado(s) a este espacio <strong>NO se cancelarán</strong></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">•</span>
+                  <span>Los turnos <strong>deben realizarse igualmente</strong> en este espacio</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">•</span>
+                  <span>No se asignarán <strong>nuevos turnos</strong> a este espacio</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">•</span>
+                  <span>Podés reactivar el espacio en cualquier momento desde esta tabla</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeactivationInfoWorkspace(null)}>
+              <X className="h-4 w-4 mr-1" /> Cancelar
+            </Button>
+            <Button variant="destructive" onClick={() => {
+              if (deactivationInfoWorkspace) {
+                executeToggle(deactivationInfoWorkspace.id)
+                setDeactivationInfoWorkspace(null)
+              }
+            }}>
+              Desactivar
             </Button>
           </DialogFooter>
         </DialogContent>

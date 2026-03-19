@@ -87,46 +87,56 @@ export default function HeaderDefault() {
 
                 <ThemeToggleButton />
 
-                <div className="dropdown dropdown-end px-2 ">
-                    <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
-                        <div className="text-neutral-content w-14 rounded-full bg-base-content">
-                            <span className="text-2xl text-base-100">{initial}</span>
+                {isAuthenticated && (
+                    <div className="dropdown dropdown-end px-2 ">
+                        <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
+                            <div className="text-neutral-content w-14 rounded-full bg-base-content">
+                                <span className="text-2xl text-base-100">{initial}</span>
+                            </div>
                         </div>
-                    </div>
-                    <ul
-                        // tabIndex={0}
-                        className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow text-base-content">
-                        {isAuthenticated ?
-                            <>
-                                {user?.role === 'admin' &&
-                                    <li><a href="/admin" className="justify-between">Admin</a></li>
-                                }
-                                {user?.role === 'supplier' &&
-                                    <li>
-                                        <a href="/supplier" className="justify-between">
-                                            Panel Proveedor
-                                            {pendingCount > 0 && (
-                                                <span className="badge badge-sm badge-error text-white">{pendingCount}</span>
-                                            )}
-                                        </a>
-                                    </li>
-                                }
-                                {user?.role === 'trabajador' &&
-                                    <li>
-                                        <a href="/trabajador" className="justify-between">
-                                            Panel Trabajador
-                                        </a>
-                                    </li>
-                                }
-                                <li><a href="/user/profile" className="justify-between">Perfil</a></li>
-                                {/* <li><a href="/user/settings">Configuración</a></li> */}
-                                <li><a href="#/logout" onClick={handlerLogout}>{'Cerrar sesión'}</a></li>
-                            </> :
-                            <li><a href="#/login" onClick={handleLogin}>{'Iniciar sesión'}</a></li>
-                        }
-                    </ul>
+                        <ul
+                            // tabIndex={0}
+                            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow text-base-content">
+                            {/* Información del usuario */}
+                            <li className="menu-title">
+                                <span className="font-bold">{user?.name || 'Usuario'}</span>
+                            </li>
+                            <li><hr /></li>
+                            
+                            {user?.role === 'admin' &&
+                                <li><a href="/admin" className="justify-between">Admin</a></li>
+                            }
+                            {user?.role === 'supplier' &&
+                                <li>
+                                    <a href="/supplier" className="justify-between">
+                                        Panel Proveedor
+                                        {pendingCount > 0 && (
+                                            <span className="badge badge-sm badge-error text-white">{pendingCount}</span>
+                                        )}
+                                    </a>
+                                </li>
+                            }
+                            {user?.role === 'trabajador' &&
+                                <li>
+                                    <a href="/trabajador" className="justify-between">
+                                        Panel Trabajador
+                                    </a>
+                                </li>
+                            }
+                            <li><a href="/user/profile" className="justify-between">Perfil</a></li>
+                            {/* <li><a href="/user/settings">Configuración</a></li> */}
+                            <li><a href="#/logout" onClick={handlerLogout}>{'Cerrar sesión'}</a></li>
+                        </ul>
 
-                </div>
+                    </div>
+                )}
+                {!isAuthenticated && (
+                    <div className="px-2">
+                        <Button onClick={handleLogin} className="bg-red-600 hover:bg-red-700">
+                            Iniciar sesión
+                        </Button>
+                    </div>
+                )}
             </div>
 
         </header>

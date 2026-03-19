@@ -87,4 +87,10 @@ export class WorkspaceService {
   async getActiveCount(): Promise<number> {
     return await this.workspaceRepository.count({ where: { isActive: true } });
   }
+
+  async getTurnoCount(id: number): Promise<number> {
+    return await this.turnoRepository.count({
+      where: { workspace: { id } },
+    });
+  }
 }

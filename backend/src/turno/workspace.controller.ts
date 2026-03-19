@@ -64,6 +64,13 @@ export class WorkspaceController {
     return await this.workspaceService.toggleActive(id);
   }
 
+  @Get(':id/turnos-count')
+  @Roles(Role.ADMIN)
+  async getTurnoCount(@Param('id', ParseIntPipe) id: number) {
+    const count = await this.workspaceService.getTurnoCount(id);
+    return { turnosCount: count };
+  }
+
   @Delete(':id')
   @Roles(Role.ADMIN)
   async remove(@Param('id', ParseIntPipe) id: number) {

@@ -142,7 +142,8 @@ export class TurnoService {
     const newTurnoEnd = new Date(dateObj);
     newTurnoEnd.setMinutes(newTurnoEnd.getMinutes() + duration);
 
-    // Para cada workspace, verificar si está libre en el horario
+    // Recopilar todos los workspaces libres en el horario solicitado
+    const freeWorkspaces: WorkSpace[] = [];
     for (const workspace of activeWorkspaces) {
       let isFree = true;
       for (const turno of existingTurnos) {
@@ -159,10 +160,39 @@ export class TurnoService {
           break;
         }
       }
-      if (isFree) return workspace;
+      if (isFree) freeWorkspaces.push(workspace);
     }
 
-    return null;
+    if (freeWorkspaces.length === 0) return null;
+
+    // Selección aleatoria (Fisher-Yates shuffle, tomar el primero)
+    for (let i = freeWorkspaces.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [freeWorkspaces[i], freeWorkspaces[j]] = [
+        freeWorkspaces[j],
+        freeWorkspaces[i],
+      ];
+    }
+    return freeWorkspaces[0];
+  }
+
+  /**
+   * Calcula el precio total de un turno basado en los servicios y tipo de vehículo
+   * @param servicios - Array de servicios con precios
+   * @param tipoVehiculo - Tipo de vehículo para obtener el precio correcto
+   * @returns Precio total calculado
+   */
+  private calculateTotalPrice(servicios: any[], tipoVehiculo: string): number {
+    const tipoVehiculoUpper = tipoVehiculo.toUpperCase();
+
+    return servicios.reduce((total, servicio) => {
+      // Buscar el precio para el tipo de vehículo específico
+      const precioServicio = servicio.precio?.find(
+        (p: any) => p.tipoVehiculo === tipoVehiculoUpper,
+      );
+
+      return total + (precioServicio ? Number(precioServicio.precio) : 0);
+    }, 0);
   }
 
   //VERIFICAR!!!!!!!!!!, agregar validaciones con respecto a la fecha (y posiblemente a los demas campos, try no funciona como deberia)
@@ -211,6 +241,14 @@ export class TurnoService {
 
       const servicios = await this.servicioService.findByIds(turno.servicios);
       existingTurno.servicio = servicios;
+
+      // Recalcular el precio total basado en los nuevos servicios
+      const nuevoTotalPrice = this.calculateTotalPrice(
+        servicios,
+        existingTurno.car.type,
+      );
+      existingTurno.totalPrice = nuevoTotalPrice;
+
       this.turnoRepository.save(existingTurno);
     } catch (error) {
       throw new HttpException('Error modifying Turno: ' + error.message, 500);
@@ -445,7 +483,7 @@ export class TurnoService {
 
   async findAll(): Promise<Turno[]> {
     return await this.turnoRepository.find({
-      relations: ['car', 'car.user', 'servicio', 'pago'],
+      relations: ['car', 'car.user', 'servicio', 'pago', 'workspace'],
       order: {
         fechaHora: 'DESC',
       },
@@ -685,6 +723,22 @@ export class TurnoService {
               <div class="total-price">
                 💰 Total: $${turno.totalPrice.toLocaleString('es-AR')}
               </div>
+
+              ${
+                turno.workspace
+                  ? `
+                <div style="background-color: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                  <h3 style="margin-top: 0; color: #2e7d32;">📍 Espacio de Trabajo Asignado</h3>
+                  <p style="margin: 0;"><strong>${turno.workspace.name}</strong></p>
+                  ${
+                    turno.workspace.description
+                      ? `<p style="margin: 8px 0 0 0; color: #555;">${turno.workspace.description}</p>`
+                      : ''
+                  }
+                </div>
+              `
+                  : ''
+              }
 
               ${
                 turno.observacion

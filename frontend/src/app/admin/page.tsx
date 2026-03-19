@@ -157,6 +157,12 @@ interface Turno {
     }
     servicio: Service[]
     pago: Pago[]
+    workspace?: {
+        id: number
+        name: string
+        description?: string
+        isActive: boolean
+    }
 }
 
 interface Pago {
@@ -311,6 +317,15 @@ export default function AdminPage() {
         password: '',
         role: 'user' as 'admin' | 'user' | 'supplier' | 'trabajador'
     })
+
+    // Estados para filtros y paginación de usuarios
+    const [userSearchName, setUserSearchName] = useState('')
+    const [userSearchEmail, setUserSearchEmail] = useState('')
+    const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'admin' | 'user' | 'supplier' | 'trabajador'>('all')
+    const [userSortField, setUserSortField] = useState<'name' | 'email' | 'role'>('name')
+    const [userSortOrder, setUserSortOrder] = useState<'asc' | 'desc'>('asc')
+    const [currentPageUsers, setCurrentPageUsers] = useState(1)
+    const itemsPerPageUsers = 10
 
     // Estados para turnos
     const [turnos, setTurnos] = useState<Turno[]>([])
@@ -3292,72 +3307,247 @@ export default function AdminPage() {
                                         Nuevo Usuario
                                     </Button>
                                 </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Nombre</TableHead>
-                                                <TableHead>Email</TableHead>
-                                                <TableHead>Telefono</TableHead>
-                                                <TableHead>Rol Actual</TableHead>
-                                                <TableHead>Cambiar Rol</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {users.map((user) => (
-                                                <TableRow key={user.id}>
-                                                    <TableCell className="font-medium">
-                                                        {user.firstname} {user.lastname}
-                                                    </TableCell>
-                                                    <TableCell>{user.email}</TableCell>
-                                                    <TableCell>{user.phone}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={user.role === 'admin' ? "default" : user.role === 'supplier' ? "outline" : user.role === 'trabajador' ? "outline" : "secondary"}>
-                                                            {user.role === 'admin' ? (
-                                                                <>
-                                                                    <ShieldCheck className="h-3 w-3 mr-1" />
-                                                                    Administrador
-                                                                </>
-                                                            ) : user.role === 'supplier' ? (
-                                                                <>
-                                                                    <Package className="h-3 w-3 mr-1" />
-                                                                    Proveedor
-                                                                </>
-                                                            ) : user.role === 'trabajador' ? (
-                                                                <>
-                                                                    <Shield className="h-3 w-3 mr-1" />
-                                                                    Trabajador
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Shield className="h-3 w-3 mr-1" />
-                                                                    Usuario
-                                                                </>
-                                                            )}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Select
-                                                            value={user.role}
-                                                            onValueChange={(newRole: 'admin' | 'user' | 'supplier' | 'trabajador') =>
-                                                                handleChangeUserRole(user.id, newRole)
+                                <CardContent className="space-y-4">
+                                    {/* Filtros de usuarios */}
+                                    <div className="flex flex-wrap gap-3 items-end">
+                                        <div className="flex-1 min-w-[180px]">
+                                            <Label className="text-xs text-muted-foreground mb-1 block">Buscar por nombre</Label>
+                                            <div className="relative">
+                                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Nombre o apellido..."
+                                                    value={userSearchName}
+                                                    onChange={(e) => { setUserSearchName(e.target.value); setCurrentPageUsers(1) }}
+                                                    className="pl-8"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 min-w-[180px]">
+                                            <Label className="text-xs text-muted-foreground mb-1 block">Buscar por email</Label>
+                                            <div className="relative">
+                                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Email..."
+                                                    value={userSearchEmail}
+                                                    onChange={(e) => { setUserSearchEmail(e.target.value); setCurrentPageUsers(1) }}
+                                                    className="pl-8"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="min-w-[150px]">
+                                            <Label className="text-xs text-muted-foreground mb-1 block">Filtrar por rol</Label>
+                                            <Select value={userRoleFilter} onValueChange={(v: typeof userRoleFilter) => { setUserRoleFilter(v); setCurrentPageUsers(1) }}>
+                                                <SelectTrigger>
+                                                    <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Todos los roles</SelectItem>
+                                                    <SelectItem value="user">Usuario</SelectItem>
+                                                    <SelectItem value="admin">Administrador</SelectItem>
+                                                    <SelectItem value="supplier">Proveedor</SelectItem>
+                                                    <SelectItem value="trabajador">Trabajador</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="min-w-[150px]">
+                                            <Label className="text-xs text-muted-foreground mb-1 block">Ordenar por</Label>
+                                            <Select value={userSortField} onValueChange={(v: typeof userSortField) => setUserSortField(v)}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="name">Nombre</SelectItem>
+                                                    <SelectItem value="email">Email</SelectItem>
+                                                    <SelectItem value="role">Rol</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            title={userSortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+                                            onClick={() => setUserSortOrder(o => o === 'asc' ? 'desc' : 'asc')}
+                                        >
+                                            {userSortOrder === 'asc' ? '↑' : '↓'}
+                                        </Button>
+                                        {(userSearchName || userSearchEmail || userRoleFilter !== 'all') && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => { setUserSearchName(''); setUserSearchEmail(''); setUserRoleFilter('all'); setCurrentPageUsers(1) }}
+                                            >
+                                                <X className="h-4 w-4 mr-1" />
+                                                Limpiar filtros
+                                            </Button>
+                                        )}
+                                    </div>
+
+                                    {/* Tabla de usuarios */}
+                                    {(() => {
+                                        // Filtrar
+                                        const filteredUsers = users
+                                            .filter(u => {
+                                                const fullName = `${u.firstname} ${u.lastname}`.toLowerCase()
+                                                const nameMatch = !userSearchName || fullName.includes(userSearchName.toLowerCase())
+                                                const emailMatch = !userSearchEmail || u.email.toLowerCase().includes(userSearchEmail.toLowerCase())
+                                                const roleMatch = userRoleFilter === 'all' || u.role === userRoleFilter
+                                                return nameMatch && emailMatch && roleMatch
+                                            })
+                                            .sort((a, b) => {
+                                                let valA = '', valB = ''
+                                                if (userSortField === 'name') { valA = `${a.firstname} ${a.lastname}`; valB = `${b.firstname} ${b.lastname}` }
+                                                else if (userSortField === 'email') { valA = a.email; valB = b.email }
+                                                else if (userSortField === 'role') { valA = a.role; valB = b.role }
+                                                return userSortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
+                                            })
+
+                                        const totalPagesUsers = Math.max(1, Math.ceil(filteredUsers.length / itemsPerPageUsers))
+                                        const safePage = Math.min(currentPageUsers, totalPagesUsers)
+                                        const pageUsers = filteredUsers.slice((safePage - 1) * itemsPerPageUsers, safePage * itemsPerPageUsers)
+
+                                        return (
+                                            <>
+                                                <div className="text-sm text-muted-foreground">
+                                                    Mostrando {filteredUsers.length === 0 ? 0 : (safePage - 1) * itemsPerPageUsers + 1}–{Math.min(safePage * itemsPerPageUsers, filteredUsers.length)} de {filteredUsers.length} usuarios
+                                                </div>
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Nombre</TableHead>
+                                                            <TableHead>Email</TableHead>
+                                                            <TableHead>Teléfono</TableHead>
+                                                            <TableHead>Rol Actual</TableHead>
+                                                            <TableHead>Cambiar Rol</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {pageUsers.length === 0 ? (
+                                                            <TableRow>
+                                                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                                                    No se encontraron usuarios con los filtros aplicados.
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ) : pageUsers.map((user) => (
+                                                            <TableRow key={user.id}>
+                                                                <TableCell className="font-medium">
+                                                                    {user.firstname} {user.lastname}
+                                                                </TableCell>
+                                                                <TableCell>{user.email}</TableCell>
+                                                                <TableCell>{user.phone}</TableCell>
+                                                                <TableCell>
+                                                                    <Badge variant={user.role === 'admin' ? "default" : user.role === 'supplier' ? "outline" : user.role === 'trabajador' ? "outline" : "secondary"}>
+                                                                        {user.role === 'admin' ? (
+                                                                            <>
+                                                                                <ShieldCheck className="h-3 w-3 mr-1" />
+                                                                                Administrador
+                                                                            </>
+                                                                        ) : user.role === 'supplier' ? (
+                                                                            <>
+                                                                                <Package className="h-3 w-3 mr-1" />
+                                                                                Proveedor
+                                                                            </>
+                                                                        ) : user.role === 'trabajador' ? (
+                                                                            <>
+                                                                                <Shield className="h-3 w-3 mr-1" />
+                                                                                Trabajador
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Shield className="h-3 w-3 mr-1" />
+                                                                                Usuario
+                                                                            </>
+                                                                        )}
+                                                                    </Badge>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Select
+                                                                        value={user.role}
+                                                                        onValueChange={(newRole: 'admin' | 'user' | 'supplier' | 'trabajador') =>
+                                                                            handleChangeUserRole(user.id, newRole)
+                                                                        }
+                                                                    >
+                                                                        <SelectTrigger className="w-32">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="user">Usuario</SelectItem>
+                                                                            <SelectItem value="admin">Admin</SelectItem>
+                                                                            <SelectItem value="supplier">Proveedor</SelectItem>
+                                                                            <SelectItem value="trabajador">Trabajador</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+
+                                                {/* Controles de paginación */}
+                                                {totalPagesUsers > 1 && (
+                                                    <div className="flex items-center justify-between pt-2">
+                                                        <span className="text-sm text-muted-foreground">Página {safePage} de {totalPagesUsers}</span>
+                                                        <div className="flex items-center gap-1">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setCurrentPageUsers(1)}
+                                                                disabled={safePage === 1}
+                                                            >
+                                                                «
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setCurrentPageUsers(p => Math.max(1, p - 1))}
+                                                                disabled={safePage === 1}
+                                                            >
+                                                                <ChevronLeft className="h-4 w-4" />
+                                                            </Button>
+                                                            {Array.from({ length: totalPagesUsers }, (_, i) => i + 1)
+                                                                .filter(p => p === 1 || p === totalPagesUsers || Math.abs(p - safePage) <= 1)
+                                                                .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                                                                    if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('...')
+                                                                    acc.push(p)
+                                                                    return acc
+                                                                }, [])
+                                                                .map((p, idx) =>
+                                                                    p === '...' ? (
+                                                                        <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">…</span>
+                                                                    ) : (
+                                                                        <Button
+                                                                            key={p}
+                                                                            variant={safePage === p ? "default" : "outline"}
+                                                                            size="sm"
+                                                                            onClick={() => setCurrentPageUsers(p as number)}
+                                                                        >
+                                                                            {p}
+                                                                        </Button>
+                                                                    )
+                                                                )
                                                             }
-                                                        >
-                                                            <SelectTrigger className="w-32">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="user">Usuario</SelectItem>
-                                                                <SelectItem value="admin">Admin</SelectItem>
-                                                                <SelectItem value="supplier">Proveedor</SelectItem>
-                                                                <SelectItem value="trabajador">Trabajador</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setCurrentPageUsers(p => Math.min(totalPagesUsers, p + 1))}
+                                                                disabled={safePage === totalPagesUsers}
+                                                            >
+                                                                ›
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setCurrentPageUsers(totalPagesUsers)}
+                                                                disabled={safePage === totalPagesUsers}
+                                                            >
+                                                                »
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )
+                                    })()}
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -3394,6 +3584,7 @@ export default function AdminPage() {
                                                 <TableHead>Cliente</TableHead>
                                                 <TableHead>Vehículo</TableHead>
                                                 <TableHead>Fecha y Hora</TableHead>
+                                                <TableHead>Espacio de Trabajo</TableHead>
                                                 <TableHead>Servicios</TableHead>
                                                 <TableHead>Total</TableHead>
                                                 <TableHead>Estado Turno</TableHead>
@@ -3437,6 +3628,14 @@ export default function AdminPage() {
                                                                     <div className="text-sm text-muted-foreground">
                                                                         {turno.fechaHora.split('T')[1]?.substring(0, 5)}
                                                                     </div>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                                                <div className="text-sm font-medium">
+                                                                    {turno.workspace?.name || 'Sin asignar'}
                                                                 </div>
                                                             </div>
                                                         </TableCell>
