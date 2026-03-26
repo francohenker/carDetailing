@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsString, Max, Min, ValidateNested } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+  IsBoolean,
+} from 'class-validator';
 import { Precio } from '../../precio/entities/precio.entity';
 
 export class UpdateServicioDto {
@@ -25,4 +32,11 @@ export class UpdateServicioDto {
   @Min(30)
   @Max(10000)
   duration: number;
+
+  @IsNumber()
+  @Min(0)
+  durationDays?: number; // Número de días si es servicio multi-día
+
+  @IsBoolean()
+  isMultiDay?: boolean; // Indica si es un servicio que dura múltiples días
 }

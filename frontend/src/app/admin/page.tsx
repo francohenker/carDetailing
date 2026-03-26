@@ -110,6 +110,8 @@ interface Service {
     description: string
     precio?: Precio[]
     duration: number
+    durationDays?: number
+    isMultiDay?: boolean
     Producto?: Product[]
     isDeleted?: boolean
 }
@@ -283,6 +285,8 @@ export default function AdminPage() {
         description: '',
         precio: [] as { tipoVehiculo: string; precio: number }[],
         duration: 30,
+        durationDays: 0,
+        isMultiDay: false,
         productId: [] as number[]
     })
     const [selectedVehicleTypes, setSelectedVehicleTypes] = useState<string[]>([])
@@ -541,6 +545,17 @@ export default function AdminPage() {
         name: ''
     })
 
+    // Estado para validación de 10 horas
+    const [maxHoursExceededDialog, setMaxHoursExceededDialog] = useState<{
+        isOpen: boolean
+        durationMinutes: number
+        requiredDays: number
+    }>({
+        isOpen: false,
+        durationMinutes: 0,
+        requiredDays: 0
+    })
+
     // ============ FUNCIONES DE AUTENTICACIÓN ============
     const fetchCurrentUser = async () => {
         try {
@@ -684,6 +699,19 @@ export default function AdminPage() {
             })
             return
         }
+
+        // Validación: No permitir más de 10 horas (600 minutos) sin marcar como multi-día
+        const MAX_HOURS_MINUTES = 600 // 10 horas
+        if (serviceForm.duration > MAX_HOURS_MINUTES && !serviceForm.isMultiDay) {
+            const requiredDays = Math.ceil(serviceForm.duration / (10 * 60)) // Suponiendo 10 horas de trabajo por día
+            setMaxHoursExceededDialog({
+                isOpen: true,
+                durationMinutes: serviceForm.duration,
+                requiredDays: requiredDays
+            })
+            return
+        }
+
         setLoading(true)
         setActionLoading('service-submit')
         try {
@@ -738,6 +766,8 @@ export default function AdminPage() {
                 precio: p.precio
             })),
             duration: service.duration,
+            durationDays: (service as any).durationDays || 0,
+            isMultiDay: (service as any).isMultiDay || false,
             productId: service.Producto?.map(p => p.id) || []
         })
         setIsServiceDialogOpen(true)
@@ -777,6 +807,8 @@ export default function AdminPage() {
             description: '',
             precio: [],
             duration: 30,
+            durationDays: 0,
+            isMultiDay: false,
             productId: []
         })
         setSelectedVehicleTypes([])
@@ -1634,6 +1666,20 @@ export default function AdminPage() {
         }).format(amount)
     }
 
+    const formatDuration = (minutes: number): string => {
+        if (minutes >= 60) {
+            const hours = Math.floor(minutes / 60)
+            const remainingMinutes = minutes % 60
+            if (remainingMinutes === 0) {
+                return `${hours}h`
+            } else {
+                return `${hours}h ${remainingMinutes}min`
+            }
+        } else {
+            return `${minutes}min`
+        }
+    }
+
     // ============ AUDITORÍA DETALLADA ============
     const fetchDetailedAuditoriaRecords = async (page = 1) => {
         try {
@@ -2469,7 +2515,11 @@ export default function AdminPage() {
                                             Administra los servicios disponibles para los clientes.
                                         </CardDescription>
                                     </div>
-                                    <Button onClick={() => setIsServiceDialogOpen(true)}>
+                                    <Button onClick={() => {
+                                        setEditingService(null)
+                                        resetServiceForm()
+                                        setIsServiceDialogOpen(true)
+                                    }}>
                                         <Plus className="h-4 w-4 mr-2" />
                                         Nuevo Servicio
                                     </Button>
@@ -2559,7 +2609,22 @@ export default function AdminPage() {
                                                                 </div>
                                                             )}
                                                         </TableCell>
-                                                        <TableCell className="">{service.duration} min</TableCell>
+                                                        <TableCell className="">
+                                                            <div className="space-y-1">
+                                                                <div className="text-sm">
+                                                                    {(service as any).isMultiDay ? (
+                                                                        <span className="font-semibold text-amber-600">
+                                                                            ⏱️ {(service as any).durationDays} día(s)
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span>{formatDuration(service.duration)}</span>
+                                                                    )}
+                                                                </div>
+                                                                {(service as any).isMultiDay && (
+                                                                    <div className="text-xs text-muted-foreground">(Multi-día)</div>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell>
                                                             <div className="flex gap-2">
                                                                 {service.isDeleted ? (
@@ -5070,7 +5135,13 @@ export default function AdminPage() {
                 </main >
 
                 {/* DIALOG PARA SERVICIOS */}
-                < Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen} >
+                < Dialog open={isServiceDialogOpen} onOpenChange={(open) => {
+                    setIsServiceDialogOpen(open)
+                    if (!open) {
+                        resetServiceForm()
+                        setEditingService(null)
+                    }
+                }} >
                     <DialogContent className="flex flex-col max-h-[90vh]">
                         <DialogHeader>
                             <DialogTitle>
@@ -5173,8 +5244,65 @@ export default function AdminPage() {
                                             type="number"
                                             value={serviceForm.duration}
                                             onChange={(e) => setServiceForm({ ...serviceForm, duration: Number(e.target.value) })}
+                                            disabled={serviceForm.isMultiDay}
                                             required
+                                            className={serviceForm.isMultiDay ? 'opacity-50 cursor-not-allowed' : ''}
                                         />
+                                        {serviceForm.isMultiDay && (
+                                            <p className="text-xs text-amber-600 mt-1">
+                                                💡 Este campo está desactivado porque el servicio es multi-día. La duración se calcula automáticamente.
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Sección Multi-Día */}
+                                    <div className="space-y-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                id="service-multiday"
+                                                type="checkbox"
+                                                checked={serviceForm.isMultiDay}
+                                                onChange={(e) => {
+                                                    setServiceForm({
+                                                        ...serviceForm,
+                                                        isMultiDay: e.target.checked,
+                                                        durationDays: e.target.checked ? 1 : 0
+                                                    })
+                                                }}
+                                                className="w-4 h-4 cursor-pointer"
+                                            />
+                                            <Label
+                                                htmlFor="service-multiday"
+                                                className="text-sm font-semibold text-amber-900 cursor-pointer"
+                                            >
+                                                ⏱️ ¿Este servicio dura múltiples días?
+                                            </Label>
+                                        </div>
+
+                                        {serviceForm.isMultiDay && (
+                                            <div className="space-y-2 mt-3">
+                                                <Label htmlFor="service-duration-days" className="text-sm text-amber-900">
+                                                    Número de días que durará el servicio
+                                                </Label>
+                                                <Input
+                                                    id="service-duration-days"
+                                                    type="number"
+                                                    min="1"
+                                                    max="30"
+                                                    value={serviceForm.durationDays}
+                                                    onChange={(e) =>
+                                                        setServiceForm({
+                                                            ...serviceForm,
+                                                            durationDays: Number(e.target.value)
+                                                        })
+                                                    }
+                                                    placeholder="Ej: 3"
+                                                />
+                                                <p className="text-xs text-amber-800 mt-2">
+                                                    💡 El espacio de trabajo estará ocupado durante todo el horario de atención (8:00 - 18:00) de los días especificados.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -5706,6 +5834,70 @@ export default function AdminPage() {
                                 ) : (
                                     "Eliminar"
                                 )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog >
+
+                {/* Modal de Validación: Duración Máxima de 10 Horas sin Multi-Día */}
+                < Dialog open={maxHoursExceededDialog.isOpen} onOpenChange={(open) =>
+                    setMaxHoursExceededDialog({ ...maxHoursExceededDialog, isOpen: open })
+                }>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-amber-600">
+                                <Clock className="h-5 w-5" />
+                                ⏱️ Duración Excede 10 Horas
+                            </DialogTitle>
+                            <DialogDescription>
+                                Un servicio no puede durar más de 10 horas en un día. Necesita marcarse como servicio multi-día.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="bg-amber-50 p-4 rounded-lg space-y-3 border border-amber-200">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium">Duración actual:</span>
+                                    <span className="text-lg font-bold text-amber-600">{formatDuration(maxHoursExceededDialog.durationMinutes)}</span>
+                                </div>
+                                <div className="divider my-2"></div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium">Días recomendados:</span>
+                                    <span className="text-lg font-bold text-amber-700">{maxHoursExceededDialog.requiredDays} día(s)</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                <p className="text-sm text-blue-900">
+                                    💡 <strong>¿Qué hacer?</strong>
+                                </p>
+                                <ul className="text-sm text-blue-800 mt-2 list-disc list-inside space-y-1">
+                                    <li>Habilita "¿Este servicio dura múltiples días?"</li>
+                                    <li>Ingresa {maxHoursExceededDialog.requiredDays} como número de días</li>
+                                    <li>El sistema reservará el espacio completo esos días</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => setMaxHoursExceededDialog({ ...maxHoursExceededDialog, isOpen: false })}
+                            >
+                                Cerrar
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setMaxHoursExceededDialog({ ...maxHoursExceededDialog, isOpen: false })
+                                    // Activa automáticamente el flag multi-día y establece los días necesarios
+                                    setServiceForm({
+                                        ...serviceForm,
+                                        isMultiDay: true,
+                                        durationDays: maxHoursExceededDialog.requiredDays
+                                    })
+                                }}
+                                className="bg-amber-600 hover:bg-amber-700"
+                            >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Activar Multi-Día
                             </Button>
                         </DialogFooter>
                     </DialogContent>

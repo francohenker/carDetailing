@@ -25,6 +25,8 @@ interface Service {
     description: string
     precio?: Precio[]
     duration: number
+    durationDays?: number
+    isMultiDay?: boolean
 }
 
 interface ServiceSearchProps {
@@ -129,10 +131,25 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
         const totalSelected = selectedServices.length
         const totalPrice = selectedServices.reduce((sum, service) => 
             sum + getPriceForCarType(service, carType), 0)
-        const totalDuration = selectedServices.reduce((sum, service) => 
-            sum + service.duration, 0)
+            
+        let totalNormalMins = 0;
+        let totalDays = 0;
         
-        return { totalSelected, totalPrice, totalDuration }
+        selectedServices.forEach((service) => {
+            if (service.isMultiDay && service.durationDays) {
+                totalDays += service.durationDays;
+            } else {
+                totalNormalMins += service.duration;
+            }
+        });
+        
+        // Si hay más de 6 horas (360 minutos), calculamos días extra
+        const extraDays = Math.floor(totalNormalMins / 360);
+        const remainingMins = totalNormalMins % 360;
+        
+        const finalDays = totalDays + extraDays;
+
+        return { totalSelected, totalPrice, finalDays, remainingMins, totalNormalMins }
     }, [selectedServices, carType])
 
     // Limpiar filtros
@@ -253,7 +270,9 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                                 <span>{stats.totalSelected} servicio{stats.totalSelected !== 1 ? 's' : ''}</span>
                                 <span className="flex items-center gap-1">
                                     <Clock className="h-3 w-3" />
-                                    {Math.floor(stats.totalDuration / 60)}h {stats.totalDuration % 60}min
+                                    {stats.finalDays > 0 && <span>{stats.finalDays} día{stats.finalDays !== 1 ? 's' : ''} </span>}
+                                    {stats.remainingMins > 0 && <span>{Math.floor(stats.remainingMins / 60)}h {stats.remainingMins % 60}min</span>}
+                                    {stats.finalDays === 0 && stats.remainingMins === 0 && <span>0h 0min</span>}
                                 </span>
                                 <span className="font-medium text-foreground">
                                     ${stats.totalPrice.toLocaleString()}
@@ -341,7 +360,9 @@ const ServiceSearch: React.FC<ServiceSearchProps> = ({
                                                     <div className="flex items-center gap-4 mt-2">
                                                         <div className="flex items-center gap-1 text-sm">
                                                             <Clock className="h-4 w-4" />
-                                                            {service.duration} min
+                                                            {service.isMultiDay && service.durationDays 
+                                                                ? `${service.durationDays} día(s)` 
+                                                                : `${service.duration} min`}
                                                         </div>
                                                         <Badge variant="outline" className="text-xs">
                                                             {carType}

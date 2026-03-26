@@ -98,7 +98,7 @@ export class TurnoController {
 
   @Get('available-slots')
   async getAvailableTimeSlots(@Req() request): Promise<any> {
-    const { date, duration } = request.query;
+    const { date, duration, serviceIds, durationDays } = request.query;
 
     if (!date) {
       throw new HttpException('Date parameter is required', 400);
@@ -110,7 +110,16 @@ export class TurnoController {
       throw new HttpException('Duration must be a positive number', 400);
     }
 
-    return this.turnoService.getAvailableTimeSlots(date, durationMinutes);
+    // Parámetros opcionales para validación multi-día
+    const isMultiDay = durationDays ? parseInt(durationDays, 10) > 0 : false;
+    const multiDayDuration = isMultiDay ? parseInt(durationDays, 10) : 0;
+
+    return this.turnoService.getAvailableTimeSlots(
+      date,
+      durationMinutes,
+      isMultiDay,
+      multiDayDuration,
+    );
   }
 
   @UseGuards(RolesGuard)

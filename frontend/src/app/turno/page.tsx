@@ -70,6 +70,8 @@ interface Service {
   description: string;
   precio?: Precio[];
   duration: number; // en minutos
+  durationDays?: number; // para servicios multi-día
+  isMultiDay?: boolean; // indica si es servicio multi-día
 }
 
 interface car {
@@ -96,6 +98,7 @@ interface BookingData {
   timeSlot: TimeSlot | null;
   totalPrice: number;
   totalDuration: number;
+  startDate?: Date | null; // para servicios multi-día
 }
 
 function TurnoPageContent() {
@@ -295,7 +298,13 @@ function TurnoPageContent() {
       const day = String(date.getDate()).padStart(2, "0");
       const dateString = `${year}-${month}-${day}`;
 
-      const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/available-slots?date=${dateString}&duration=${duration}`;
+      // Construir URL con parámetros multi-día si aplica
+      let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/turno/available-slots?date=${dateString}&duration=${duration}`;
+      if (hasMultiDayServices()) {
+        const multiDayDuration = getMultiDayDuration();
+        url += `&durationDays=${multiDayDuration}`;
+      }
+
       const resp = await fetch(url, {
         method: "GET",
         headers: {
@@ -394,7 +403,7 @@ function TurnoPageContent() {
 
   // Manejar selección de vehículo
   const handlecarSelect = (car: car) => {
-    // Recalcular precios con el nuevo tipo de vehículo
+  // Recalcular precios con el nuevo tipo de vehículo
     const totalPrice = bookingData.services.reduce(
       (sum, s) => sum + getPriceForCarType(s, car.type),
       0,
@@ -405,6 +414,39 @@ function TurnoPageContent() {
       car,
       totalPrice,
     });
+  };
+
+  // Obtener el cálculo completo de la duración en días y minutos restantes
+  const getCalculatedDuration = () => {
+    let totalMultiDays = 0;
+    let totalNormalMins = 0;
+
+    bookingData.services.forEach((s) => {
+      if (s.isMultiDay && s.durationDays) {
+        totalMultiDays += s.durationDays;
+      } else {
+        totalNormalMins += s.duration || 0;
+      }
+    });
+
+    const extraDays = Math.floor(totalNormalMins / 360); // 6 horas = 1 día
+    const remainingMins = totalNormalMins % 360;
+
+    return {
+      totalDays: totalMultiDays + extraDays,
+      remainingMins: remainingMins,
+      isMultiDay: (totalMultiDays + extraDays) > 0 || (totalMultiDays > 0),
+    };
+  };
+
+  // Función para detectar si hay servicios multi-día o si excede las 6 horas
+  const hasMultiDayServices = (): boolean => {
+    return getCalculatedDuration().totalDays > 0;
+  };
+
+  // Obtener el número máximo de días de los servicios multi-día
+  const getMultiDayDuration = (): number => {
+    return getCalculatedDuration().totalDays;
   };
 
   // Manejar selección de fecha en el calendario
@@ -506,6 +548,11 @@ function TurnoPageContent() {
       case 2:
         return bookingData.services.length > 0;
       case 3:
+        // Para servicios multi-día, solo necesita date
+        if (hasMultiDayServices()) {
+          return bookingData.date !== null;
+        }
+        // Para servicios normales, necesita date Y timeSlot
         return bookingData.date !== null && bookingData.timeSlot !== null;
       default:
         return false;
@@ -690,7 +737,7 @@ function TurnoPageContent() {
                 <div className="card-body">
                   <h2 className="card-title text-2xl mb-6">
                     <CalendarIcon className="h-6 w-6 text-primary" />
-                    Selecciona Fecha y Hora
+                    {hasMultiDayServices() ? 'Selecciona Fecha de Inicio' : 'Selecciona Fecha y Hora'}
                   </h2>
 
                   {/* Calendario + horarios */}
@@ -716,20 +763,59 @@ function TurnoPageContent() {
                       />
                     </div>
 
-                    {/* Selector de horarios */}
-                    <div className="bg-base-200 rounded-lg p-4">
-                      <TimeSlotSelector
-                        selectedSlot={bookingData.timeSlot}
-                        onSelect={handleTimeSlotSelect}
-                        availableSlots={availableSlots}
-                        isLoading={slotsLoading}
-                        hasDate={!!bookingData.date}
-                        label="Horario disponible"
-                        placeholder="Elige tu horario preferido"
-                        className="w-full"
-                      />
-                    </div>
-                    {bookingData.totalDuration > 0 && (
+                    {/* Selector de horarios - Solo mostrar si NO es multi-día */}
+                    {!hasMultiDayServices() && (
+                      <div className="bg-base-200 rounded-lg p-4">
+                        <TimeSlotSelector
+                          selectedSlot={bookingData.timeSlot}
+                          onSelect={handleTimeSlotSelect}
+                          availableSlots={availableSlots}
+                          isLoading={slotsLoading}
+                          hasDate={!!bookingData.date}
+                          label="Horario disponible"
+                          placeholder="Elige tu horario preferido"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
+
+                    {/* Información de multi-día */}
+                    {hasMultiDayServices() && (
+                      <div className="alert alert-warning">
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon className="h-5 w-5" />
+                          <div>
+                            <span className="font-semibold">Servicio Multi-Día</span>
+                            <p className="text-sm mt-1">
+                              Tu servicio durará {getMultiDayDuration()} día(s) completo(s). 
+                              El espacio de trabajo se ocupará todo ese período.
+                            </p>
+                            {bookingData.date && (
+                              <div className="text-sm mt-2">
+                                <p>
+                                  📅 <strong>Desde:</strong> {formatDate(bookingData.date, {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                  })}
+                                </p>
+                                <p className="mt-1">
+                                  🏁 <strong>Hasta:</strong> {formatDate(new Date(bookingData.date.getTime() + (getMultiDayDuration() - 1) * 24 * 60 * 60 * 1000), {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                  })}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {bookingData.totalDuration > 0 && !hasMultiDayServices() && (
                       <div className="alert alert-info mt-4">
                         <div className="flex items-center gap-2">
                           <Clock className="h-5 w-5" />
@@ -743,7 +829,7 @@ function TurnoPageContent() {
                     )}
 
                     {/* Widget del clima para la fecha seleccionada */}
-                    {bookingData.date && (
+                    {bookingData.date && !hasMultiDayServices() && (
                       <div className="mt-6">
                         <DateWeatherWidget date={bookingData.date} />
                       </div>
@@ -786,7 +872,7 @@ function TurnoPageContent() {
                                   {service.name}
                                 </span>
                                 <span className="text-sm text-base-content/70 ml-2">
-                                  ({service.duration} min)
+                                  {service.isMultiDay && service.durationDays ? `(${service.durationDays} día(s))` : `(${service.duration} min)`}
                                 </span>
                               </div>
                               <span className="font-semibold">
@@ -820,29 +906,62 @@ function TurnoPageContent() {
                     {/* Resumen de Fecha y Hora */}
                     <div>
                       <h3 className="text-lg font-semibold mb-2">
-                        Fecha y Hora
+                        {hasMultiDayServices() ? 'Período del Servicio' : 'Fecha y Hora'}
                       </h3>
                       <div className="p-2 bg-base-200 rounded">
                         <div className="flex items-center gap-2">
                           <CalendarIcon className="h-5 w-5 text-primary" />
                           <div>
                             <span className="font-medium">
-                              {bookingData.date &&
-                                formatDate(bookingData.date, {
-                                  weekday: "long",
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                })}
+                              {bookingData.date && hasMultiDayServices() ? (
+                                <>
+                                  <div className="mb-1">
+                                    <span className="font-semibold">Desde:</span>{" "}
+                                    {formatDate(bookingData.date, {
+                                      weekday: "long",
+                                      day: "numeric",
+                                      month: "long",
+                                    })}
+                                  </div>
+                                  <div>
+                                    <span className="font-semibold">Hasta:</span>{" "}
+                                    {formatDate(
+                                      new Date(
+                                        bookingData.date.getTime() +
+                                          (getMultiDayDuration() - 1) * 24 * 60 * 60 * 1000
+                                      ),
+                                      {
+                                        weekday: "long",
+                                        day: "numeric",
+                                        month: "long",
+                                      }
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
+                                bookingData.date &&
+                                  formatDate(bookingData.date, {
+                                    weekday: "long",
+                                    day: "numeric",
+                                    month: "long",
+                                    year: "numeric",
+                                  })
+                              )}
                             </span>
                             <div className="text-sm text-base-content/70">
-                              Hora:{" "}
-                              {bookingData.date
-                                ? formatTime(bookingData.date)
-                                : ""}{" "}
-                              • Duración:{" "}
-                              {Math.floor(bookingData.totalDuration / 60)}h{" "}
-                              {bookingData.totalDuration % 60}min
+                              {hasMultiDayServices() ? (
+                                <>Duración: {getMultiDayDuration()} día(s)</>
+                              ) : (
+                                <>
+                                  Hora:{" "}
+                                  {bookingData.date
+                                    ? formatTime(bookingData.date)
+                                    : ""}{" "}
+                                  • Duración:{" "}
+                                  {Math.floor(bookingData.totalDuration / 60)}h{" "}
+                                  {bookingData.totalDuration % 60}min
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -909,9 +1028,9 @@ function TurnoPageContent() {
                 )}
 
                 {/* Fecha y Hora */}
-                {bookingData.date && bookingData.timeSlot && (
+                {bookingData.date && (bookingData.timeSlot || hasMultiDayServices()) && (
                   <div>
-                    <h4 className="font-semibold text-sm">Fecha y Hora:</h4>
+                    <h4 className="font-semibold text-sm">Fecha{hasMultiDayServices() ? ' Inicio:' : ' y Hora:'}</h4>
                     <p className="text-sm">
                       {formatDate(bookingData.date, {
                         day: "2-digit",
@@ -919,9 +1038,28 @@ function TurnoPageContent() {
                         year: "numeric",
                       })}
                     </p>
-                    <p className="text-sm">
-                      {bookingData.date ? formatTime(bookingData.date) : ""}
-                    </p>
+                    {hasMultiDayServices() ? (
+                      <>
+                        <h4 className="font-semibold text-sm mt-1">Fecha Fin:</h4>
+                        <p className="text-sm">
+                          {formatDate(
+                            new Date(
+                              bookingData.date.getTime() +
+                                (getMultiDayDuration() - 1) * 24 * 60 * 60 * 1000
+                            ),
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            }
+                          )}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm">
+                        {bookingData.date ? formatTime(bookingData.date) : ""}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -934,8 +1072,14 @@ function TurnoPageContent() {
                       <span>${bookingData.totalPrice.toLocaleString()}</span>
                     </div>
                     <div className="text-sm text-base-content/70">
-                      Duración: {Math.floor(bookingData.totalDuration / 60)}h{" "}
-                      {bookingData.totalDuration % 60}min
+                      {hasMultiDayServices() ? (
+                        <>Duración: {getMultiDayDuration()} día(s)</>
+                      ) : (
+                        <>
+                          Duración: {Math.floor(bookingData.totalDuration / 60)}h{" "}
+                          {bookingData.totalDuration % 60}min
+                        </>
+                      )}
                     </div>
                   </>
                 )}

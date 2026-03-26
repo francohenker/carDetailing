@@ -39,13 +39,19 @@ export class ServicioService {
       [],
       servicio.duration,
       productos,
+      servicio.durationDays,
+      servicio.isMultiDay,
     );
     const savedService = await this.servicioRepository.save(service);
 
     // Crear los precios asociados
     if (servicio.precio && servicio.precio.length > 0) {
       const precios = servicio.precio.map((p) => {
-        const precio = new Precio(savedService.id, p.tipoVehiculo.toUpperCase(), p.precio);
+        const precio = new Precio(
+          savedService.id,
+          p.tipoVehiculo.toUpperCase(),
+          p.precio,
+        );
         return precio;
       });
 
@@ -70,6 +76,8 @@ export class ServicioService {
     oldService.name = servicio.name;
     oldService.description = servicio.description;
     oldService.duration = servicio.duration;
+    oldService.durationDays = servicio.durationDays || 0;
+    oldService.isMultiDay = servicio.isMultiDay || false;
 
     // Actualizar productos asociados
     if (servicio.productId && servicio.productId.length > 0) {

@@ -37,16 +37,50 @@ export class TurnoService {
       );
     }
 
-    // Validación mejorada que considera conflictos de tiempo basados en duración y espacios
-    await this.validateTimeSlotAvailability(turnoView.date, turnoView.duration);
+    const servicios = await this.servicioService.findByIds(turnoView.services);
+
+    // Detectar si hay servicios multi-día
+    const isMultiDay = this.hasMultiDayServices(servicios);
+
+    if (isMultiDay) {
+      // Validación para servicios multi-día
+      const durationDays = this.getMultiDayDuration(servicios);
+      await this.validateMultiDayAvailability(
+        turnoView.date,
+        durationDays,
+        servicios,
+      );
+      // La duración total se calcula automáticamente
+      const calculatedDuration = this.calculateTotalDuration(
+        servicios,
+        turnoView.duration,
+      );
+      turnoView.duration = calculatedDuration;
+    } else {
+      // Validación estándar para servicios de un día
+      await this.validateTimeSlotAvailability(
+        turnoView.date,
+        turnoView.duration,
+      );
+    }
 
     // Buscar un espacio disponible para asignar
-    const workspace = await this.findAvailableWorkspace(
-      turnoView.date,
-      turnoView.duration,
-    );
+    let workspace: WorkSpace | null = null;
+    if (isMultiDay) {
+      // Para servicios multi-día, buscar workspace para TODOS los días
+      const durationDays = this.getMultiDayDuration(servicios);
+      workspace = await this.findAvailableWorkspaceForMultiDays(
+        turnoView.date,
+        durationDays,
+      );
+    } else {
+      // Para servicios normales, buscar workspace para ese día/horario
+      workspace = await this.findAvailableWorkspace(
+        turnoView.date,
+        turnoView.duration,
+      );
+    }
 
-    const servicios = await this.servicioService.findByIds(turnoView.services);
     const newTurno = new Turno(
       car,
       estado_turno.PENDIENTE,
@@ -63,7 +97,11 @@ export class TurnoService {
     this.turnoRepository.save(turno);
 
     // Enviar email de confirmación con formato HTML
-    const htmlContent = this.generateTurnoCreatedEmailTemplate(newTurno);
+    const htmlContent = this.generateTurnoCreatedEmailTemplate(
+      newTurno,
+      isMultiDay,
+      isMultiDay ? this.getMultiDayDuration(servicios) : 0,
+    );
     this.mailService.sendHtmlMail(
       newTurno.car.user.email,
       '✅ Turno Confirmado - Car Detailing',
@@ -177,6 +215,54 @@ export class TurnoService {
   }
 
   /**
+   * Encuentra un espacio de trabajo disponible durante TODOS los días de un servicio multi-día
+   * @param startDate - Fecha de inicio (será primer día del período)
+   * @param durationDays - Número de días que durará el servicio
+   * @returns WorkSpace disponible durante todo el período, o null si no hay
+   */
+  private async findAvailableWorkspaceForMultiDays(
+    startDate: Date,
+    durationDays: number,
+  ): Promise<WorkSpace | null> {
+    const activeWorkspaces = await this.workspaceService.findActive();
+    if (activeWorkspaces.length === 0) return null;
+
+    const dateObj = new Date(startDate);
+    dateObj.setHours(0, 0, 0, 0);
+
+    // Para cada workspace, verificar que esté libre durante TODOS los días
+    for (const workspace of activeWorkspaces) {
+      let isAvailableForAllDays = true;
+
+      for (let dayOffset = 0; dayOffset < durationDays; dayOffset++) {
+        const currentDate = new Date(dateObj);
+        currentDate.setDate(currentDate.getDate() + dayOffset);
+        const dateString = currentDate.toISOString().split('T')[0];
+
+        // Obtener todos los turnos de ese día
+        const existingTurnos = await this.findDate(dateString);
+
+        // Verificar si ese workspace está asignado a algún turno ese día
+        const workspaceUsedThatDay = existingTurnos.some(
+          (t) => t.workspace?.id === workspace.id,
+        );
+
+        if (workspaceUsedThatDay) {
+          isAvailableForAllDays = false;
+          break;
+        }
+      }
+
+      // Si este workspace está disponible todos los días, devolverlo
+      if (isAvailableForAllDays) {
+        return workspace;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Calcula el precio total de un turno basado en los servicios y tipo de vehículo
    * @param servicios - Array de servicios con precios
    * @param tipoVehiculo - Tipo de vehículo para obtener el precio correcto
@@ -193,6 +279,110 @@ export class TurnoService {
 
       return total + (precioServicio ? Number(precioServicio.precio) : 0);
     }, 0);
+  }
+
+  /**
+   * Detecta si hay servicios multi-día en un array de servicios
+   * @param servicios - Array de servicios
+   * @returns true si hay al menos un servicio multi-día
+   */
+  private hasMultiDayServices(servicios: any[]): boolean {
+    return servicios.some((s) => s.isMultiDay === true && s.durationDays > 0);
+  }
+
+  /**
+   * Calcula la duración total en minutos de un turno considerando servicios multi-día
+   * Si hay servicios multi-día, retorna: durationDays * horasTrabajo * 60
+   * @param servicios - Array de servicios del turno
+   * @param duration - Duración base en minutos
+   * @returns Duración total en minutos
+   */
+  private calculateTotalDuration(servicios: any[], duration: number): number {
+    // Verificar si hay servicios multi-día
+    const multiDayServices = servicios.filter(
+      (s) => s.isMultiDay === true && s.durationDays > 0,
+    );
+
+    if (multiDayServices.length > 0) {
+      // Tomar el servicio multi-día con más días
+      const maxDays = Math.max(...multiDayServices.map((s) => s.durationDays));
+      const horasTrabajo = empresaInfo.horarioAtencion.horasTrabajo;
+      return maxDays * horasTrabajo * 60; // Convertir a minutos
+    }
+
+    return duration;
+  }
+
+  /**
+   * Obtiene el número de días que un turno ocupará
+   * @param servicios - Array de servicios del turno
+   * @returns Número de días
+   */
+  private getMultiDayDuration(servicios: any[]): number {
+    const multiDayServices = servicios.filter(
+      (s) => s.isMultiDay === true && s.durationDays > 0,
+    );
+
+    if (multiDayServices.length > 0) {
+      return Math.max(...multiDayServices.map((s) => s.durationDays));
+    }
+
+    return 0;
+  }
+
+  /**
+   * Valida disponibilidad considerando servicios multi-día
+   * Para servicios multi-día, valida que TODOS los días tengan espacio disponible en algún workspace
+   */
+  private async validateMultiDayAvailability(
+    requestedDateTime: Date,
+    durationDays: number,
+    servicios: any[],
+  ): Promise<void> {
+    const dateObj = new Date(requestedDateTime);
+    dateObj.setHours(0, 0, 0, 0);
+
+    const activeWorkspaces = await this.workspaceService.getActiveCount();
+    const maxConcurrent = activeWorkspaces > 0 ? activeWorkspaces : 1;
+
+    // Verificar que haya un workspace disponible para TODO el período
+    const workspaceForPeriod = await this.findAvailableWorkspaceForMultiDays(
+      requestedDateTime,
+      durationDays,
+    );
+
+    if (!workspaceForPeriod) {
+      throw new HttpException(
+        `No hay espacios de trabajo disponibles para los ${durationDays} día(s) solicitados. ` +
+          `Todos los espacios están ocupados en una o más fechas del período.`,
+        400,
+      );
+    }
+
+    // Además, validar que cada día individual tenga espacio
+    for (let dayOffset = 0; dayOffset < durationDays; dayOffset++) {
+      const currentDate = new Date(dateObj);
+      currentDate.setDate(currentDate.getDate() + dayOffset);
+      const dateString = currentDate.toISOString().split('T')[0];
+
+      const existingTurnos = await this.findDate(dateString);
+
+      // Contar turnos multi-día que se solapan en este día
+      let overlappingMultiDayCount = 0;
+      for (const turno of existingTurnos) {
+        if (turno.servicio?.some((s: any) => s.isMultiDay)) {
+          overlappingMultiDayCount++;
+        }
+      }
+
+      if (overlappingMultiDayCount >= maxConcurrent) {
+        throw new HttpException(
+          `El día ${currentDate.toLocaleDateString('es-AR')} (día ${dayOffset + 1} del servicio) ` +
+            `no tiene espacios disponibles para servicios multi-día. Todos los ${maxConcurrent} espacio(s) están ocupados.`,
+          400,
+        );
+      }
+    }
   }
 
   //VERIFICAR!!!!!!!!!!, agregar validaciones con respecto a la fecha (y posiblemente a los demas campos, try no funciona como deberia)
@@ -374,7 +564,101 @@ export class TurnoService {
   async getAvailableTimeSlots(
     targetDate: string,
     duration: number,
+    isMultiDay: boolean = false,
+    multiDayDuration: number = 0,
   ): Promise<any> {
+    // Si es multi-día, validar disponibilidad para TODOS los días
+    if (isMultiDay && multiDayDuration > 0) {
+      try {
+        const dateObj = new Date(targetDate + 'T00:00:00');
+        // Validar que hay un workspace disponible para todo el período
+        const availableWorkspace =
+          await this.findAvailableWorkspaceForMultiDays(
+            dateObj,
+            multiDayDuration,
+          );
+
+        if (!availableWorkspace) {
+          // No hay workspace disponible para el período multi-día
+          return {
+            date: targetDate,
+            duration: duration,
+            isMultiDay: true,
+            multiDayDuration: multiDayDuration,
+            totalSpaces: await this.workspaceService.getActiveCount(),
+            slots: [], // Retornar slots vacíos - no hay disponibilidad
+            occupiedTurnos: [],
+            message: `No hay espacios de trabajo disponibles para los ${multiDayDuration} día(s) completos solicitados.`,
+          };
+        }
+
+        // Validar cada día individual
+        for (let dayOffset = 0; dayOffset < multiDayDuration; dayOffset++) {
+          const currentDate = new Date(dateObj);
+          currentDate.setDate(currentDate.getDate() + dayOffset);
+          const dateString = currentDate.toISOString().split('T')[0];
+
+          const existingTurnos = await this.findDate(dateString);
+          const activeWorkspaces = await this.workspaceService.getActiveCount();
+          const maxConcurrent = activeWorkspaces > 0 ? activeWorkspaces : 1;
+
+          // Contar turnos multi-día
+          let overlappingMultiDayCount = 0;
+          for (const turno of existingTurnos) {
+            if (turno.servicio?.some((s: any) => s.isMultiDay)) {
+              overlappingMultiDayCount++;
+            }
+          }
+
+          if (overlappingMultiDayCount >= maxConcurrent) {
+            // No hay disponibilidad en alguno de los días
+            return {
+              date: targetDate,
+              duration: duration,
+              isMultiDay: true,
+              multiDayDuration: multiDayDuration,
+              totalSpaces: maxConcurrent,
+              slots: [], // Retornar vacío
+              occupiedTurnos: [],
+              message: `El día ${currentDate.toLocaleDateString('es-AR')} (día ${dayOffset + 1} del servicio) no tiene espacios disponibles.`,
+            };
+          }
+        }
+
+        // Si llegamos aquí, hay disponibilidad multi-día
+        // Retornar solo el primer slot disponible (ya que es multi-día, no hay "horarios")
+        return {
+          date: targetDate,
+          duration: duration,
+          isMultiDay: true,
+          multiDayDuration: multiDayDuration,
+          totalSpaces: await this.workspaceService.getActiveCount(),
+          slots: [
+            {
+              time: '08:00', // Horario de inicio (empresa comienza a las 8:00)
+              available: true,
+              availableSpaces: 1,
+              isMultiDaySlot: true,
+            },
+          ],
+          occupiedTurnos: [],
+          message: `Disponibilidad confirmada para los ${multiDayDuration} día(s) solicitados.`,
+        };
+      } catch (error) {
+        return {
+          date: targetDate,
+          duration: duration,
+          isMultiDay: true,
+          multiDayDuration: multiDayDuration,
+          totalSpaces: await this.workspaceService.getActiveCount(),
+          slots: [],
+          occupiedTurnos: [],
+          message: `Error validando disponibilidad: ${error.message}`,
+        };
+      }
+    }
+
+    // Lógica original para servicios de un solo día
     // Obtener todos los turnos del día especificado
     const turnos = await this.findTurnosByDate(
       new Date(targetDate + 'T00:00:00'),
@@ -563,21 +847,29 @@ export class TurnoService {
 
   // ============ TEMPLATES DE EMAIL HTML ============
 
-  private generateTurnoCreatedEmailTemplate(turno: Turno): string {
+  private generateTurnoCreatedEmailTemplate(
+    turno: Turno,
+    isMultiDay: boolean = false,
+    durationDays: number = 0,
+  ): string {
     const serviciosList = turno.servicio
       .map(
         (servicio) => `
         <tr>
           <td style="padding: 12px; border: 1px solid #ddd; background-color: #f8f9fa;">
             <strong>${servicio.name}</strong>
+            ${servicio.isMultiDay ? '<br><span style="color: #d32f2f; font-size: 12px;">⏱️ Servicio Multi-Día</span>' : ''}
           </td>
           <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">
-            ${servicio.duration} min
+            ${servicio.isMultiDay ? `${servicio.durationDays} día(s)` : `${servicio.duration} min`}
           </td>
         </tr>
       `,
       )
       .join('');
+
+    const durationHours = Math.floor(turno.duration / 60);
+    const durationMinutes = turno.duration % 60;
 
     return `
       <!DOCTYPE html>
@@ -636,6 +928,13 @@ export class TurnoService {
               border-left: 4px solid #007bff;
               padding: 15px;
               margin: 15px 0;
+            }
+            .multi-day-alert {
+              background-color: #fff3cd;
+              border: 2px solid #ffc107;
+              border-radius: 8px;
+              padding: 20px;
+              margin: 20px 0;
             }
             table { 
               width: 100%; 
@@ -717,8 +1016,21 @@ export class TurnoService {
                     ${serviciosList}
                   </tbody>
                 </table>
-                <p><strong>Duración total estimada:</strong> ${turno.duration} minutos</p>
+                <p><strong>Duración total estimada:</strong> ${durationHours > 0 ? `${durationHours}h ${durationMinutes}min` : `${turno.duration} minutos`}</p>
               </div>
+
+              ${
+                isMultiDay
+                  ? `
+                <div class="multi-day-alert">
+                  <h3 style="margin-top: 0; color: #d32f2f;">⏱️ Servicio Multi-Día</h3>
+                  <p style="margin: 10px 0;"><strong>Este turno durará ${durationDays} día(s) completo(s)</strong></p>
+                  <p style="margin: 10px 0; color: #666;">Tu vehículo ocupará el espacio de trabajo durante todo ese período (${empresaInfo.horarioAtencion.horaInicio}:00 - ${empresaInfo.horarioAtencion.horaFin}:00 diarios)</p>
+                  <p style="margin: 0; color: #d32f2f;">⚠️ Solo podrás retirar tu vehículo cuando se complete el servicio.</p>
+                </div>
+              `
+                  : ''
+              }
 
               <div class="total-price">
                 💰 Total: $${turno.totalPrice.toLocaleString('es-AR')}

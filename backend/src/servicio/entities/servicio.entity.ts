@@ -27,8 +27,22 @@ export class Servicio {
   })
   precio: Precio[];
 
-  @Column()
+  @Column({
+    comment: 'Duración en minutos del servicio (si es menor a 10 horas)',
+  })
   duration: number;
+
+  @Column({
+    default: 0,
+    comment: 'Número de días que dura el servicio (0 si es un unico día)',
+  })
+  durationDays: number;
+
+  @Column({
+    default: false,
+    comment: 'Indica si este servicio ocupa múltiples días',
+  })
+  isMultiDay: boolean;
 
   @Column({ default: false })
   isDeleted: boolean;
@@ -46,11 +60,15 @@ export class Servicio {
     precio: Precio[],
     duration: number,
     producto?: Producto[],
+    durationDays?: number,
+    isMultiDay?: boolean,
   ) {
     this.name = name;
     this.description = description;
     this.precio = precio;
     this.duration = duration;
     this.Producto = producto;
+    this.durationDays = durationDays || 0;
+    this.isMultiDay = isMultiDay || false;
   }
 }
