@@ -1053,6 +1053,23 @@ export default function AdminPage() {
                 return
             }
 
+            const newUser = await response.json()
+
+            if (userForm.role && userForm.role !== 'user') {
+                try {
+                    await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/change-role/${newUser.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+                        },
+                        body: JSON.stringify({ role: userForm.role })
+                    })
+                } catch (roleError) {
+                    console.error('Error setting user role:', roleError)
+                }
+            }
+
             toast.success("Usuario creado correctamente")
             setIsUserDialogOpen(false)
             resetUserForm()

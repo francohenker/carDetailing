@@ -23,7 +23,8 @@ export class CarService {
   ) {}
 
   async create(createCarDto: createCarDto, user: Users): Promise<Car> {
-    const patenteRegex = /^([a-zA-Z]{3}\d{3}|[a-zA-Z]{2}\d{3}[a-zA-Z]{2})$/;
+    const patenteRegex =
+      /^([a-zA-Z]{3}\d{3}|[a-zA-Z]{2}\d{3}[a-zA-Z]{2}|[a-zA-Z]\d{3}[a-zA-Z]{3}|\d{3}[a-zA-Z]{3})$/;
 
     if (!patenteRegex.test(createCarDto.patente)) {
       throw new Error('Patente inválida');

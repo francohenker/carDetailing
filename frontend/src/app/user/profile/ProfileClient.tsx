@@ -262,14 +262,14 @@ export default function ProfileClient() {
         }
     };
 
-    const patenteRegex = /^([a-zA-Z]{3}\d{3}|[a-zA-Z]{2}\d{3}[a-zA-Z]{2})$/;
+    const patenteRegex = /^([a-zA-Z]{3}\d{3}|[a-zA-Z]{2}\d{3}[a-zA-Z]{2}|[a-zA-Z]\d{3}[a-zA-Z]{3}|\d{3}[a-zA-Z]{3})$/;
 
     const handleAddcar = () => {
         if (isAddingCar) return; // Evitar múltiples clicks
 
         if (!patenteRegex.test(newcar.patente)) {
             toast.error("Patente inválida", {
-                description: "El formato de la patente debe ser ABC123 o AB123CD",
+                description: "El formato de la patente debe ser ABC123 o AB123CD o A123BCD o 123ABC para Motos.",
             });
             return;
         }
@@ -1302,7 +1302,7 @@ export default function ProfileClient() {
                         <div className="space-y-4 py-4">
                             <div className="flex gap-2">
                                 <Input
-                                    placeholder="Ej: ABC123 o AB123CD"
+                                    placeholder="Ej: ABC123 o AB123CD A123BCD 123ABC"
                                     value={claimPatente}
                                     onChange={(e) => { setClaimPatente(e.target.value.toUpperCase()); setClaimCheckResult(null); }}
                                     maxLength={7}

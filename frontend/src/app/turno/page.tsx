@@ -528,7 +528,7 @@ function TurnoPageContent() {
       if (res.status === 201) {
         toast.success("¡Turno reservado exitosamente!");
         setTimeout(() => {
-          router.push("/user/profile");
+          router.push("/user/profile?tab=history");
         }, 2000);
       } else {
         toast.error(
