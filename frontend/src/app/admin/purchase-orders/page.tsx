@@ -1,21 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import {
     Package,
     Plus,
-    Edit2,
     Trash2,
     ChevronLeft,
     CheckCircle,
     X,
-    AlertTriangle,
-    Calendar,
-    Building2,
     FileText,
-    Clock,
-    TrendingUp
+    Clock
 } from "lucide-react"
 import { toast } from "sonner"
 import HeaderDefault from "@/app/header"
@@ -106,8 +100,6 @@ interface OrderForm {
 }
 
 export default function PurchaseOrdersPage() {
-    const router = useRouter()
-    
     const [orders, setOrders] = useState<PurchaseOrder[]>([])
     const [suppliers, setSuppliers] = useState<Supplier[]>([])
     const [products, setProducts] = useState<Product[]>([])
@@ -131,26 +123,57 @@ export default function PurchaseOrdersPage() {
     })
     
     const [filterStatus, setFilterStatus] = useState<'all' | 'PENDIENTE' | 'RECIBIDA' | 'PARCIAL' | 'CANCELADA'>('all')
+    
+    // Estados para paginación de órdenes
+    const [currentPageOrders, setCurrentPageOrders] = useState(1)
+    const itemsPerPageOrders = 5
+    const [paginatedOrders, setPaginatedOrders] = useState<PurchaseOrder[]>([])
+    const [totalPagesOrders, setTotalPagesOrders] = useState(0)
 
     useEffect(() => {
+        const fetchAllData = async () => {
+            setLoading(true)
+            try {
+                await Promise.all([
+                    fetchOrders(),
+                    fetchSuppliers(),
+                    fetchProducts()
+                ])
+            } catch (error) {
+                console.error('Error loading data:', error)
+                toast.error("Error al cargar los datos")
+            } finally {
+                setLoading(false)
+            }
+        }
+        
         fetchAllData()
     }, [])
 
-    const fetchAllData = async () => {
-        setLoading(true)
-        try {
-            await Promise.all([
-                fetchOrders(),
-                fetchSuppliers(),
-                fetchProducts()
-            ])
-        } catch (error) {
-            console.error('Error loading data:', error)
-            toast.error("Error al cargar los datos")
-        } finally {
-            setLoading(false)
+    // Efecto para paginar órdenes cuando cambian los datos
+    useEffect(() => {
+        const filteredOrders = orders.filter(order => 
+            filterStatus === 'all' || order.status === filterStatus
+        )
+        
+        // Calcular total de páginas
+        const totalPages = Math.ceil(filteredOrders.length / itemsPerPageOrders)
+        setTotalPagesOrders(totalPages)
+        
+        // Mantener la página actual si es válida, sino volver a la primera
+        let pageToUse = currentPageOrders
+        if (totalPages > 0 && currentPageOrders > totalPages) {
+            pageToUse = totalPages
+        } else if (totalPages === 0) {
+            pageToUse = 0
         }
-    }
+        
+        // Paginar los órdenes
+        const startIndex = (pageToUse - 1) * itemsPerPageOrders
+        const endIndex = startIndex + itemsPerPageOrders
+        const paginated = filteredOrders.slice(startIndex, endIndex)
+        setPaginatedOrders(paginated)
+    }, [orders, filterStatus, currentPageOrders])
 
     const fetchOrders = async () => {
         try {
@@ -355,6 +378,23 @@ export default function PurchaseOrdersPage() {
         }
     }
 
+    // Función para paginar órdenes
+    const paginateOrdersHandler = (ordersToPage: PurchaseOrder[], page: number) => {
+        const startIndex = (page - 1) * itemsPerPageOrders
+        const endIndex = startIndex + itemsPerPageOrders
+        const paginated = ordersToPage.slice(startIndex, endIndex)
+        setPaginatedOrders(paginated)
+    }
+
+    // Función para cambiar de página
+    const handlePageChangeOrders = (page: number) => {
+        setCurrentPageOrders(page)
+        const filteredOrders = orders.filter(order => 
+            filterStatus === 'all' || order.status === filterStatus
+        )
+        paginateOrdersHandler(filteredOrders, page)
+    }
+
     const filteredOrders = orders.filter(order => 
         filterStatus === 'all' || order.status === filterStatus
     )
@@ -470,21 +510,22 @@ export default function PurchaseOrdersPage() {
                                     No hay órdenes de compra
                                 </div>
                             ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>N° Orden</TableHead>
-                                            <TableHead>Proveedor</TableHead>
-                                            <TableHead>Fecha</TableHead>
-                                            <TableHead>Items</TableHead>
-                                            <TableHead>Total</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                            <TableHead>Fecha Recepción</TableHead>
-                                            <TableHead>Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {filteredOrders.map((order) => (
+                                <>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>N° Orden</TableHead>
+                                                <TableHead>Proveedor</TableHead>
+                                                <TableHead>Fecha</TableHead>
+                                                <TableHead>Items</TableHead>
+                                                <TableHead>Total</TableHead>
+                                                <TableHead>Estado</TableHead>
+                                                <TableHead>Fecha Recepción</TableHead>
+                                                <TableHead>Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {paginatedOrders.map((order) => (
                                             <TableRow key={order.id}>
                                                 <TableCell className="font-medium">
                                                     {order.orderNumber}
@@ -564,7 +605,55 @@ export default function PurchaseOrdersPage() {
                                         ))}
                                     </TableBody>
                                 </Table>
-                            )}
+
+                                {/* Controles de paginación */}
+                                {totalPagesOrders > 1 && (
+                                    <div className="flex justify-center items-center gap-2 mt-6">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handlePageChangeOrders(Math.max(currentPageOrders - 1, 1))}
+                                            disabled={currentPageOrders === 1}
+                                        >
+                                            <ChevronLeft className="h-4 w-4 mr-1" />
+                                            Anterior
+                                        </Button>
+
+                                        <div className="flex gap-1">
+                                            {Array.from({ length: totalPagesOrders }, (_, i) => i + 1).map(
+                                                (page) => (
+                                                    <Button
+                                                        key={page}
+                                                        variant={
+                                                            currentPageOrders === page ? "default" : "outline"
+                                                        }
+                                                        size="sm"
+                                                        onClick={() => handlePageChangeOrders(page)}
+                                                        className="min-w-[2.5rem]"
+                                                    >
+                                                        {page}
+                                                    </Button>
+                                                ),
+                                            )}
+                                        </div>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                                handlePageChangeOrders(
+                                                    Math.min(currentPageOrders + 1, totalPagesOrders),
+                                                )
+                                            }
+                                            disabled={currentPageOrders === totalPagesOrders}
+                                        >
+                                            Siguiente
+                                            <ChevronLeft className="h-4 w-4 ml-1 rotate-180" />
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
+                        )}
                         </CardContent>
                     </Card>
                 </main>

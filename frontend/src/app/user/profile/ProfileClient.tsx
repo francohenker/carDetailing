@@ -267,6 +267,42 @@ export default function ProfileClient() {
     const handleAddcar = () => {
         if (isAddingCar) return; // Evitar múltiples clicks
 
+        // Validar que todos los campos requeridos estén completos
+        if (!newcar.marca.trim()) {
+            toast.error("Marca requerida", {
+                description: "Por favor ingresa la marca del vehículo.",
+            });
+            return;
+        }
+
+        if (!newcar.model.trim()) {
+            toast.error("Modelo requerido", {
+                description: "Por favor ingresa el modelo del vehículo.",
+            });
+            return;
+        }
+
+        if (!newcar.color.trim()) {
+            toast.error("Color requerido", {
+                description: "Por favor ingresa el color del vehículo.",
+            });
+            return;
+        }
+
+        if (!newcar.patente.trim()) {
+            toast.error("Patente requerida", {
+                description: "Por favor ingresa la patente del vehículo.",
+            });
+            return;
+        }
+
+        if (!newcar.type) {
+            toast.error("Tipo requerido", {
+                description: "Por favor selecciona el tipo de vehículo.",
+            });
+            return;
+        }
+
         if (!patenteRegex.test(newcar.patente)) {
             toast.error("Patente inválida", {
                 description: "El formato de la patente debe ser ABC123 o AB123CD o A123BCD o 123ABC para Motos.",
@@ -343,6 +379,14 @@ export default function ProfileClient() {
 
     const handleUpdatecar = () => {
         if (isUpdatingCar || !editingcar) return; // Evitar múltiples clicks
+
+        // Validar que el color esté completo
+        if (!editingcar.color.trim()) {
+            toast.error("Color requerido", {
+                description: "Por favor ingresa el color del vehículo.",
+            });
+            return;
+        }
 
         setIsUpdatingCar(true); // Deshabilitar el botón
 
@@ -854,7 +898,7 @@ export default function ProfileClient() {
                                                     <div className="grid gap-4 py-4">
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <div className="space-y-2">
-                                                                <Label htmlFor="marca">Marca</Label>
+                                                                <Label htmlFor="marca">Marca *</Label>
                                                                 {isCustomBrand ? (
                                                                     <div className="space-y-2">
                                                                         <Input
@@ -899,7 +943,7 @@ export default function ProfileClient() {
                                                                 )}
                                                             </div>
                                                             <div className="space-y-2">
-                                                                <Label htmlFor="model">Modelo</Label>
+                                                                <Label htmlFor="model">Modelo *</Label>
                                                                 <Input
                                                                     id="model"
                                                                     name="model"
@@ -920,7 +964,7 @@ export default function ProfileClient() {
                                                                 />
                                                             </div> */}
                                                         <div className="space-y-2">
-                                                            <Label htmlFor="color">Color</Label>
+                                                            <Label htmlFor="color">Color *</Label>
                                                             <Input
                                                                 id="color"
                                                                 name="color"
@@ -931,7 +975,7 @@ export default function ProfileClient() {
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div className="space-y-2">
-                                                            <Label htmlFor="licensePlate">Patente</Label>
+                                                            <Label htmlFor="licensePlate">Patente *</Label>
                                                             <Input
                                                                 type="text"
                                                                 pattern="^([a-zA-Z]{3}\d{3}|[a-zA-Z]{2}\d{3}[a-zA-Z]{2})$"
@@ -942,7 +986,7 @@ export default function ProfileClient() {
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label htmlFor="type">Tipo</Label>
+                                                            <Label htmlFor="type">Tipo *</Label>
                                                             <Select
                                                                 value={newcar.type}
                                                                 onValueChange={(value) =>
@@ -982,7 +1026,14 @@ export default function ProfileClient() {
                                                         <button
                                                             className={`btn btn-success ${isAddingCar ? "loading" : ""}`}
                                                             onClick={handleAddcar}
-                                                            disabled={isAddingCar}
+                                                            disabled={
+                                                                isAddingCar ||
+                                                                !newcar.marca.trim() ||
+                                                                !newcar.model.trim() ||
+                                                                !newcar.color.trim() ||
+                                                                !newcar.patente.trim() ||
+                                                                !newcar.type
+                                                            }
                                                         >
                                                             {isAddingCar
                                                                 ? "Agregando..."
@@ -1157,7 +1208,11 @@ export default function ProfileClient() {
                                                 <button
                                                     onClick={handleUpdatecar}
                                                     className={`btn btn-success ${isUpdatingCar ? "loading" : ""}`}
-                                                    disabled={isUpdatingCar}
+                                                    disabled={
+                                                        isUpdatingCar ||
+                                                        !editingcar ||
+                                                        !editingcar.color.trim()
+                                                    }
                                                 >
                                                     {isUpdatingCar ? "Guardando..." : "Guardar cambios"}
                                                 </button>
