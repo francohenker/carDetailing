@@ -513,6 +513,10 @@ export default function AdminPage() {
     // Estados para órdenes de compra
     const [showPurchaseOrders, setShowPurchaseOrders] = useState(false)
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
+    const [filterOrderStatus, setFilterOrderStatus] = useState<'all' | 'PENDIENTE' | 'RECIBIDA' | 'PARCIAL' | 'CANCELADA'>('all')
+    const [searchOrderNumber, setSearchOrderNumber] = useState('')
+    const [currentPagePurchaseOrders, setCurrentPagePurchaseOrders] = useState(1)
+    const itemsPerPagePurchaseOrders = 10
     const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false)
     const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<PurchaseOrder | null>(null)
     const [orderForm, setOrderForm] = useState<OrderForm>({
@@ -526,7 +530,6 @@ export default function AdminPage() {
         quantity: '',
         notes: ''
     })
-    const [filterOrderStatus, setFilterOrderStatus] = useState<'all' | 'PENDIENTE' | 'RECIBIDA' | 'PARCIAL' | 'CANCELADA'>('all')
     const [supplierSearchQuery, setSupplierSearchQuery] = useState('')
     const [itemReceiveQuantities, setItemReceiveQuantities] = useState<Record<number, number>>({})
 
@@ -2033,9 +2036,26 @@ export default function AdminPage() {
         }
     }
 
-    const filteredPurchaseOrders = purchaseOrders.filter(order =>
-        filterOrderStatus === 'all' || order.status === filterOrderStatus
-    )
+    const filteredPurchaseOrders = purchaseOrders.filter(order => {
+        const matchStatus = filterOrderStatus === 'all' || order.status === filterOrderStatus;
+        const matchSearch = order.orderNumber.toLowerCase().includes(searchOrderNumber.toLowerCase());
+        return matchStatus && matchSearch;
+    })
+
+    // Derived state for Pagination of Purchase Orders
+    const totalPagesPurchaseOrders = Math.ceil(filteredPurchaseOrders.length / itemsPerPagePurchaseOrders)
+    
+    const safePagePurchaseOrders = currentPagePurchaseOrders > totalPagesPurchaseOrders && totalPagesPurchaseOrders > 0 
+        ? totalPagesPurchaseOrders 
+        : currentPagePurchaseOrders === 0 && totalPagesPurchaseOrders > 0 ? 1 : currentPagePurchaseOrders;
+
+    const startIndexPurchaseOrders = (safePagePurchaseOrders - 1) * itemsPerPagePurchaseOrders;
+    const paginatedPurchaseOrders = filteredPurchaseOrders.slice(Math.max(0, startIndexPurchaseOrders), startIndexPurchaseOrders + itemsPerPagePurchaseOrders);
+
+    // Función para manejar el cambio de página
+    const handlePageChangePurchaseOrders = (page: number) => {
+        setCurrentPagePurchaseOrders(page)
+    }
 
     const orderStats = {
         total: purchaseOrders.length,
@@ -2904,18 +2924,29 @@ export default function AdminPage() {
                                                         Gestiona las órdenes de compra manuales y automáticas
                                                     </CardDescription>
                                                 </div>
-                                                <Select value={filterOrderStatus} onValueChange={(v: any) => setFilterOrderStatus(v)}>
-                                                    <SelectTrigger className="w-[180px]">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">Todas</SelectItem>
-                                                        <SelectItem value="PENDIENTE">Pendientes</SelectItem>
-                                                        <SelectItem value="RECIBIDA">Recibidas</SelectItem>
-                                                        <SelectItem value="PARCIAL">Parciales</SelectItem>
-                                                        <SelectItem value="CANCELADA">Canceladas</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        placeholder="Buscar por N° Orden..."
+                                                        value={searchOrderNumber}
+                                                        onChange={(e) => {
+                                                            setSearchOrderNumber(e.target.value);
+                                                            setCurrentPagePurchaseOrders(1);
+                                                        }}
+                                                        className="w-[200px]"
+                                                    />
+                                                    <Select value={filterOrderStatus} onValueChange={(v: any) => { setFilterOrderStatus(v); setCurrentPagePurchaseOrders(1); }}>
+                                                        <SelectTrigger className="w-[180px]">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">Todas</SelectItem>
+                                                            <SelectItem value="PENDIENTE">Pendientes</SelectItem>
+                                                            <SelectItem value="RECIBIDA">Recibidas</SelectItem>
+                                                            <SelectItem value="PARCIAL">Parciales</SelectItem>
+                                                            <SelectItem value="CANCELADA">Canceladas</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
                                             <div className="flex gap-2">
                                                 <Button variant="outline" onClick={() => setShowPurchaseOrders(false)}>
@@ -2953,7 +2984,7 @@ export default function AdminPage() {
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
-                                                        {filteredPurchaseOrders.map((order) => (
+                                                        {paginatedPurchaseOrders.map((order) => (
                                                             <TableRow key={order.id}>
                                                                 <TableCell className="font-medium">
                                                                     {order.orderNumber}
@@ -3042,6 +3073,53 @@ export default function AdminPage() {
                                                         ))}
                                                     </TableBody>
                                                 </Table>
+                                            )}
+
+                                            {/* Controles de paginación para Órdenes de Compra */}
+                                            {totalPagesPurchaseOrders > 1 && (
+                                                <div className="flex justify-center items-center gap-2 mt-6">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handlePageChangePurchaseOrders(Math.max(currentPagePurchaseOrders - 1, 1))}
+                                                        disabled={currentPagePurchaseOrders === 1}
+                                                    >
+                                                        <ChevronLeft className="h-4 w-4 mr-1" />
+                                                        Anterior
+                                                    </Button>
+
+                                                    <div className="flex gap-1">
+                                                        {Array.from({ length: totalPagesPurchaseOrders }, (_, i) => i + 1).map(
+                                                            (page) => (
+                                                                <Button
+                                                                    key={page}
+                                                                    variant={
+                                                                        currentPagePurchaseOrders === page ? "default" : "outline"
+                                                                    }
+                                                                    size="sm"
+                                                                    onClick={() => handlePageChangePurchaseOrders(page)}
+                                                                    className="min-w-[2.5rem]"
+                                                                >
+                                                                    {page}
+                                                                </Button>
+                                                            ),
+                                                        )}
+                                                    </div>
+
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            handlePageChangePurchaseOrders(
+                                                                Math.min(currentPagePurchaseOrders + 1, totalPagesPurchaseOrders),
+                                                            )
+                                                        }
+                                                        disabled={currentPagePurchaseOrders === totalPagesPurchaseOrders}
+                                                    >
+                                                        Siguiente
+                                                        <ChevronLeft className="h-4 w-4 ml-1 rotate-180" />
+                                                    </Button>
+                                                </div>
                                             )}
                                         </CardContent>
                                     </Card>
