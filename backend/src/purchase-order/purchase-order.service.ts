@@ -57,7 +57,9 @@ export class PurchaseOrderService {
     }
 
     // Validar que no haya productos duplicados
-    const productoIds = createPurchaseOrderDto.items.map((item) => item.productoId);
+    const productoIds = createPurchaseOrderDto.items.map(
+      (item) => item.productoId,
+    );
     const uniqueIds = new Set(productoIds);
     if (uniqueIds.size !== productoIds.length) {
       throw new BadRequestException(
@@ -115,7 +117,13 @@ export class PurchaseOrderService {
 
   async findAll(): Promise<PurchaseOrder[]> {
     return await this.purchaseOrderRepository.find({
-      relations: ['supplier', 'items', 'items.producto', 'quotationResponse', 'receivedBy'],
+      relations: [
+        'supplier',
+        'items',
+        'items.producto',
+        'quotationResponse',
+        'receivedBy',
+      ],
       order: { createdAt: 'DESC' },
     });
   }
@@ -123,7 +131,13 @@ export class PurchaseOrderService {
   async findOne(id: number): Promise<PurchaseOrder> {
     const order = await this.purchaseOrderRepository.findOne({
       where: { id },
-      relations: ['supplier', 'items', 'items.producto', 'quotationResponse', 'receivedBy'],
+      relations: [
+        'supplier',
+        'items',
+        'items.producto',
+        'quotationResponse',
+        'receivedBy',
+      ],
     });
 
     if (!order) {
@@ -172,14 +186,15 @@ export class PurchaseOrderService {
       // Si la orden está vinculada a una cotización, marcar la cotización como finalizada
       if (order.quotationResponseId) {
         try {
-          const quotationResponse = await this.quotationResponseRepository.findOne({
-            where: { id: order.quotationResponseId },
-            relations: ['quotationRequest'],
-          });
+          const quotationResponse =
+            await this.quotationResponseRepository.findOne({
+              where: { id: order.quotationResponseId },
+              relations: ['quotationRequest'],
+            });
 
           if (quotationResponse && quotationResponse.quotationRequest) {
             const quotationRequest = quotationResponse.quotationRequest;
-            
+
             // Solo marcar como finalizada si está en estado COMPLETED
             if (quotationRequest.status === QuotationRequestStatus.COMPLETED) {
               quotationRequest.status = QuotationRequestStatus.FINISHED;
@@ -236,7 +251,10 @@ export class PurchaseOrderService {
       await this.purchaseOrderItemRepository.save(item);
 
       // Actualizar estado de la orden si es necesario
-      await this.updateOrderStatusBasedOnItems(orderId, updateItemDto.receivedById);
+      await this.updateOrderStatusBasedOnItems(
+        orderId,
+        updateItemDto.receivedById,
+      );
 
       return item;
     }
@@ -320,7 +338,10 @@ export class PurchaseOrderService {
     return `OC-${year}-${sequence.toString().padStart(5, '0')}`;
   }
 
-  private async updateOrderStatusBasedOnItems(orderId: number, receivedById?: number): Promise<void> {
+  private async updateOrderStatusBasedOnItems(
+    orderId: number,
+    receivedById?: number,
+  ): Promise<void> {
     const order = await this.findOne(orderId);
 
     const totalOrdered = order.items.reduce(
@@ -352,10 +373,11 @@ export class PurchaseOrderService {
       // Finalizar cotización vinculada si corresponde
       if (order.quotationResponseId) {
         try {
-          const quotationResponse = await this.quotationResponseRepository.findOne({
-            where: { id: order.quotationResponseId },
-            relations: ['quotationRequest'],
-          });
+          const quotationResponse =
+            await this.quotationResponseRepository.findOne({
+              where: { id: order.quotationResponseId },
+              relations: ['quotationRequest'],
+            });
 
           if (quotationResponse && quotationResponse.quotationRequest) {
             const quotationRequest = quotationResponse.quotationRequest;

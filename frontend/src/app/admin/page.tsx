@@ -243,6 +243,10 @@ interface PurchaseOrder {
     supplier: Supplier
     supplierId: number
     quotationResponseId?: number
+    quotationResponse?: {
+        id: number
+        quotationRequestId: number
+    }
     items: PurchaseOrderItem[]
     status: 'PENDIENTE' | 'RECIBIDA' | 'PARCIAL' | 'CANCELADA'
     totalAmount: number
@@ -6733,7 +6737,7 @@ export default function AdminPage() {
                                 </Card>
 
                                 {/* Información de cotización (si es automática) */}
-                                {selectedPurchaseOrder.quotationResponseId && (
+                                {selectedPurchaseOrder.quotationResponseId && selectedPurchaseOrder.quotationResponse && (
                                     <Card className="bg-blue-50">
                                         <CardContent className="p-4">
                                             <h3 className="font-semibold mb-2 flex items-center gap-2">
@@ -6741,7 +6745,7 @@ export default function AdminPage() {
                                                 Creada desde Cotización
                                             </h3>
                                             <p className="text-sm text-blue-800">
-                                                Esta orden fue creada automáticamente desde la cotización N° {selectedPurchaseOrder.quotationResponseId}
+                                                Esta orden fue creada automáticamente desde la solicitud de cotización N° {selectedPurchaseOrder.quotationResponse.quotationRequestId}
                                             </p>
                                         </CardContent>
                                     </Card>
