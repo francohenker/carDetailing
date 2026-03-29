@@ -11,6 +11,7 @@ import {
   Tooltip,
   Legend,
   Filler,
+  Plugin,
 } from 'chart.js';
 
 ChartJS.register(
@@ -23,6 +24,40 @@ ChartJS.register(
   Legend,
   Filler
 );
+
+// Plugin para mostrar valores debajo de cada punto (SOLO para gráficos de Evolución de Ingresos)
+const dataLabelsPlugin: Plugin = {
+  id: 'dataLabelsRevenue',
+  afterDatasetsDraw(chart: any) {
+    // Solo ejecutar si el gráfico contiene "Evolución de Ingresos" en el título
+    const chartTitle = chart.options?.plugins?.title?.text || '';
+    if (!chartTitle.includes('Evolución de Ingresos')) {
+      return;
+    }
+
+    const ctx = chart.ctx;
+    const dataset = chart.data.datasets[0];
+    const meta = chart.getDatasetMeta(0);
+    
+    if (meta.hidden || !dataset.data) return;
+
+    ctx.font = 'bold 18px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#374151';
+
+    meta.data.forEach((point: any, index: number) => {
+      const value = dataset.data[index];
+      if (value !== null && value !== undefined) {
+        const label = '$' + value.toLocaleString('es-AR');
+        ctx.fillText(label, point.x, point.y - 20);
+      }
+    });
+  }
+};
+
+// Registrar solo en este archivo/componente
+ChartJS.register(dataLabelsPlugin);
 
 interface RevenueChartProps {
   monthlyRevenue: Array<{
@@ -120,7 +155,7 @@ export default function RevenueChart({ monthlyRevenue, period }: RevenueChartPro
             return '$' + value.toLocaleString('es-AR');
           },
           font: {
-            size: 11,
+            size: 14,
           },
           color: '#6B7280',
         },
@@ -131,7 +166,7 @@ export default function RevenueChart({ monthlyRevenue, period }: RevenueChartPro
         },
         ticks: {
           font: {
-            size: 11,
+            size: 16,
           },
           color: '#6B7280',
         },

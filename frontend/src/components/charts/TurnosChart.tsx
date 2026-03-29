@@ -60,7 +60,7 @@ export default function TurnosChart({ weeklyTurnos }: TurnosChartProps) {
         },
       },
       title: {
-        display: true,
+        display: false,
         text: 'Turnos por Día (Última Semana)',
         font: {
           size: 16,

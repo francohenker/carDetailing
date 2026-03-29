@@ -3994,14 +3994,7 @@ export default function AdminPage() {
                                                     Mostrando datos de {detailedStatistics.period.days} días
                                                 </p>
                                             </div>
-                                            <Button
-                                                onClick={fetchDetailedStatistics}
-                                                variant="outline"
-                                                size="sm"
-                                                className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                                            >
-                                                Ver Dashboard General
-                                            </Button>
+                                            
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -4109,9 +4102,9 @@ export default function AdminPage() {
                                     </Card>
 
                                     {/* Row with 3 charts */}
-                                    <div className="grid gap-6 lg:grid-cols-3">
+                                    <div className="grid gap-6 lg:grid-cols-2">
                                         {/* Turnos Chart */}
-                                        <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
+                                        {/* <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
                                             <CardContent className="p-6">
                                                 {detailedStatistics?.weeklyTurnos ? (
                                                     <TurnosChart weeklyTurnos={detailedStatistics.weeklyTurnos} />
@@ -4123,7 +4116,7 @@ export default function AdminPage() {
                                                     </div>
                                                 )}
                                             </CardContent>
-                                        </Card>
+                                        </Card> */}
 
                                         {/* Services Chart */}
                                         <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">

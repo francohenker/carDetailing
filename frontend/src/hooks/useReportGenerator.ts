@@ -130,7 +130,7 @@ export function useReportGenerator() {
       pdf.setTextColor(0, 0, 0);
       
       const currentDate = new Date().toLocaleDateString('es-AR');
-      const currentTime = new Date().toLocaleTimeString('es-AR');
+      const currentTime = new Date().toLocaleTimeString('es-AR', { hour12: false });
       pdf.text(`Fecha de emisión: ${currentDate} a las ${currentTime}`, 20, yPosition);
       yPosition += 8;
       
@@ -163,9 +163,9 @@ export function useReportGenerator() {
       pdf.setTextColor(0, 0, 0);
       
       const metrics = [
-        { label: 'Ingresos Total', value: `$${(data.periodRevenue || 0).toLocaleString('es-AR')}` },
+        { label: 'Ingresos Total', value: `$ ${(data.periodRevenue || 0).toLocaleString('es-AR')}` },
         { label: 'Turnos Totales', value: (data.periodTurnos || 0).toString() },
-        { label: 'Turnos Completados', value: (data.completedTurnos || 0).toString() },
+        // { label: 'Turnos Completados', value: (data.completedTurnos || 0).toString() },
         { label: 'Nuevos Usuarios', value: (data.newUsers || 0).toString() },
       ];
 
@@ -236,8 +236,8 @@ export function useReportGenerator() {
 
       // Top clientes
       if (data.topClients && data.topClients.length > 0) {
-        // Verificar si necesitamos nueva página
-        if (yPosition > pageHeight - 60) {
+        // Verificar si necesitamos nueva página (margen más generoso para evitar superposición)
+        if (yPosition > pageHeight - 90) {
           pdf.addPage();
           yPosition = 20;
         }
@@ -265,6 +265,28 @@ export function useReportGenerator() {
         pdf.setTextColor(0, 0, 0);
 
         data.topClients.slice(0, 10).forEach((client, index) => {
+          // Verificar espacio disponible antes de cada cliente
+          if (yPosition > pageHeight - 25) {
+            pdf.addPage();
+            yPosition = 20;
+            
+            // Redibuja encabezados en la nueva página
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(107, 114, 128);
+            pdf.text('Cliente', 25, yPosition);
+            pdf.text('Ingresos', 125, yPosition);
+            pdf.text('Turnos Realizados', 160, yPosition);
+            yPosition += 8;
+            
+            pdf.setDrawColor(200, 200, 200);
+            pdf.line(20, yPosition - 2, 190, yPosition - 2);
+            yPosition += 2;
+            
+            pdf.setFontSize(11);
+            pdf.setTextColor(0, 0, 0);
+          }
+          
           const turnosRealizados = client.turnosRealizados || client.turnosCount || '0';
           
           pdf.setFont('helvetica', 'bold');

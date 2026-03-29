@@ -10,7 +10,6 @@ import HeaderDefault from "../../header"
 import ProtectedRoute from "@/components/ProtectedRoutes"
 import RevenueChart from "@/components/charts/RevenueChart"
 import ServicesChart from "@/components/charts/ServicesChart"
-import TurnosChart from "@/components/charts/TurnosChart"
 import StatusChart from "@/components/charts/StatusChart"
 import DateFilter from "@/components/DateFilter"
 import { useReportGenerator } from "@/hooks/useReportGenerator"
@@ -393,23 +392,8 @@ export default function StatisticsPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Row with 3 charts */}
-                        <div className="grid gap-6 lg:grid-cols-3">
-                            {/* Turnos Chart */}
-                            <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
-                                <CardContent className="p-6">
-                                    {data?.weeklyTurnos ? (
-                                        <TurnosChart weeklyTurnos={data.weeklyTurnos} />
-                                    ) : data?.dailyTurnos ? (
-                                        <TurnosChart weeklyTurnos={data.dailyTurnos.map(d => ({ day: d.day, turnos: d.turnos }))} />
-                                    ) : (
-                                        <div className="h-80 flex items-center justify-center">
-                                            <p className="text-muted-foreground">No hay datos de turnos disponibles</p>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-
+                        {/* Row with 2 charts */}
+                        <div className="grid gap-6 lg:grid-cols-2">
                             {/* Services Chart */}
                             <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm chart-container">
                                 <CardContent className="p-6">

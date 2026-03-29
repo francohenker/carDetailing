@@ -202,11 +202,25 @@ export class StatisticsService {
   }
 
   async getFilteredStatistics(startDate: string, endDate: string) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Parsear fechas sin problemas de zona horaria
+    // Formato esperado: 'YYYY-MM-DD'
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
 
-    // Ajustar el final del día para incluir todo el día
-    end.setHours(23, 59, 59, 999);
+    // Crear fechas en zona local (importante para comparaciones en BD)
+    const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+    const end = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
+
+    console.log(
+      '🔍 [DEBUG] getFilteredStatistics - startDate string:',
+      startDate,
+    );
+    console.log(
+      '🔍 [DEBUG] getFilteredStatistics - start:',
+      start.toISOString(),
+    );
+    console.log('🔍 [DEBUG] getFilteredStatistics - endDate string:', endDate);
+    console.log('🔍 [DEBUG] getFilteredStatistics - end:', end.toISOString());
 
     // 1. Ingresos en el período
     const periodRevenue = await this.pagoRepository
@@ -215,27 +229,40 @@ export class StatisticsService {
       .where('pago.fecha_pago BETWEEN :start AND :end', { start, end })
       .getRawOne();
 
+    console.log('🔍 [DEBUG] periodRevenue:', periodRevenue);
+
     // 2. Turnos en el período
-    const periodTurnos = await this.turnoRepository.count({
-      where: {
-        fechaHora: Between(start, end),
-      },
-    });
+    const periodTurnos = await this.turnoRepository
+      .createQueryBuilder('turno')
+      .where('DATE(turno.fechaHora) >= DATE(:start)', { start })
+      .andWhere('DATE(turno.fechaHora) <= DATE(:end)', { end })
+      .getCount();
+
+    console.log(
+      '🔍 [DEBUG] periodTurnos count (queryBuilder con DATE):',
+      periodTurnos,
+    );
 
     // 3. Turnos completados en el período
-    const completedTurnos = await this.turnoRepository.count({
-      where: {
-        estado: estado_turno.FINALIZADO,
-        fechaHora: Between(start, end),
-      },
-    });
+    const completedTurnos = await this.turnoRepository
+      .createQueryBuilder('turno')
+      .where('turno.estado = :estado', { estado: estado_turno.FINALIZADO })
+      .andWhere('DATE(turno.fechaHora) >= DATE(:start)', { start })
+      .andWhere('DATE(turno.fechaHora) <= DATE(:end)', { end })
+      .getCount();
+
+    console.log(
+      '🔍 [DEBUG] completedTurnos count (queryBuilder):',
+      completedTurnos,
+    );
 
     // 4. Nuevos usuarios en el período
-    const newUsers = await this.usersRepository.count({
-      where: {
-        createdAt: Between(start, end),
-      },
-    });
+    const newUsers = await this.usersRepository
+      .createQueryBuilder('user')
+      .where('user.createdAt BETWEEN :start AND :end', { start, end })
+      .getCount();
+
+    console.log('🔍 [DEBUG] newUsers count:', newUsers);
 
     // 5. Servicios más populares en el período con estado de turnos
     const popularServicesRaw = await this.turnoRepository
@@ -255,7 +282,8 @@ export class StatisticsService {
         `COUNT(CASE WHEN turno.estado = '${estado_turno.CANCELADO}' THEN 1 END)`,
         'cancelados',
       )
-      .where('turno.fechaHora BETWEEN :start AND :end', { start, end })
+      .where('DATE(turno.fechaHora) >= DATE(:start)', { start })
+      .andWhere('DATE(turno.fechaHora) <= DATE(:end)', { end })
       .groupBy('servicio.name')
       .orderBy('total', 'DESC')
       .limit(10)
@@ -279,7 +307,8 @@ export class StatisticsService {
       .createQueryBuilder('turno')
       .select('turno.estado', 'estado')
       .addSelect('COUNT(*)', 'count')
-      .where('turno.fechaHora BETWEEN :start AND :end', { start, end })
+      .where('DATE(turno.fechaHora) >= DATE(:start)', { start })
+      .andWhere('DATE(turno.fechaHora) <= DATE(:end)', { end })
       .groupBy('turno.estado')
       .getRawMany();
 
@@ -330,25 +359,22 @@ export class StatisticsService {
         currentDate.getFullYear(),
         currentDate.getMonth() + 1,
         0,
-        23,
-        59,
-        59,
       );
 
       const monthRevenue = await this.pagoRepository
         .createQueryBuilder('pago')
         .select('SUM(pago.monto)', 'total')
-        .where('pago.fecha_pago BETWEEN :start AND :end', {
-          start: monthStart,
-          end: monthEnd,
-        })
+        .where('DATE(pago.fecha_pago) >= DATE(:start)', { start: monthStart })
+        .andWhere('DATE(pago.fecha_pago) <= DATE(:end)', { end: monthEnd })
         .getRawOne();
 
+      const monthName = currentDate.toLocaleString('es-AR', {
+        month: 'long',
+        year: 'numeric',
+      });
+
       monthsData.push({
-        month: currentDate.toLocaleString('es-AR', {
-          month: 'long',
-          year: 'numeric',
-        }),
+        month: monthName,
         revenue: parseFloat(monthRevenue.total) || 0,
       });
 
@@ -374,12 +400,12 @@ export class StatisticsService {
 
       const nextDay = new Date(targetDate);
       nextDay.setDate(targetDate.getDate() + 1);
+      nextDay.setHours(0, 0, 0, 0);
 
-      const dayTurnos = await this.turnoRepository.count({
-        where: {
-          fechaHora: Between(targetDate, nextDay),
-        },
-      });
+      const dayTurnos = await this.turnoRepository
+        .createQueryBuilder('turno')
+        .where('DATE(turno.fechaHora) = DATE(:targetDate)', { targetDate })
+        .getCount();
 
       dailyData.push({
         date: targetDate.toISOString().split('T')[0],
@@ -409,16 +435,10 @@ export class StatisticsService {
       targetDate.setDate(startDate.getDate() + i);
       targetDate.setHours(0, 0, 0, 0);
 
-      const nextDay = new Date(targetDate);
-      nextDay.setDate(targetDate.getDate() + 1);
-
       const dayRevenue = await this.pagoRepository
         .createQueryBuilder('pago')
         .select('SUM(pago.monto)', 'total')
-        .where('pago.fecha_pago BETWEEN :start AND :end', {
-          start: targetDate,
-          end: nextDay,
-        })
+        .where('DATE(pago.fecha_pago) = DATE(:targetDate)', { targetDate })
         .getRawOne();
 
       dailyData.push({
@@ -453,10 +473,8 @@ export class StatisticsService {
           `COUNT(DISTINCT CASE WHEN turno.estado = '${estado_turno.FINALIZADO}' THEN turno.id END)`,
           'turnosRealizados',
         )
-        .where('pago.fecha_pago BETWEEN :start AND :end', {
-          start: startDate,
-          end: endDate,
-        })
+        .where('DATE(pago.fecha_pago) >= DATE(:start)', { start: startDate })
+        .andWhere('DATE(pago.fecha_pago) <= DATE(:end)', { end: endDate })
         .andWhere('pago.monto IS NOT NULL') // Filtrar pagos nulos
         .andWhere('user.firstname IS NOT NULL') // Filtrar usuarios sin nombre
         .groupBy('user.id, user.firstname, user.lastname, user.email')
