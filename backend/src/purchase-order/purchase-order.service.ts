@@ -331,7 +331,7 @@ export class PurchaseOrderService {
 
     let sequence = 1;
     if (lastOrder) {
-      const lastNumber = parseInt(lastOrder.orderNumber.split('-')[1]);
+      const lastNumber = parseInt(lastOrder.orderNumber.split('-')[2]);
       sequence = lastNumber + 1;
     }
 

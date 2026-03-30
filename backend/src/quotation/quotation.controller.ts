@@ -165,18 +165,22 @@ export class QuotationController {
     descripcion: 'Marcado de cotización como recibida y actualización de stock',
   })
   @Post('requests/:id/mark-received')
-  async markAsReceived(@Param('id', ParseIntPipe) requestId: number) {
-    const request =
+  async markAsReceived(
+    @Param('id', ParseIntPipe) requestId: number,
+    @Req() request: any,
+  ) {
+    const quotationRequest =
       await this.quotationService.getQuotationRequestById(requestId);
-    await this.quotationService.markAsReceived(requestId);
+    const userId = request.user?.userId;
+    await this.quotationService.markAsReceived(requestId, userId);
 
     // Retornar datos enriquecidos para auditoría
-    const winningResponse = request.responses.find((r) => r.isWinner);
+    const winningResponse = quotationRequest.responses.find((r) => r.isWinner);
     return {
       message: 'Stock updated successfully',
       id: requestId,
       supplierName: winningResponse?.supplier?.name,
-      productNames: request.products.map((p) => p.name),
+      productNames: quotationRequest.products.map((p) => p.name),
       totalAmount: winningResponse?.totalAmount,
     };
   }

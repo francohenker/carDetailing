@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, Inject, forwardRef, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  forwardRef,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { QuotationRequest } from './entities/quotation-request.entity';
@@ -73,17 +79,25 @@ export class QuotationService {
     });
 
     if (!request) {
-      throw new NotFoundException(`Solicitud de cotización ${requestId} no encontrada`);
+      throw new NotFoundException(
+        `Solicitud de cotización ${requestId} no encontrada`,
+      );
     }
 
     if (request.status !== QuotationRequestStatus.PENDING) {
-      throw new BadRequestException('Esta solicitud de cotización ya no está pendiente');
+      throw new BadRequestException(
+        'Esta solicitud de cotización ya no está pendiente',
+      );
     }
 
     // Verificar que el proveedor está incluido en la solicitud
-    const isSupplierIncluded = request.suppliers.some((s) => s.id === supplierId);
+    const isSupplierIncluded = request.suppliers.some(
+      (s) => s.id === supplierId,
+    );
     if (!isSupplierIncluded) {
-      throw new BadRequestException('No está autorizado a responder esta solicitud');
+      throw new BadRequestException(
+        'No está autorizado a responder esta solicitud',
+      );
     }
 
     // Verificar que no haya respondido ya
@@ -91,13 +105,17 @@ export class QuotationService {
       where: { quotationRequestId: requestId, supplierId },
     });
     if (existingResponse) {
-      throw new BadRequestException('Ya ha enviado una respuesta para esta solicitud');
+      throw new BadRequestException(
+        'Ya ha enviado una respuesta para esta solicitud',
+      );
     }
 
     // Enriquecer productQuotes con nombres
     const productQuotes = await Promise.all(
       dto.productQuotes.map(async (quote) => {
-        const product = await this.productoRepository.findOne({ where: { id: quote.productId } });
+        const product = await this.productoRepository.findOne({
+          where: { id: quote.productId },
+        });
         return {
           ...quote,
           productName: product?.name || 'Producto desconocido',
@@ -136,7 +154,9 @@ export class QuotationService {
       .leftJoinAndSelect('request.suppliers', 'allSuppliers')
       .leftJoinAndSelect('request.responses', 'response')
       .where('supplier.id = :supplierId', { supplierId })
-      .andWhere('request.status = :status', { status: QuotationRequestStatus.PENDING })
+      .andWhere('request.status = :status', {
+        status: QuotationRequestStatus.PENDING,
+      })
       .orderBy('request.sentAt', 'DESC')
       .getMany();
 
@@ -301,7 +321,7 @@ export class QuotationService {
     );
   }
 
-  async markAsReceived(requestId: number): Promise<void> {
+  async markAsReceived(requestId: number, userId?: number): Promise<void> {
     const request = await this.getQuotationRequestById(requestId);
 
     if (request.status !== QuotationRequestStatus.COMPLETED) {
@@ -323,10 +343,17 @@ export class QuotationService {
       );
 
       if (relatedOrder) {
-        await this.purchaseOrderService.updateStatus(relatedOrder.id, {
+        const updateDto: any = {
           status: 'RECIBIDA' as any,
           receivedAt: new Date(),
-        });
+        };
+        if (userId) {
+          updateDto.receivedById = userId;
+        }
+        await this.purchaseOrderService.updateStatus(
+          relatedOrder.id,
+          updateDto,
+        );
       }
     } catch (error) {
       console.error('Error al actualizar orden de compra:', error);
