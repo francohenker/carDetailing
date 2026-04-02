@@ -102,3 +102,6 @@ frontend/*.tsbuildinfo
 frontend/next-env.d.ts
 
 frontend/.next
+
+# cypress
+frontend/cypress/*
